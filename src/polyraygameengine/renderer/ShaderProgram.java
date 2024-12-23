@@ -105,7 +105,6 @@ public class ShaderProgram {
                 str.append(line);
                 str.append("\n");
             }
-
         } catch (IOException e) {
         }
         return str.toString();
@@ -133,91 +132,91 @@ public class ShaderProgram {
         return this.compute;
     }
 
-    public void setUniform(String name, int... v) {
+    public void setUniform(String name, int... i) {
         int location = glGetUniformLocation(program, name);
         if (location == -1) {
             return;
         }
-        switch (v.length) {
+        switch (i.length) {
             case 1 -> {
-                glUniform1i(location, v[0]);
+                glUniform1i(location, i[0]);
             }
             case 2 -> {
-                glUniform2i(location, v[0], v[1]);
+                glUniform2i(location, i[0], i[1]);
             }
             case 3 -> {
-                glUniform3i(location, v[0], v[1], v[2]);
+                glUniform3i(location, i[0], i[1], i[2]);
             }
             case 4 -> {
-                glUniform4i(location, v[0], v[1], v[2], v[3]);
+                glUniform4i(location, i[0], i[1], i[2], i[3]);
             }
             default -> {
-                int i;
-                for (i = 0; i < v.length - 4; i += 4) {
-                    glUniform4i(location, v[i], v[i + 1], v[i + 2], v[i + 3]);
+                int j;
+                for (j = 0; j < i.length - 4; j += 4) {
+                    glUniform4i(location, i[j], i[j + 1], i[j + 2], i[j + 3]);
                 }
-                for (; i < v.length; i++) {
-                    glUniform1i(location, v[i]);
+                for (; j < i.length; j++) {
+                    glUniform1i(location, i[j]);
                 }
             }
         }
     }
 
-    public void setUniform(String name, float... v) {
+    public void setUniform(String name, float... f) {
         int location = glGetUniformLocation(program, name);
         if (location == -1) {
             return;
         }
-        switch (v.length) {
+        switch (f.length) {
             case 1 -> {
-                glUniform1f(location, v[0]);
+                glUniform1f(location, f[0]);
             }
             case 2 -> {
-                glUniform2f(location, v[0], v[1]);
+                glUniform2f(location, f[0], f[1]);
             }
             case 3 -> {
-                glUniform3f(location, v[0], v[1], v[2]);
+                glUniform3f(location, f[0], f[1], f[2]);
             }
             case 4 -> {
-                glUniform4f(location, v[0], v[1], v[2], v[3]);
+                glUniform4f(location, f[0], f[1], f[2], f[3]);
             }
             default -> {
                 int i;
-                for (i = 0; i < v.length - 4; i += 4) {
-                    glUniform4f(location, v[i], v[i + 1], v[i + 2], v[i + 3]);
+                for (i = 0; i < f.length - 4; i += 4) {
+                    glUniform4f(location, f[i], f[i + 1], f[i + 2], f[i + 3]);
                 }
-                for (; i < v.length; i++) {
-                    glUniform1f(location, v[i]);
+                for (; i < f.length; i++) {
+                    glUniform1f(location, f[i]);
                 }
             }
         }
     }
 
-    public void setUniform(String name, double... v) {
+    public void setUniform(String name, double... d) {
         int location = glGetUniformLocation(program, name);
         if (location == -1) {
             return;
         }
-        switch (v.length) {
+        switch (d.length) {
             case 1 -> {
-                glUniform1d(location, v[0]);
+                glUniform1d(location, d[0]);
             }
             case 2 -> {
-                glUniform2d(location, v[0], v[1]);
+                glUniform2d(location, d[0], d[1]);
             }
             case 3 -> {
-                glUniform3d(location, v[0], v[1], v[2]);
+                glUniform3d(location, d[0], d[1], d[2]);
             }
             case 4 -> {
-                glUniform4d(location, v[0], v[1], v[2], v[3]);
+                glUniform4d(location, d[0], d[1], d[2], d[3]);
             }
             default -> {
                 int i;
-                for (i = 0; i < v.length - 4; i += 4) {
-                    glUniform4d(location, v[i], v[i + 1], v[i + 2], v[i + 3]);
+                for (i = 0; i < d.length - 4; i += 4) {
+                    glUniform4d(location, d[i], d[i + 1], d[i + 2], d[i + 3]);
                 }
-                for (; i < v.length; i++) {
-                    glUniform1d(location, v[i]);
+                for (; i < d.length; i++) {
+                    glUniform1d(location, d[i]);
                 }
             }
         }
