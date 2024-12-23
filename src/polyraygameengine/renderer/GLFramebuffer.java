@@ -11,7 +11,7 @@ public class GLFramebuffer {
     public GLFramebuffer(int width, int height) {
         // Generate the framebuffer and texture
         framebufferID = glGenFramebuffers();
-        render = new GLTexture(width, height, GL_RGBA8, GL_RGBA);
+        render = new GLTexture(width, height, GL_RGBA8, GL_RGBA, false, false);
 
         bind();
 
