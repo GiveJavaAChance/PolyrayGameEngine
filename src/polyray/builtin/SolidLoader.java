@@ -1,8 +1,7 @@
-package polyray;
+package polyray.builtin;
 
 import java.util.Iterator;
-import polyray.builtin.Vertex3D;
-import polyray.builtin.RenderObject;
+import polyray.IcoSphere;
 
 public class SolidLoader {
 
