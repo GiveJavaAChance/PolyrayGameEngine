@@ -47,7 +47,7 @@ public class AudioEffectsAndFFTExample extends JPanel {
         //effector.addEffect(new VolumeModifier(new DCDBREffect(10000, 4096 * 32, 1024, 2.0d), 0.005f), 0);
 
         // Outside a room
-        effector.addEffect(DBREffect.loadReverb("samples.dat", 0.1f, 1.5f, 1024), 0);
+        effector.addEffect(DBREffect.loadDBRData("samples.dat", 0.1f, 1.5f, 1024), 0);
 
         setBackground(new Color(0, 0, 0, 0));
         new Thread(() -> {
