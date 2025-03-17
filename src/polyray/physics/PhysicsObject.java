@@ -47,6 +47,24 @@ public class PhysicsObject {
         acc.y = 0.0d;
         acc.z = 0.0d;
     }
+    
+    public void applyGround(double dt, double height, Vector3f normal) {
+        if (pos.y < height) {
+            Vector3f v = new Vector3f((float) (pos.x - prevPos.x), (float) (pos.y - prevPos.y), (float) (pos.z - prevPos.z));
+            double diff = height - pos.y;
+            Vector3f resolve = Vector3f.mul(normal, (float) diff);
+            pos.x += resolve.x;
+            pos.y += resolve.y;
+            pos.z += resolve.z;
+            if (Vector3f.dot(v, normal) > 0.0f) {
+                return;
+            }
+            Vector3f vel = bounce(v, normal);
+            prevPos.x = pos.x - vel.x;
+            prevPos.y = pos.y - vel.y;
+            prevPos.z = pos.z - vel.z;
+        }
+    }
 
     protected Vector3f bounce(Vector3f v, Vector3f n) {
         float height = -Vector3f.dot(v, n);
