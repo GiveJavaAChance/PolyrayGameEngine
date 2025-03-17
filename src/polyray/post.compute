@@ -1,0 +1,307 @@
+#version 430
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = IN_IDX, rgba8) uniform image2D inputImage;
+layout(binding = OUT_IDX, rgba8) uniform image2D outputImage;
+
+uniform float time;
+uniform int effect;
+
+uint seed;
+
+uint nextRandom() {
+    seed = seed * 747796405 + 2891336453;
+    uint result = ((seed >> ((seed >> 28) + 4)) ^ seed) * 277803737;
+    result = (result >> 22) ^ result;
+    return result;
+}
+
+float random() {
+    return nextRandom() / 4294967295.0;
+}
+
+vec3 threshold(vec3 color, float threshold) {
+    return max(color - vec3(threshold), vec3(0.0));
+}
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec2 rotate(vec2 point, float angle) {
+    float cosA = cos(angle);
+    float sinA = sin(angle);
+    mat2 rotationMatrix = mat2(
+        cosA, -sinA,
+        sinA,  cosA
+    );
+    return rotationMatrix * point;
+}
+
+void swapIO(ivec2 pos) {
+    vec4 i = imageLoad(inputImage, pos);
+    vec4 o = imageLoad(outputImage, pos);
+    imageStore(outputImage, pos, i);
+    imageStore(inputImage, pos, o);
+}
+
+void postFlashbang(ivec2 pos, float amt) {
+    imageStore(outputImage, pos, mix(imageLoad(inputImage, pos), imageLoad(outputImage, pos), amt));
+}
+
+void colorOsc(ivec2 pos) {
+    float time = float(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y) * 0.01;
+    vec2 swirlOffset = vec2(sin(time), cos(time)) * 10.0;
+    vec3 src = imageLoad(inputImage, pos + ivec2(sin(time) * 10.0, cos(time) * 10.0)).rgb;
+    vec3 col = vec3(sin(src.r * 10.0 + time), sin(src.g * 10.0 - time), cos(src.b * 10.0 + time));
+    ivec2 outOff = ivec2(sin(time) * 8.0, cos(time) * 8.0);
+    imageStore(outputImage, pos + outOff, vec4(col, 1.0));
+}
+
+void waveDist(ivec2 pos) {
+    float wave = sin(float(pos.x + pos.y) * 0.1) * 10.0;
+    ivec2 posOffset = ivec2(wave, wave);
+    vec3 src = imageLoad(inputImage, pos + posOffset).rgb;
+    vec3 col = vec3(src.r * sin(pos.x * 0.1), src.g * cos(pos.y * 0.1), src.b * sin(pos.x * 0.1 + pos.y * 0.1));
+    ivec2 outOff = ivec2(cos(float(pos.y) * 0.1) * 10.0, sin(float(pos.x) * 0.1) * 10.0);
+    imageStore(outputImage, pos + outOff, vec4(col, 1.0));
+}
+
+void rgbShift(ivec2 pos) {
+    ivec2 blockPos = (pos / 10) * 10;
+    vec3 src = imageLoad(inputImage, blockPos).rgb;
+    vec3 col = vec3(
+        imageLoad(inputImage, blockPos + ivec2(1, 0)).r,
+        imageLoad(inputImage, blockPos + ivec2(0, 1)).g,
+        imageLoad(inputImage, blockPos + ivec2(1, 1)).b
+    );
+    ivec2 outOff = ivec2(sin(float(blockPos.x + blockPos.y) * 0.1) * 5.0);
+    imageStore(outputImage, pos + outOff, vec4(col, 1.0));
+}
+
+void radBlur(ivec2 pos, float amt) {
+    vec2 center = vec2(imageSize(inputImage) / 2);
+    vec2 toCenter = vec2(pos) - center;
+    float dist = length(toCenter);
+    vec3 src = imageLoad(inputImage, pos + ivec2(toCenter * sin(dist * amt))).rgb;
+    vec3 col = vec3(
+        sin(dist * 0.05) * src.r,
+        cos(dist * 0.05) * src.g,
+        sin(dist * 0.05 + 3.14 / 2.0) * src.b
+    );
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+void psych(ivec2 pos) {
+    float gridPattern = sin(float(pos.x) * 0.1) * cos(float(pos.y) * 0.1) * 0.5 + 0.5;
+    vec3 src = imageLoad(inputImage, pos).rgb;
+    vec3 col = src * vec3(gridPattern, 1.0 - gridPattern, gridPattern * 0.5 + 0.5);
+    ivec2 outOff = ivec2(sin(float(pos.y) * 0.05) * 5.0, cos(float(pos.x) * 0.05) * 5.0);
+    imageStore(outputImage, pos + outOff, vec4(col, 1.0));
+}
+
+void kaleidoscope(ivec2 pos) {
+    ivec2 center = ivec2(imageSize(inputImage) / 2);
+    vec2 direction = vec2(pos - center);
+    float angle = atan(direction.y, direction.x) * 6.0;
+    float radius = length(direction);
+    vec2 kaleidoscopePos = vec2(cos(angle), sin(angle)) * radius;
+    vec3 col = imageLoad(inputImage, center + ivec2(kaleidoscopePos)).rgb;
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+void abberation(ivec2 pos, vec3 amt) {
+    vec2 center = vec2(imageSize(inputImage) / 2);
+    vec3 red = imageLoad(inputImage, ivec2(center + rotate(pos - center, amt.r))).rgb;
+    vec3 green = imageLoad(inputImage, ivec2(center + rotate(pos - center, amt.g))).rgb;
+    vec3 blue = imageLoad(inputImage, ivec2(center + rotate(pos - center, amt.b))).rgb;
+    vec3 col = vec3(red.r, green.g, blue.b);
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+void abberation2(ivec2 pos, float amt, int numColors) {
+    vec2 center = vec2(imageSize(inputImage) / 2);
+    vec2 p = pos - center;
+    vec3 col = vec3(0.0);
+    float off = -numColors * 0.5 * amt;
+    float invNum = 1.0 / float(numColors);
+    for(int i = 0; i < numColors; i++) {
+        col += imageLoad(inputImage, ivec2(center + rotate(p, off + amt * i))).rgb * hsv2rgb(vec3(float(i) * invNum, 1.0, 1.0));
+    }
+    imageStore(outputImage, pos, vec4(col * invNum, 1.0));
+}
+
+void fractal(ivec2 pos, float t) {
+    vec3 src = imageLoad(inputImage, pos).rgb;
+    float noise = sin(pos.x * 0.1 + t) * cos(pos.y * 0.1 - t);
+    vec3 col = src * vec3(0.5 + noise, 0.5 - noise, noise);
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+void tunnel(ivec2 pos) {
+    ivec2 center = ivec2(imageSize(inputImage) / 2);
+    float time = float(gl_GlobalInvocationID.x + gl_GlobalInvocationID.y) * 0.01;
+    vec2 direction = vec2(pos - center) * 0.1;
+    float zoom = sin(time) * 5.0 + 10.0;
+    vec3 col = imageLoad(inputImage, center + ivec2(direction * zoom)).rgb;
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+void melt(ivec2 pos) {
+    vec2 waveOffset = vec2(sin(float(pos.y) * 0.1), cos(float(pos.x) * 0.1)) * 10.0;
+    ivec2 offsetPos = (pos / 8) * 8 + ivec2(waveOffset);
+    vec3 src = imageLoad(inputImage, offsetPos).rgb;
+    vec3 col = vec3(src.r, src.g * 0.8, src.b * 1.2);
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+vec3 shiftHue(vec3 color, float hueShift) {
+    float angle = hueShift * 3.141592 * 2.0;
+    float s = sin(angle), c = cos(angle);
+    mat3 hueRotation = mat3(
+        vec3(0.299, 0.587, 0.114) + vec3(0.701, -0.587, -0.114) * c + vec3(0.168, -0.330, 0.500) * s,
+        vec3(0.299, 0.587, 0.114) + vec3(-0.299, 0.413, -0.114) * c + vec3(0.328, 0.035, -0.500) * s,
+        vec3(0.299, 0.587, 0.114) + vec3(-0.300, -0.588, 0.886) * c + vec3(-0.497, 1.325, 0.000) * s
+    );
+    return color * hueRotation;
+}
+
+void colorCycle(ivec2 pos, float t) {
+    vec3 col = imageLoad(inputImage, pos).rgb;
+    vec3 shiftedColor = shiftHue(col, t * 0.1);
+    imageStore(outputImage, pos, vec4(shiftedColor, 1.0));
+}
+
+void distort(ivec2 pos, float amt, float amtOff) {
+    vec3 col = imageLoad(inputImage, pos).rgb;
+    vec3 noise = vec3(random(), random(), random());
+    ivec2 off = ivec2(vec2(random() * 2.0 - 1.0, random() * 2.0 - 1.0) * amtOff);
+    imageStore(outputImage, pos + off, vec4(mix(col, noise, amt), 1.0));
+}
+
+void distortMerge(ivec2 pos, float amt, float amtOff) {
+    vec3 col = imageLoad(inputImage, pos).rgb;
+    vec3 noise = vec3(random(), random(), random());
+    ivec2 off = ivec2(vec2(random() * 2.0 - 1.0, random() * 2.0 - 1.0) * amtOff);
+    imageStore(outputImage, pos + off, mix(vec4(mix(col, noise, amt), 1.0), imageLoad(outputImage, pos), 0.95));
+}
+
+void cameraShake(ivec2 pos, float t) {
+    ivec2 off = ivec2(vec2(sin(time * 5.1789) * 20.0, cos(time * 2.1687) * 50.0));
+    ivec2 center = ivec2(imageSize(inputImage) / 2);
+    imageStore(outputImage, ivec2(center + rotate(pos - center, sin(time * 1.5354 + cos(time)) * 0.2)) + off, imageLoad(inputImage, pos));
+}
+
+void perspective(ivec2 pos) {
+    ivec2 center = ivec2(imageSize(inputImage) / 2);
+    float z = 1.0 - float(pos.y) / float(center.y * 2.0) * 0.75;
+    ivec2 p = ivec2(vec2(float(pos.x - center.x) / z + center.x, (pos.y - center.y) / z + center.y));
+    imageStore(outputImage, pos, imageLoad(inputImage, p));
+}
+
+void vignette(ivec2 pos, float amt) {
+    ivec2 size = imageSize(inputImage);
+    vec2 center = vec2(size) / 2.0;
+    vec2 d = (vec2(pos) - center) / center;
+    float len = 1.0 - length(d) * amt;
+    vec3 col = imageLoad(inputImage, pos).rgb * len;
+    imageStore(outputImage, pos, vec4(col, 1.0));
+}
+
+void sharpen(ivec2 pos, float amt) {
+    ivec2 size = imageSize(inputImage);
+    vec3 centerColor = imageLoad(inputImage, pos).rgb;
+    ivec2 offsets[4] = ivec2[4](
+        ivec2(0, 1),
+        ivec2(0, -1),
+        ivec2(1, 0),
+        ivec2(-1, 0)
+    );
+    float totalDiff = 0.0;
+    for (int i = 0; i < 4; i++) {
+        ivec2 neighborPos = pos + offsets[i];
+        if (neighborPos.x >= 0 && neighborPos.x < size.x &&
+            neighborPos.y >= 0 && neighborPos.y < size.y) {
+            vec3 neighborColor = imageLoad(inputImage, neighborPos).rgb;
+            totalDiff += length(centerColor - neighborColor);
+        }
+    }
+    float avgDiff = totalDiff * 0.25 * amt;
+    float scaleFactor = avgDiff > 0.01 ? 1.0 / avgDiff : 1.0;
+    vec3 finalColor = centerColor * scaleFactor;
+    imageStore(outputImage, pos, vec4(finalColor, 1.0));
+}
+
+void initRandom(ivec2 pos, float t) {
+    seed = int(sin(float(pos.x / 11.1876) * float(pos.y / 16.1876) * 5871.16) * 1698.1876 + sin(pos.x) * 169.1876 + sin(pos.y + pos.x / 1.16789) * 219.1687 + fract(t) * sin(t * 16987.167) * 179871.1876);
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    initRandom(pos, fract(time));
+    nextRandom();
+    switch (effect) {
+        case 0:
+            postFlashbang(pos, 0.95);
+            break;
+        case 1:
+            colorOsc(pos);
+            break;
+        case 2:
+            waveDist(pos);
+            break;
+        case 3:
+            rgbShift(pos);
+            break;
+        case 4:
+            radBlur(pos, 0.01);
+            break;
+        case 5:
+            psych(pos);
+            break;
+        case 6:
+            kaleidoscope(pos);
+            break;
+        case 7:
+            abberation(pos, vec3(0.005, 0.0, -0.005));
+            break;
+        case 8:
+            abberation(pos, vec3(time, time * 0.1, -time * 0.5));
+            break;
+        case 9:
+            abberation2(pos, 0.005, 100);
+            break;
+        case 10:
+            fractal(pos, time * 10.0);
+            break;
+        case 11:
+            tunnel(pos);
+            break;
+        case 12:
+            melt(pos);
+            break;
+        case 13:
+            colorCycle(pos, time);
+            break;
+        case 14:
+            distort(pos, 0.0, 2.0);
+            break;
+        case 15:
+            distortMerge(pos, 0.0, 2.0);
+            break;
+        case 16:
+            cameraShake(pos, time);
+            break;
+        case 17:
+            perspective(pos);
+            break;
+        case 18:
+            vignette(pos, 0.5);
+            break;
+        default:
+            swapIO(pos);
+            break;
+    }
+}
