@@ -161,7 +161,7 @@ public class ShaderPreprocessor {
 
     private static String readLocalFile(String filePath) {
         StringBuilder str = new StringBuilder();
-        try ( BufferedReader br = new BufferedReader(new InputStreamReader(ShaderProgram.class.getResourceAsStream(filePath)))) {
+        try ( BufferedReader br = new BufferedReader(new InputStreamReader(ShaderProgram.class.getResourceAsStream("shaders/" + filePath)))) {
             String line;
             while ((line = br.readLine()) != null) {
                 str.append(line);
