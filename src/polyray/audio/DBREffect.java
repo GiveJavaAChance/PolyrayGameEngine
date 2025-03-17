@@ -8,24 +8,24 @@ import java.nio.FloatBuffer;
 
 public class DBREffect implements Effect {
 
-    private final float[] reverb;
-    private final int[] reverbTmp;
+    private final float[] collector;
+    private final int[] channelTmp;
 
     private final int samplesPerBuffer;
     private final float[] volumes;
     private final int[] delays;
 
     private DBREffect(int bufferSize, float[] volumes, int[] delays, int maxDelay) {
-        this.reverb = new float[maxDelay + bufferSize];
-        this.reverbTmp = new int[bufferSize];
+        this.collector = new float[maxDelay + bufferSize];
+        this.channelTmp = new int[bufferSize];
         this.samplesPerBuffer = delays.length;
         this.volumes = volumes;
         this.delays = delays;
     }
 
     public DBREffect(int samplesPerBuffer, int maxDelay, int bufferSize) {
-        this.reverb = new float[maxDelay + bufferSize];
-        this.reverbTmp = new int[bufferSize];
+        this.collector = new float[maxDelay + bufferSize];
+        this.channelTmp = new int[bufferSize];
         this.samplesPerBuffer = samplesPerBuffer;
         volumes = new float[samplesPerBuffer];
         delays = new int[samplesPerBuffer];
@@ -37,8 +37,8 @@ public class DBREffect implements Effect {
     }
 
     public DBREffect(int samplesPerBuffer, int maxDelay, int bufferSize, double power) {
-        this.reverb = new float[maxDelay + bufferSize];
-        this.reverbTmp = new int[bufferSize];
+        this.collector = new float[maxDelay + bufferSize];
+        this.channelTmp = new int[bufferSize];
         this.samplesPerBuffer = samplesPerBuffer;
         volumes = new float[samplesPerBuffer];
         delays = new int[samplesPerBuffer];
@@ -49,7 +49,7 @@ public class DBREffect implements Effect {
         }
     }
 
-    public static final DBREffect loadReverb(String name, float delayMul, float volumeMul, int bufferSize) {
+    public static final DBREffect loadDBRData(String name, float delayMul, float volumeMul, int bufferSize) {
         try ( BufferedInputStream in = new BufferedInputStream(DBREffect.class.getResourceAsStream(name))) {
             byte[] bytes = in.readAllBytes();
             FloatBuffer floats = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).asFloatBuffer();
@@ -76,17 +76,17 @@ public class DBREffect implements Effect {
             int idx = delays[i];
             float vol = volumes[i];
             for (int j = 0; j < channel.length; j++) {
-                reverb[j + idx] += channel[j] * vol;
+                collector[j + idx] += channel[j] * vol;
             }
         }
         for (int i = 0; i < channel.length; i++) {
-            channel[i] = (int) reverb[i];
+            channel[i] = (int) collector[i];
         }
-        System.arraycopy(reverb, channel.length, reverb, 0, reverb.length - channel.length);
-        for (int i = reverb.length - channel.length; i < reverb.length; i++) {
-            reverb[i] = 0.0f;
+        System.arraycopy(collector, channel.length, collector, 0, collector.length - channel.length);
+        for (int i = collector.length - channel.length; i < collector.length; i++) {
+            collector[i] = 0.0f;
         }
-        System.arraycopy(channel, 0, reverbTmp, 0, channel.length);
+        System.arraycopy(channel, 0, channelTmp, 0, channel.length);
     }
 
     @Override
@@ -96,7 +96,7 @@ public class DBREffect implements Effect {
 
     @Override
     public void computeLeft(int[] channel) {
-        System.arraycopy(reverbTmp, 0, channel, 0, channel.length);
+        System.arraycopy(channelTmp, 0, channel, 0, channel.length);
     }
 
     @Override
