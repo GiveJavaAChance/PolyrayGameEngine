@@ -10,6 +10,7 @@ public final class ControllerInput {
 
     private static final HashMap<Integer, Boolean> BUTTON_MAP = new HashMap<>();
     private static final HashMap<Integer, Float> JOYSTICK_MAP = new HashMap<>();
+    private static final ArrayList<Integer> allControllers = new ArrayList<>(16);
     private static final ArrayList<Integer> controllers = new ArrayList<>();
 
     public static final int BUTTON_PLAYSTATION_X = 0;
@@ -42,6 +43,12 @@ public final class ControllerInput {
     public static final int JOYSTICK_RIGHT_Y_AXIS = 3;
     public static final int TRIGGER_LEFT = 4;
     public static final int TRIGGER_RIGHT = 5;
+
+    static {
+        for (int i = 0; i <= GLFW_JOYSTICK_LAST; i++) {
+            allControllers.add(i);
+        }
+    }
 
     public static boolean getButton(int controller, int button) {
         return BUTTON_MAP.getOrDefault(controller | (button << 4), false);
@@ -79,6 +86,13 @@ public final class ControllerInput {
     }
 
     public static void updateControllers() {
+        ArrayList<Integer> all = new ArrayList<>(allControllers);
+        all.removeAll(controllers);
+        for (int c : all) {
+            if (glfwJoystickPresent(c)) {
+                controllers.add(c);
+            }
+        }
         for (int controller : controllers) {
             if (glfwJoystickPresent(controller)) {
                 ByteBuffer buttons = glfwGetJoystickButtons(controller);
