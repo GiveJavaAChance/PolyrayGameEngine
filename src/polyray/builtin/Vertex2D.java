@@ -2,12 +2,13 @@ package polyray.builtin;
 
 import polyray.modular.Vertex;
 import java.nio.FloatBuffer;
-import polyray.VertexBuffer.VertexAttribute;
-import polyray.VertexBuffer.VertexBufferTemplate;
+import polyray.VertexBuffer.*;
 
 public class Vertex2D implements Vertex {
 
-    public static final VertexBufferTemplate VBO_TEMPLATE = new VertexBufferTemplate(false).addAttribute(VertexAttribute.VEC2).addAttribute(VertexAttribute.VEC2);
+    public static final VertexBufferTemplate VBO_TEMPLATE = new VertexBufferTemplate(false)
+            .addAttribute(VertexAttribute.VEC2)
+            .addAttribute(VertexAttribute.VEC2);
 
     public float x, y, u, v;
 
