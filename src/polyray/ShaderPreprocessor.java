@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -15,7 +14,6 @@ public class ShaderPreprocessor {
 
     private static final DecimalFormat df = new DecimalFormat("0.######");
 
-    private static final Pattern BINDING_PATTERN = Pattern.compile("(layout\\s*\\([^)]*binding\\s*=\\s*(\\d+)\\s*,\\s*[^)]*\\)\\s*[^;]*;)");
     private static final Pattern APPEND_PATTERN = Pattern.compile("#append\\s+\"([^\"]+)\";");
 
     private final String[] shaderCodes;
@@ -28,27 +26,6 @@ public class ShaderPreprocessor {
     private ShaderPreprocessor(boolean isCompute, String... shaderCodes) {
         this.shaderCodes = shaderCodes;
         this.isCompute = isCompute;
-    }
-
-    public void setBindingPoint(String name, int binding) {
-        for (int i = 0; i < shaderCodes.length; i++) {
-            String shaderCode = shaderCodes[i];
-            // Create a matcher for the shader code
-            Matcher matcher = BINDING_PATTERN.matcher(shaderCode);
-
-            while (matcher.find()) {
-                String layoutBlock = matcher.group(1);  // The entire layout block
-                // Check if the texture/buffer name is part of this layout block
-                if (layoutBlock.contains(name)) {
-                    // Replace the binding number for this layout block
-                    String updatedLayoutBlock = layoutBlock.replaceAll("binding\\s*=\\s*\\d+", "binding = " + binding);
-                    // Replace the original block with the updated one
-                    shaderCode = shaderCode.replace(layoutBlock, updatedLayoutBlock);
-                    break;
-                }
-            }
-            shaderCodes[i] = shaderCode;
-        }
     }
 
     public void setInt(String name, int val) {
@@ -67,6 +44,12 @@ public class ShaderPreprocessor {
 
     public void setDouble(String name, double val) {
         String value = df.format(val);
+        for (int i = 0; i < shaderCodes.length; i++) {
+            shaderCodes[i] = shaderCodes[i].replace(name, value);
+        }
+    }
+    
+    public void setString(String name, String value) {
         for (int i = 0; i < shaderCodes.length; i++) {
             shaderCodes[i] = shaderCodes[i].replace(name, value);
         }
