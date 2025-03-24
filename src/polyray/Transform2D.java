@@ -78,17 +78,26 @@ public class Transform2D {
     }
 
     public Transform2D inverse() {
-        Transform2D result = new Transform2D();
-        if (!invertMatrix(this.matrix, result.matrix)) {
+        Transform2D out = new Transform2D();
+        if (!invertMatrix(this.matrix, out.matrix)) {
             throw new IllegalStateException("Matrix cannot be inverted");
         }
-        return result;
+        return out;
     }
 
     public void invert() {
         if (!invertMatrix(this.matrix, this.matrix)) {
             throw new IllegalStateException("Matrix cannot be inverted");
         }
+    }
+    
+    public Transform2D transposed() {
+        Transform2D out = new Transform2D(toColumnMajor());
+        return out;
+    }
+    
+    public void transpose() {
+        this.matrix = toColumnMajor();
     }
 
     public void transform(float[] points, int nPoints) {
