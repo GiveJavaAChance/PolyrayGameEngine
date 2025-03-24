@@ -109,17 +109,26 @@ public final class Transform3D {
     }
 
     public Transform3D inverse() {
-        Transform3D result = new Transform3D();
-        if (!invertMatrix(this.matrix, result.matrix)) {
+        Transform3D out = new Transform3D();
+        if (!invertMatrix(this.matrix, out.matrix)) {
             throw new IllegalStateException("Matrix cannot be inverted");
         }
-        return result;
+        return out;
     }
 
     public void invert() {
         if (!invertMatrix(this.matrix, this.matrix)) {
             throw new IllegalStateException("Matrix cannot be inverted");
         }
+    }
+    
+    public Transform3D transposed() {
+        Transform3D out = new Transform3D(toColumnMajor());
+        return out;
+    }
+    
+    public void transpose() {
+        this.matrix = toColumnMajor();
     }
 
     public void transform(float[] points, int nPoints) {
