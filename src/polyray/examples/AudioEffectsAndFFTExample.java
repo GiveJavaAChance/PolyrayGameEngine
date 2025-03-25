@@ -19,9 +19,14 @@ import javax.sound.sampled.TargetDataLine;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import polyray.FFTV2;
 import polyray.audio.DBREffect;
+import polyray.audio.DCDBREffect;
+import polyray.audio.NativeDCDBREffect;
 import polyray.audio.SoundEffector;
+import polyray.audio.VolumeEffect;
+import polyray.audio.VolumeModifier;
 
 public class AudioEffectsAndFFTExample extends JPanel {
 
@@ -44,15 +49,35 @@ public class AudioEffectsAndFFTExample extends JPanel {
     public AudioEffectsAndFFTExample() {
         // Switch between different acoustics:
         // Large Cave
-        //effector.addEffect(new VolumeModifier(new DCDBREffect(10000, 4096 * 32, 1024, 2.0d), 0.005f), 0);
+        //effector.addEffect(new VolumeModifier(new DCDBREffect(100000, 4096 * 4, 1024, 2.0d), 0.0001f), 0);
 
         // Outside a room
-        effector.addEffect(DBREffect.loadDBRData("samples.dat", 0.1f, 1.5f, 1024), 0);
+        //effector.addEffect(DBREffect.loadDBRData("samples.dat", 0.1f, 1.5f, 1024), 0);
+        
+        // Optimized Native DCDBR (x86-64 gcc systems only)
+        int samplesPerBuffer = 10000;
+        int maxDelay = 4096 * 4;
+        float[] volumesRight = new float[samplesPerBuffer];
+        float[] volumesLeft = new float[samplesPerBuffer];
+        int[] delays = new int[samplesPerBuffer];
+        for (int i = 0; i < samplesPerBuffer; i++) {
+            double r = Math.pow(Math.random(), 2.0d);
+            double l = Math.random();
+            volumesRight[i] = (float) (r * l);
+            volumesLeft[i] = (float) (r * (1.0d - l));
+            delays[i] = (int) ((1.0d - r) * maxDelay);
+        }
+        
+        NativeDCDBREffect eff = new NativeDCDBREffect(maxDelay, 1024);
+        eff.setSampleData(volumesRight, volumesLeft, delays, samplesPerBuffer);
+        effector.addEffect(eff, 0);
+        effector.addEffect(new VolumeEffect(0.01f), 1);
 
         setBackground(new Color(0, 0, 0, 0));
         new Thread(() -> {
             JFileChooser fc = new JFileChooser();
             fc.setMultiSelectionEnabled(true);
+            fc.setFileFilter(new FileNameExtensionFilter("Wave Files", "wav"));
             fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
             while (true) {
                 if(fc.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
@@ -93,7 +118,7 @@ public class AudioEffectsAndFFTExample extends JPanel {
                         while ((bytesRead = in.read(buffer)) != -1) {
 
                             long startTime = System.nanoTime();
-                            buffer = effector.nextBuffer(buffer, time, true);
+                            buffer = effector.nextBuffer(buffer, true);
                             DATA = effector.getRightChannel();
                             System.out.printf("Effect Time: %sms\n", dc.format((System.nanoTime() - startTime) / 1000000.0f));
 

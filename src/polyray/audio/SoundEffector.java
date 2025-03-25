@@ -7,8 +7,8 @@ import javax.sound.sampled.AudioFormat;
 
 public class SoundEffector {
 
-    private HashMap<Integer, Effect> effects = new HashMap<>();
-    private ArrayList<Integer> keys = new ArrayList<>();
+    private final HashMap<Integer, Effect> effects = new HashMap<>();
+    private final ArrayList<Integer> keys = new ArrayList<>();
     private final int numChannels;
     private final int numBytes;
     private int[] rightChannel, leftChannel;
@@ -26,8 +26,20 @@ public class SoundEffector {
         Collections.sort(keys);
     }
 
-    public byte[] nextBuffer(byte[] buffer, float time, boolean swapStereo) {
-        int len = buffer.length / numBytes / numChannels;
+    public void nextBuffer(int[] right, int[] left) {
+        for (Integer key : keys) {
+            Effect effect = effects.get(key);
+            effect.onStart();
+            effect.computeRight(right);
+            effect.computeLeft(left);
+            effect.onFinnish();
+        }
+        limit(right);
+        limit(left);
+    }
+
+    public byte[] nextBuffer(byte[] buffer, boolean swapStereo) {
+        int len = (buffer.length / numBytes) >> 1;
         if (numChannels == 2) {
             this.rightChannel = new int[len];
             this.leftChannel = new int[len];
@@ -36,8 +48,8 @@ public class SoundEffector {
             int pos = 0;
             for (int j = 0; j < buffer.length; j += 4) {
                 short sampleLeft = (short) ((buffer[j + 1] << 8) | (buffer[j] & 0xFF));
-
                 short sampleRight = (short) ((buffer[j + 3] << 8) | (buffer[j + 2] & 0xFF));
+                
                 if (swapStereo) {
                     rightChannel[pos] = sampleRight;
                     leftChannel[pos] = sampleLeft;
@@ -49,7 +61,7 @@ public class SoundEffector {
             }
 
             // Apply effects
-            for (int key : keys) {
+            for (Integer key : keys) {
                 Effect effect = effects.get(key);
                 effect.onStart();
                 effect.computeRight(rightChannel);
@@ -60,24 +72,7 @@ public class SoundEffector {
             limit(leftChannel);
 
             // Encode
-            byte[] audioDataBack = new byte[len * 4];
-            pos = 0;
-            for (int j = 0; j < len; j++) {
-                short sampleRight = (short) rightChannel[j];
-                short sampleLeft = (short) leftChannel[j];
-
-                byte byte1 = (byte) (sampleRight & 0xFF);
-                byte byte2 = (byte) ((sampleRight >> 8) & 0xFF);
-                byte byte3 = (byte) (sampleLeft & 0xFF);
-                byte byte4 = (byte) ((sampleLeft >> 8) & 0xFF);
-
-                audioDataBack[pos] = byte1;
-                audioDataBack[pos + 1] = byte2;
-                audioDataBack[pos + 2] = byte3;
-                audioDataBack[pos + 3] = byte4;
-                pos += 4;
-            }
-            return audioDataBack;
+            return encode(rightChannel, leftChannel);
         } else if (numChannels == 1) {
             this.rightChannel = new int[len];
 
@@ -90,7 +85,7 @@ public class SoundEffector {
             }
 
             // Apply effects
-            for (int key : keys) {
+            for (Integer key : keys) {
                 Effect effect = effects.get(key);
                 effect.onStart();
                 effect.computeRight(rightChannel);
@@ -99,32 +94,20 @@ public class SoundEffector {
             limit(rightChannel);
 
             // Encode
-            byte[] audioDataBack = new byte[len * 2];
-            pos = 0;
-            for (int j = 0; j < len; j++) {
-                short sampleRight = (short) rightChannel[j];
-
-                byte byte1 = (byte) (sampleRight & 0xFF);
-                byte byte2 = (byte) ((sampleRight >> 8) & 0xFF);
-
-                audioDataBack[pos] = byte1;
-                audioDataBack[pos + 1] = byte2;
-                pos += 2;
-            }
-            return audioDataBack;
+            return encode(rightChannel);
         }
         return null;
     }
 
-    public byte[] nextBuffer(int[] buffer, float time) {
-        int len = buffer.length;
+    public byte[] nextBuffer(int[] channel) {
+        int len = channel.length;
         if (numChannels == 2) {
-            this.rightChannel = buffer;
+            this.rightChannel = channel;
             this.leftChannel = new int[len];
-            System.arraycopy(buffer, 0, this.leftChannel, 0, len);
+            System.arraycopy(channel, 0, this.leftChannel, 0, len);
 
             // Apply effects
-            for (int key : keys) {
+            for (Integer key : keys) {
                 Effect effect = effects.get(key);
                 effect.onStart();
                 effect.computeRight(rightChannel);
@@ -135,29 +118,12 @@ public class SoundEffector {
             limit(leftChannel);
 
             // Encode
-            byte[] audioDataBack = new byte[len * 4];
-            int pos = 0;
-            for (int j = 0; j < len; j++) {
-                short sampleRight = (short) rightChannel[j];
-                short sampleLeft = (short) leftChannel[j];
-
-                byte byte1 = (byte) (sampleRight & 0xFF);
-                byte byte2 = (byte) ((sampleRight >> 8) & 0xFF);
-                byte byte3 = (byte) (sampleLeft & 0xFF);
-                byte byte4 = (byte) ((sampleLeft >> 8) & 0xFF);
-
-                audioDataBack[pos] = byte1;
-                audioDataBack[pos + 1] = byte2;
-                audioDataBack[pos + 2] = byte3;
-                audioDataBack[pos + 3] = byte4;
-                pos += 4;
-            }
-            return audioDataBack;
+            return encode(rightChannel, leftChannel);
         } else if (numChannels == 1) {
-            this.rightChannel = buffer;
+            this.rightChannel = channel;
 
             // Apply effects
-            for (int key : keys) {
+            for (Integer key : keys) {
                 Effect effect = effects.get(key);
                 effect.onStart();
                 effect.computeRight(rightChannel);
@@ -166,19 +132,7 @@ public class SoundEffector {
             limit(rightChannel);
 
             // Encode
-            byte[] audioDataBack = new byte[len * 2];
-            int pos = 0;
-            for (int j = 0; j < len; j++) {
-                short sampleRight = (short) rightChannel[j];
-
-                byte byte1 = (byte) (sampleRight & 0xFF);
-                byte byte2 = (byte) ((sampleRight >> 8) & 0xFF);
-
-                audioDataBack[pos] = byte1;
-                audioDataBack[pos + 1] = byte2;
-                pos += 2;
-            }
-            return audioDataBack;
+            return encode(rightChannel);
         }
         return null;
     }
@@ -201,6 +155,33 @@ public class SoundEffector {
 
     public int[] getLeftChannel() {
         return this.leftChannel;
+    }
+
+    private static byte[] encode(int[] right, int[] left) {
+        int pos = 0;
+        byte[] buffer = new byte[right.length << 2];
+        for (int j = 0; j < right.length; j++) {
+            short sampleRight = (short) right[j];
+            short sampleLeft = (short) left[j];
+
+            buffer[pos++] = (byte) (sampleRight & 0xFF);
+            buffer[pos++] = (byte) ((sampleRight >> 8) & 0xFF);
+            buffer[pos++] = (byte) (sampleLeft & 0xFF);
+            buffer[pos++] = (byte) ((sampleLeft >> 8) & 0xFF);
+        }
+        return buffer;
+    }
+
+    private static byte[] encode(int[] channel) {
+        byte[] buffer = new byte[channel.length << 1];
+        int pos = 0;
+        for (int j = 0; j < channel.length; j++) {
+            short sample = (short) channel[j];
+
+            buffer[pos++] = (byte) (sample & 0xFF);
+            buffer[pos++] = (byte) ((sample >> 8) & 0xFF);
+        }
+        return buffer;
     }
 
     public static final float getDelay(AudioFormat format, int bufferSize) {
