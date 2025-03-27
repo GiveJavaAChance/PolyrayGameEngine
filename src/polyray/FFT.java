@@ -30,6 +30,18 @@ public class FFT {
         }
     }
     
+    public static void ifft(Complex[] x) {
+        int n = x.length;
+        for (int i = 0; i < n; i++) {
+            x[i] = x[i].conjugate();
+        }
+        fft(x);
+        double k = 1.0d / n;
+        for (int i = 0; i < n; i++) {
+            x[i] = x[i].conjugate().mul(k);
+        }
+    }
+    
     public static Complex[][] fft2D(Complex[][] data) {
         int width = data.length;
         int height = data[0].length;
@@ -43,6 +55,22 @@ public class FFT {
             fft(data[i]);
         }
         
+        return transpose(data);
+    }
+    
+    public static Complex[][] ifft2D(Complex[][] data) {
+        int width = data.length;
+        int height = data[0].length;
+
+        for (int i = 0; i < width; i++) {
+            ifft(data[i]);
+        }
+        data = transpose(data);
+
+        for (int i = 0; i < height; i++) {
+            ifft(data[i]);
+        }
+
         return transpose(data);
     }
 
