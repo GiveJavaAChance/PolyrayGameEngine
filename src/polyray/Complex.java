@@ -36,6 +36,10 @@ public class Complex {
     public double magnitude() {
         return Math.sqrt(real * real + imag * imag);
     }
+    
+    public double magnitudeSquared() {
+        return real * real + imag * imag;
+    }
 
     public double phase() {
         return Math.atan2(imag, real);
