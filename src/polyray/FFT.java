@@ -1,7 +1,7 @@
 package polyray;
 
 public class FFT {
-
+    
     public static void fft(Complex[] x) {
         int n = x.length;
         if (n == 1) {
@@ -15,30 +15,37 @@ public class FFT {
         Complex[] even = new Complex[size];
         Complex[] odd = new Complex[size];
         for (int i = 0; i < size; i++) {
-            even[i] = x[i * 2];
-            odd[i] = x[i * 2 + 1];
+            int idx = i << 1;
+            even[i] = x[idx];
+            odd[i] = x[idx + 1];
         }
-        
+
         fft(even);
         fft(odd);
         
+        double th = -2.0d * Math.PI;
         for (int k = 0; k < size; k++) {
-            double kth = -2 * k * Math.PI / n;
-            Complex wk = new Complex(Math.cos(kth), Math.sin(kth));
-            x[k] = even[k].add(wk.mul(odd[k]));
-            x[k + size] = even[k].sub(wk.mul(odd[k]));
+            double kth = k * th / n;
+            Complex e = even[k];
+            Complex wk = new Complex(Math.cos(kth), Math.sin(kth)).mul(odd[k]);
+            x[k] = e.add(wk);
+            x[k + size] = e.sub(wk);
         }
     }
     
     public static void ifft(Complex[] x) {
         int n = x.length;
         for (int i = 0; i < n; i++) {
-            x[i] = x[i].conjugate();
+            Complex c = x[i];
+            c.imag = -c.imag;
         }
         fft(x);
         double k = 1.0d / n;
         for (int i = 0; i < n; i++) {
-            x[i] = x[i].conjugate().mul(k);
+            Complex c = x[i];
+            c.imag = -c.imag;
+            c.real *= k;
+            c.imag *= k;
         }
     }
     
@@ -49,13 +56,14 @@ public class FFT {
         for (int i = 0; i < width; i++) {
             fft(data[i]);
         }
-        data = transpose(data);
+        transpose(data);
         
         for (int i = 0; i < height; i++) {
             fft(data[i]);
         }
         
-        return transpose(data);
+        transpose(data);
+        return data;
     }
     
     public static Complex[][] ifft2D(Complex[][] data) {
@@ -65,24 +73,25 @@ public class FFT {
         for (int i = 0; i < width; i++) {
             ifft(data[i]);
         }
-        data = transpose(data);
+        transpose(data);
 
         for (int i = 0; i < height; i++) {
             ifft(data[i]);
         }
 
-        return transpose(data);
+        transpose(data);
+        return data;
     }
 
-    private static Complex[][] transpose(Complex[][] matrix) {
-        int width = matrix.length;
-        int height = matrix[0].length;
-        Complex[][] transposed = new Complex[height][width];
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                transposed[j][i] = matrix[i][j];
+    private static void transpose(Complex[][] matrix) {
+        int size = matrix.length;
+        for (int i = 0; i < size; i++) {
+            Complex[] matrixI = matrix[i];
+            for (int j = i + 1; j < size; j++) {
+                Complex temp = matrixI[j];
+                matrixI[j] = matrix[j][i];
+                matrix[j][i] = temp;
             }
         }
-        return transposed;
     }
 }
