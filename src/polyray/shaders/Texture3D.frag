@@ -21,8 +21,6 @@ void main() {
     
     vec3 normal = normalize(norm);
 
-    vec3 cameraPos = inverse(viewMatrix)[3].xyz;
-
     vec3 viewDir = normalize(cameraPos - pos);
 
     vec3 color = PBRLighting(normal, viewDir, sunDir, sunColor * 5.0, col.rgb);

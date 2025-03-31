@@ -129,9 +129,10 @@ public class Renderer3D extends RendererBase {
     @Override
     protected void renderInternal(int width, int height) {
         createPerspectiveMatrix(FOV, (float) width / height, minRendDist, renderDist, projection);
-        FloatBuffer cameraData = FloatBuffer.allocate(32);
+        FloatBuffer cameraData = FloatBuffer.allocate(36);
         cameraTransform.toFloatBuffer(cameraData);
         cameraData.put(projection.array());
+        cameraData.put(cameraTransform.inverse().matrix, 12, 3);
         cameraTransformBuffer.uploadData(cameraData.array());
         uiTransformBuffer.uploadData(uiTransform.toFloatBuffer(FloatBuffer.allocate(12), true).array());
         background.render(width, height);
