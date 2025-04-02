@@ -2,9 +2,10 @@ package polyray;
 
 public class FFTV2 {
 
-    private float[] real, imag;
-    private int size;
-    private float period, da, db;
+    private final float[] real;
+    private final float[] imag;
+    private final int size;
+    private final float period;
 
     public FFTV2(int size, float period) {
         this.size = size;
@@ -14,15 +15,35 @@ public class FFTV2 {
     }
 
     public void doFFT(int[] data, int range, float minFreq, float intensity, float maxFreq) {
+        float[] dat = new float[data.length];
+        for (int i = 0; i < data.length; i++) {
+            dat[i] = (float) data[i] / range / data.length;
+        }
+
         float length = period / data.length;
         float ang = length * (float) Math.PI * 2.0f;
         float delta = maxFreq - minFreq;
         for (int i = 0; i < size; i++) {
             float f = (float) i / (size - 1.0f);
             float freq = minFreq + f * delta;
-            da = (float) Math.sin(ang * freq);
-            db = (float) Math.cos(ang * freq);
-            calcRotated(data, range, i, intensity * freq);
+            float a = ang * freq;
+            float sin = (float) Math.sin(a);
+            float cos = (float) Math.cos(a);
+            float x = 1.0f;
+            float xt;
+            float y = 0.0f;
+            float re = 0.0f, im = 0.0f;
+            for (int j = 0; j < dat.length; j++) {
+                float d = dat[j];
+                re += x * d;
+                im += y * d;
+                xt = x * cos - y * sin;
+                y = x * sin + y * cos;
+                x = xt;
+            }
+            float I = intensity * freq;
+            real[i] = re * I;
+            imag[i] = im * I;
         }
     }
 
@@ -30,6 +51,11 @@ public class FFTV2 {
         if (dt <= 0.0f) {
             dt = Math.abs(dt) + 0.01f;
         }
+        float[] dat = new float[data.length];
+        for (int i = 0; i < data.length; i++) {
+            dat[i] = (float) data[i] / range / data.length;
+        }
+
         float length = period / data.length;
         float ang = length * (float) Math.PI * 2.0f;
         float delta = maxFreq - minFreq;
@@ -37,31 +63,25 @@ public class FFTV2 {
         for (int i = 0; i < size; i++) {
             float f = (float) i / (size - 1.0f);
             float freq = (float) (minFreq + (Math.pow(2.0f, f * dt) - 1.0f) * diff);
-            da = (float) Math.sin(ang * freq);
-            db = (float) Math.cos(ang * freq);
-            if (pure) {
-                calcRotated(data, range, i, 1.0f);
-            } else {
-                calcRotated(data, range, i, intensity * freq);
+            float a = ang * freq;
+            float sin = (float) Math.sin(a);
+            float cos = (float) Math.cos(a);
+            float x = 1.0f;
+            float xt;
+            float y = 0.0f;
+            float re = 0.0f, im = 0.0f;
+            for (int j = 0; j < dat.length; j++) {
+                float d = dat[j];
+                re += x * d;
+                im += y * d;
+                xt = x * cos - y * sin;
+                y = x * sin + y * cos;
+                x = xt;
             }
+            float I = pure ? 1.0f : intensity * freq;
+            real[i] = re * I;
+            imag[i] = im * I;
         }
-    }
-
-    private void calcRotated(int[] data, int range, int index, float intensity) {
-        float[] start = {1.0f, 0.0f};
-        float re = 0.0f, im = 0.0f;
-        for (int i = 0; i < data.length; i++) {
-            float d = (float) data[i] / range;
-            re += start[0] * d;
-            im += start[1] * d;
-            start = rotate(start);
-        }
-        real[index] = re / data.length * intensity;
-        imag[index] = im / data.length * intensity;
-    }
-
-    private float[] rotate(float[] p) {
-        return new float[]{p[0] * db - p[1] * da, p[0] * da + p[1] * db};
     }
 
     public float[] getReal() {
