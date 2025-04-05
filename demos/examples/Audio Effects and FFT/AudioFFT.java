@@ -1,5 +1,3 @@
-package polyray.examples;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -28,7 +26,7 @@ import polyray.audio.SoundEffector;
 import polyray.audio.VolumeEffect;
 import polyray.audio.VolumeModifier;
 
-public class AudioEffectsAndFFTExample extends JPanel {
+public class AudioFFT extends JPanel {
 
     public static final DecimalFormat dc = new DecimalFormat("#.##");
 
@@ -46,7 +44,7 @@ public class AudioEffectsAndFFTExample extends JPanel {
 
     public boolean MIC = false;
 
-    public AudioEffectsAndFFTExample() {
+    public AudioFFT() {
         // Switch between different acoustics:
         // Large Cave
         //effector.addEffect(new VolumeModifier(new DCDBREffect(100000, 4096 * 4, 1024, 2.0d), 0.0001f), 0);
@@ -183,7 +181,7 @@ public class AudioEffectsAndFFTExample extends JPanel {
         frame.setPreferredSize(d);
         frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        AudioEffectsAndFFTExample p = new AudioEffectsAndFFTExample();
+        AudioFFT p = new AudioFFT();
         frame.add(p);
         frame.setUndecorated(true);
         frame.setBackground(new Color(0, 0, 0, 0));
