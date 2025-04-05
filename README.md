@@ -7,5 +7,7 @@
 * Shader Preprocessor for quality-of-life GLSL code features.
 * DBR and DCDBR for real-Time acoustics using ShaderEffector.
 
+#### **[Read the Full Technical Report (PDF)](https://givejavaachance.github.io/PolyrayGameEngine/Polyray%20Game%20Engine%20Report.pdf)**
+
 ### Dependencies:
 Requires LWJGL
