@@ -50,6 +50,13 @@ public class DBRDeconvolver {
 
         learningRate /= W.length;
 
+        System.arraycopy(G, 0, Gp, 0, G.length);
+        for (int n = 0; n < W.length; n++) {
+            float w = W[n];
+            for (int i = 0; i < V.length; i++) {
+                Gp[i + n] += V[i] * w;
+            }
+        }
         float firstLoss = 0.0f;
         for (int i = 0; i < G.length; i++) {
             float diff = Gp[i];
