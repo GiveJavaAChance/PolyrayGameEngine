@@ -47,7 +47,7 @@ public class AudioFFT extends JPanel {
     public AudioFFT() {
         // Switch between different acoustics:
         // Large Cave
-        //effector.addEffect(new VolumeModifier(new DCDBREffect(100000, 4096 * 4, 1024, 2.0d), 0.0001f), 0);
+        //effector.addEffect(new VolumeModifier(new DCDBREffect(10000, 4096 * 64, 1024, 2.0d), 0.005f), 0);
 
         // Outside a room
         //effector.addEffect(DBREffect.loadDBRData("samples.dat", 0.1f, 1.5f, 1024), 0);
