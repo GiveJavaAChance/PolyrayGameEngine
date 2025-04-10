@@ -4,19 +4,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 
-public abstract class MultiplayerPacket {
+public interface MultiplayerPacket {
 
-    private int ID = -1;
+    public void read(BufferedInputStream in) throws IOException;
 
-    void setId(int id) {
-        this.ID = id;
-    }
-
-    public int getId() {
-        return ID;
-    }
-
-    public abstract void read(BufferedInputStream in) throws IOException;
-
-    public abstract void write(BufferedOutputStream out) throws IOException;
+    public void write(BufferedOutputStream out) throws IOException;
 }
