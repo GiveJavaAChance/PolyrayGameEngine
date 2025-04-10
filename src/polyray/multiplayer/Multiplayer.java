@@ -14,7 +14,7 @@ public abstract class Multiplayer {
     private final BufferedInputStream in;
     private final BufferedOutputStream out;
     private boolean listening;
-    private final ArrayList<MultiplayerPacket> packets;
+    private final ArrayList<Pack> packets;
     private final Object packetLock = new Object();
 
     public Multiplayer(String serverHost, int serverPort) throws IOException {
@@ -40,16 +40,16 @@ public abstract class Multiplayer {
         out.flush();
     }
 
-    public abstract void onReceive(MultiplayerPacket p);
+    public abstract void onReceive(MultiplayerPacket p, int ID);
 
     public void pollPackets() {
-        ArrayList<MultiplayerPacket> packFrame;
+        ArrayList<Pack> packFrame;
         synchronized (packetLock) {
             packFrame = new ArrayList<>(packets);
             packets.clear();
         }
-        for (MultiplayerPacket p : packFrame) {
-            onReceive(p);
+        for (Pack pack : packFrame) {
+            onReceive(pack.p, pack.ID);
         }
     }
 
@@ -69,14 +69,28 @@ public abstract class Multiplayer {
                     int clientID = header.getInt();
                     int packetID = header.getInt();
                     MultiplayerPacket p = PacketRegistry.create(packetID);
-                    p.setId(clientID);
                     p.read(in);
                     synchronized (packetLock) {
-                        packets.add(p);
+                        packets.add(new Pack(p, clientID));
                     }
                 }
             } catch (IOException e) {
             }
         }).start();
+    }
+    
+    public int getClientID() {
+        return this.ID;
+    }
+
+    private static class Pack {
+
+        public final MultiplayerPacket p;
+        public final int ID;
+
+        public Pack(MultiplayerPacket p, int ID) {
+            this.p = p;
+            this.ID = ID;
+        }
     }
 }
