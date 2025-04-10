@@ -13,8 +13,8 @@ public class MultiplayerClient {
     public MultiplayerClient() throws IOException, InterruptedException {
         this.m = new Multiplayer("localhost", 3050) {
             @Override
-            public void onReceive(MultiplayerPacket p) {
-                System.out.println(p.getId());
+            public void onReceive(MultiplayerPacket p, int ID) {
+                System.out.println(ID);
                 if (p instanceof RectanglePacket pd) {
                     System.out.println(pd.width + " " + pd.height);
                 }
@@ -41,7 +41,7 @@ public class MultiplayerClient {
         MultiplayerClient p = new MultiplayerClient();
     }
 
-    public static class RectanglePacket extends MultiplayerPacket {
+    public static class RectanglePacket implements MultiplayerPacket {
 
         public int width, height;
 
