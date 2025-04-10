@@ -9,8 +9,5 @@
 
 #### **[Read the Full Technical Report (PDF)](https://givejavaachance.github.io/PolyrayGameEngine/Polyray%20Game%20Engine%20Report.pdf)**
 
-### Planned Features:
-* A modular multiplayer handler for sending and receiving data between clients and a server.
-
 ### Dependencies:
 Requires LWJGL
