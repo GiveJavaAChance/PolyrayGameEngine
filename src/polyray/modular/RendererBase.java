@@ -1,10 +1,12 @@
 package polyray.modular;
 
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import polyray.FullscreenQuad;
 import polyray.GLFramebuffer;
 import polyray.GLFramebufferMSAA;
 import polyray.GLTexture;
-import polyray.PostProcess;
+import polyray.DefaultPostProcess;
 import static org.lwjgl.opengl.GL43.*;
 
 public abstract class RendererBase {
@@ -14,30 +16,28 @@ public abstract class RendererBase {
 
     private final GLFramebuffer frameBuffer;
     private final GLTexture rendered, output;
-    private final PostProcess post;
     private final FullscreenQuad quad;
+
+    private PostProcessor post;
 
     private int targetFramebuffer = 0;
 
-    public RendererBase(int width, int height) {
-        this.antialiasing = false;
+    private RendererBase(int width, int height, boolean antialiasing) {
+        this.antialiasing = antialiasing;
         this.frameBuffer = new GLFramebuffer(width, height);
         this.rendered = frameBuffer.render;
         this.output = new GLTexture(width, height, GL_RGBA8, GL_RGBA, true, false);
-        this.post = new PostProcess(rendered, output);
 
         this.quad = new FullscreenQuad();
     }
 
-    public RendererBase(int width, int height, int MSAASampleCount) {
-        this.antialiasing = true;
-        this.MSAAFrameBuffer = new GLFramebufferMSAA(width, height, MSAASampleCount);
-        this.frameBuffer = new GLFramebuffer(width, height);
-        this.rendered = frameBuffer.render;
-        this.output = new GLTexture(width, height, GL_RGBA8, GL_RGBA, true, false);
-        this.post = new PostProcess(rendered, output);
+    public RendererBase(int width, int height) {
+        this(width, height, false);
+    }
 
-        this.quad = new FullscreenQuad();
+    public RendererBase(int width, int height, int MSAASampleCount) {
+        this(width, height, true);
+        this.MSAAFrameBuffer = new GLFramebufferMSAA(width, height, MSAASampleCount);
     }
 
     public void setRenderTarget(GLFramebuffer target) {
@@ -47,7 +47,7 @@ public abstract class RendererBase {
     public void setToDefaultRenderTarget() {
         this.targetFramebuffer = 0;
     }
-    
+
     public void setToNoRenderTarget() {
         this.targetFramebuffer = -1;
     }
@@ -59,9 +59,17 @@ public abstract class RendererBase {
     public GLTexture getRenderTexture() {
         return this.output;
     }
-
-    public void changeEffect(int effect) {
-        post.changeEffect(effect);
+    
+    public void setPostProcess(BiFunction<GLTexture, GLTexture, DefaultPostProcess> post) {
+        if(post == null) {
+            this.post = null;
+            return;
+        }
+        this.post = post.apply(rendered, output);
+    }
+    
+    public PostProcessor getPostProcessor() {
+        return this.post;
     }
 
     private void start() {
@@ -86,11 +94,12 @@ public abstract class RendererBase {
         if (targetFramebuffer != 0 && targetFramebuffer != -1) {
             glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer);
         }
-
-        post.runPostProcess();
+        if (post != null) {
+            post.process();
+        }
         if (targetFramebuffer != -1) {
             glClear(GL_COLOR_BUFFER_BIT);
-            quad.setTexture(output);
+            quad.setTexture(post == null ? rendered : output);
             quad.render();
         }
     }
