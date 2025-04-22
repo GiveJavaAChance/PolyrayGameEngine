@@ -120,6 +120,14 @@ public class Renderer3D extends RendererBase {
     public void add3DObject(RenderObjectBase r) {
         objects3D.add(r);
     }
+    
+    public void remove2DObject(RenderObjectBase r) {
+        objects2D.remove(r);
+    }
+
+    public void remove3DObject(RenderObjectBase r) {
+        objects3D.remove(r);
+    }
 
     public void clearObjects() {
         objects2D.clear();
