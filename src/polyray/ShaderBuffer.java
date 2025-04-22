@@ -38,6 +38,10 @@ public class ShaderBuffer {
         glBindBuffer(target, ID);
         glBufferData(target, data, usage);
     }
+    
+    public void bind() {
+        glBindBuffer(target, ID);
+    }
 
     public void delete() {
         glDeleteBuffers(ID);
