@@ -8,6 +8,10 @@ public class BindingRegistry {
     private static final HashMap<String, Integer> usedBindings = new HashMap<>();
 
     public static int bindImageTexture(GLTexture texture, int level, boolean layered, int layer, int access) {
+        return bindImageTexture(texture, level, layered, layer, access, texture.interFormat);
+    }
+
+    public static int bindImageTexture(GLTexture texture, int level, boolean layered, int layer, int access, int format) {
         String key = "tex" + texture.ID;
         Integer currentBinding = usedBindings.get(key);
         if (currentBinding != null) {
@@ -18,12 +22,16 @@ public class BindingRegistry {
             System.err.println("No available image binding points!");
             return -1;
         }
-        glBindImageTexture(binding, texture.ID, level, layered, layer, access, texture.interFormat);
+        glBindImageTexture(binding, texture.ID, level, layered, layer, access, format);
         usedBindings.put(key, binding);
         return binding;
     }
 
     public static int bindBufferBase(ShaderBuffer buffer) {
+        return bindBufferBase(buffer, buffer.target);
+    }
+
+    public static int bindBufferBase(ShaderBuffer buffer, int target) {
         String key = "buf" + buffer.ID;
         Integer currentBinding = usedBindings.get(key);
         if (currentBinding != null) {
@@ -34,7 +42,7 @@ public class BindingRegistry {
             System.err.println("No available image binding points!");
             return -1;
         }
-        glBindBufferBase(buffer.target, binding, buffer.ID);
+        glBindBufferBase(target, binding, buffer.ID);
         usedBindings.put(key, binding);
         return binding;
     }
