@@ -11,7 +11,7 @@ public abstract class Multiplayer {
 
     private final int ID;
     private final Socket socket;
-    private final BufferedInputStream in;
+    private final ServerStream in;
     private final BufferedOutputStream out;
     private boolean listening;
     private final ArrayList<Pack> packets;
@@ -19,12 +19,12 @@ public abstract class Multiplayer {
 
     public Multiplayer(String serverHost, int serverPort) throws IOException {
         this.socket = new Socket(serverHost, serverPort);
-        this.in = new BufferedInputStream(socket.getInputStream());
+        this.in = new ServerStream(socket.getInputStream());
         this.out = new BufferedOutputStream(socket.getOutputStream());
         this.listening = false;
         this.packets = new ArrayList<>();
 
-        this.ID = ByteBuffer.wrap(in.readNBytes(4)).getInt();
+        this.ID = in.read(4).getInt();
     }
 
     public void start() {
@@ -65,7 +65,7 @@ public abstract class Multiplayer {
         new Thread(() -> {
             try {
                 while (!socket.isClosed()) {
-                    ByteBuffer header = ByteBuffer.wrap(in.readNBytes(8));
+                    ByteBuffer header = in.read(8);
                     int clientID = header.getInt();
                     int packetID = header.getInt();
                     MultiplayerPacket p = PacketRegistry.create(packetID);
