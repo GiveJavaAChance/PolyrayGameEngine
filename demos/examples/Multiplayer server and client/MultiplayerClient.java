@@ -1,10 +1,10 @@
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import polyray.multiplayer.Multiplayer;
 import polyray.multiplayer.MultiplayerPacket;
 import polyray.multiplayer.PacketRegistry;
+import polyray.multiplayer.ServerStream;
 
 public class MultiplayerClient {
 
@@ -46,8 +46,8 @@ public class MultiplayerClient {
         public int width, height;
 
         @Override
-        public void read(BufferedInputStream in) throws IOException {
-            ByteBuffer buffer = ByteBuffer.wrap(in.readNBytes(8));
+        public void read(ServerStream in) throws IOException {
+            ByteBuffer buffer = in.read(8);
             this.width = buffer.getInt();
             this.height = buffer.getInt();
         }
