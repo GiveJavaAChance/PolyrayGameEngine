@@ -35,7 +35,9 @@ public abstract class RenderObjectBase {
         vao = glGenVertexArrays();
         glBindVertexArray(vao);
         vbo = vboTemplate.build(0);
-        instanceVbo = instanceVboTemplate.build(vbo.numAttributes);
+        if (instanceVboTemplate != null) {
+            instanceVbo = instanceVboTemplate.build(vbo.numAttributes);
+        }
         glBindVertexArray(0);
     }
 
