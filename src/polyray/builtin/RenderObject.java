@@ -4,18 +4,13 @@ import java.util.ArrayList;
 import polyray.GLTexture;
 import polyray.ShaderProgram;
 import polyray.Texture;
-import polyray.VertexBuffer;
+import polyray.VertexBufferTemplate;
 import static org.lwjgl.opengl.GL43.*;
-import polyray.VertexBuffer.VertexBufferTemplate;
 import polyray.modular.Instance;
 import polyray.modular.RenderObjectBase;
 import polyray.modular.Vertex;
 
 public class RenderObject extends RenderObjectBase {
-
-    public RenderObject(ShaderProgram shader, VertexBuffer vbo, VertexBuffer instanceVbo) {
-        super(shader, vbo, instanceVbo);
-    }
 
     public RenderObject(ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         super(shader, vboTemplate, instanceVboTemplate);

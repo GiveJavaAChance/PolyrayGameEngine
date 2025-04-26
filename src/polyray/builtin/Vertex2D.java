@@ -2,7 +2,8 @@ package polyray.builtin;
 
 import polyray.modular.Vertex;
 import java.nio.FloatBuffer;
-import polyray.VertexBuffer.*;
+import polyray.VertexBufferTemplate;
+import polyray.VertexBufferTemplate.VertexAttribute;
 
 public class Vertex2D implements Vertex {
 

@@ -3,7 +3,8 @@ package polyray.builtin;
 import polyray.modular.Instance;
 import java.nio.FloatBuffer;
 import polyray.Transform3D;
-import polyray.VertexBuffer.*;
+import polyray.VertexBufferTemplate;
+import polyray.VertexBufferTemplate.VertexAttribute;
 
 public class Instance3D implements Instance {
 

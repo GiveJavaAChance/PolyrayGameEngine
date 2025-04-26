@@ -4,7 +4,8 @@ import polyray.modular.Instance;
 import java.awt.geom.AffineTransform;
 import java.nio.FloatBuffer;
 import polyray.Transform2D;
-import polyray.VertexBuffer.*;
+import polyray.VertexBufferTemplate;
+import polyray.VertexBufferTemplate.VertexAttribute;
 
 public class Instance2D implements Instance {
 
