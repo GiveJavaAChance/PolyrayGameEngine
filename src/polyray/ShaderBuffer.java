@@ -15,6 +15,12 @@ public class ShaderBuffer {
         this.usage = usage;
     }
 
+    public ShaderBuffer(int target, int usage, int ID) {
+        this.ID = ID;
+        this.target = target;
+        this.usage = usage;
+    }
+
     public void setUsage(int usage) {
         this.usage = usage;
     }
@@ -38,7 +44,27 @@ public class ShaderBuffer {
         glBindBuffer(target, ID);
         glBufferData(target, data, usage);
     }
-    
+
+    public void uploadPartialData(int[] data, int offset) {
+        glBindBuffer(target, ID);
+        glBufferSubData(target, (long) offset << 2l, data);
+    }
+
+    public void uploadPartialData(long[] data, int offset) {
+        glBindBuffer(target, ID);
+        glBufferSubData(target, (long) offset << 3l, data);
+    }
+
+    public void uploadPartialData(float[] data, int offset) {
+        glBindBuffer(target, ID);
+        glBufferSubData(target, (long) offset << 2l, data);
+    }
+
+    public void uploadPartialData(ByteBuffer data, long offset) {
+        glBindBuffer(target, ID);
+        glBufferSubData(target, offset, data);
+    }
+
     public void bind() {
         glBindBuffer(target, ID);
     }
