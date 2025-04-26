@@ -4,10 +4,10 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import static org.lwjgl.opengl.GL43.*;
 import polyray.GLTexture;
+import polyray.ShaderBuffer;
 import polyray.ShaderProgram;
 import polyray.Texture;
-import polyray.VertexBuffer;
-import polyray.VertexBuffer.VertexBufferTemplate;
+import polyray.VertexBufferTemplate;
 
 public abstract class RenderObjectBase {
 
@@ -20,11 +20,12 @@ public abstract class RenderObjectBase {
     protected int numVertices = 0, numInstances = 0;
 
     protected int vao;
-    protected VertexBuffer vbo, instanceVbo;
+    protected ShaderBuffer vbo, instanceVbo;
+    protected int vboLength, instanceLength;
     protected GLTexture texture;
     protected int mode = GL_TRIANGLES;
 
-    public RenderObjectBase(ShaderProgram shader, VertexBuffer vbo, VertexBuffer instanceVbo) {
+    public RenderObjectBase(ShaderProgram shader, ShaderBuffer vbo, ShaderBuffer instanceVbo) {
         this.shader = shader;
         this.vbo = vbo;
         this.instanceVbo = instanceVbo;
@@ -32,11 +33,13 @@ public abstract class RenderObjectBase {
 
     public RenderObjectBase(ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         this.shader = shader;
-        vao = glGenVertexArrays();
+        this.vao = glGenVertexArrays();
         glBindVertexArray(vao);
-        vbo = vboTemplate.build(0);
+        this.vbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, vboTemplate.build(0));
+        this.vboLength = vboTemplate.getSize();
         if (instanceVboTemplate != null) {
-            instanceVbo = instanceVboTemplate.build(vbo.numAttributes);
+            this.instanceVbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, instanceVboTemplate.build(vboTemplate.getAttributeCount()));
+            this.instanceLength = instanceVboTemplate.getSize();
         }
         glBindVertexArray(0);
     }
@@ -78,26 +81,26 @@ public abstract class RenderObjectBase {
     }
 
     public void upload() {
-        FloatBuffer buffer = FloatBuffer.allocate(vertices.size() * vbo.length);
+        FloatBuffer buffer = FloatBuffer.allocate(vertices.size() * vboLength);
         for (Vertex v : vertices) {
             v.put(buffer);
         }
         buffer.flip();
 
         vbo.bind();
-        vbo.setData(buffer.array(), true);
+        vbo.uploadData(buffer.array());
         this.numVertices = vertices.size();
     }
 
     public void uploadInstances() {
-        FloatBuffer buffer = FloatBuffer.allocate(instances.size() * instanceVbo.length);
+        FloatBuffer buffer = FloatBuffer.allocate(instances.size() * instanceLength);
         for (Instance i : instances) {
             i.toFloatBuffer(buffer);
         }
         buffer.flip();
 
         instanceVbo.bind();
-        instanceVbo.setData(buffer.array(), true);
+        instanceVbo.uploadData(buffer.array());
         this.numInstances = instances.size();
     }
 
