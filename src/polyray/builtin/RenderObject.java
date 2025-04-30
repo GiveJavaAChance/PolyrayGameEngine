@@ -39,14 +39,6 @@ public class RenderObject extends RenderObjectBase {
     public void addAllInstances(ArrayList<Instance> instances) {
         this.instances.addAll(instances);
     }
-    
-    public void removeVertex(Vertex v) {
-        this.vertices.remove(v);
-    }
-    
-    public void removeInstance(Instance i) {
-        this.instances.remove(i);
-    }
 
     @Override
     public void render() {
