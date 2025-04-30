@@ -19,6 +19,7 @@
 * Local and Global ID manager for multiplayer.
 * Extremely fast text renderer.
 * Noise functions such as "Inigo Quilez noise" and Voronoi path noise.
+
 These features will first be tested and expanded upon in the test-branch
 
 ### Dependencies:
