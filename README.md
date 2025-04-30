@@ -9,5 +9,17 @@
 
 #### **[Read the Full Technical Report (PDF)](https://givejavaachance.github.io/PolyrayGameEngine/Polyray%20Game%20Engine%20Report.pdf)**
 
+### Future Features:
+* A Modular Entity system.
+* A Modular item system.
+* P2IN parser for items.
+* Mod support.
+* Moddable Property class for items.
+* Gizmos drawing.
+* Local and Global ID manager for multiplayer.
+* Extremely fast text renderer.
+* Noise functions such as "Inigo Quilez noise" and Voronoi path noise.
+These features will first be tested and expanded upon in the test-branch
+
 ### Dependencies:
 Requires LWJGL
