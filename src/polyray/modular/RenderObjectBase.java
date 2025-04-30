@@ -79,6 +79,14 @@ public abstract class RenderObjectBase {
     public void addInstance(Instance i) {
         instances.add(i);
     }
+    
+    public void removeVertex(Vertex v) {
+        this.vertices.remove(v);
+    }
+    
+    public void removeInstance(Instance i) {
+        this.instances.remove(i);
+    }
 
     public void upload() {
         FloatBuffer buffer = FloatBuffer.allocate(vertices.size() * vboLength);
