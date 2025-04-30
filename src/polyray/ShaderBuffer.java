@@ -24,6 +24,11 @@ public class ShaderBuffer {
     public void setUsage(int usage) {
         this.usage = usage;
     }
+    
+    public void setSize(int size) {
+        glBindBuffer(target, ID);
+        glBufferData(target, size, usage);
+    }
 
     public void uploadData(int[] data) {
         glBindBuffer(target, ID);
