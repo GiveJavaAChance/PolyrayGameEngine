@@ -11,6 +11,7 @@
 
 ### Future Features:
 * A Modular Entity system.
+* A Modular Particle system.
 * A Modular item system.
 * P2IN parser for items.
 * Mod support.
