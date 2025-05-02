@@ -60,7 +60,7 @@ public abstract class RendererBase {
         return this.output;
     }
     
-    public void setPostProcess(BiFunction<GLTexture, GLTexture, DefaultPostProcess> post) {
+    public void setPostProcess(BiFunction<GLTexture, GLTexture, PostProcessor> post) {
         if(post == null) {
             this.post = null;
             return;
