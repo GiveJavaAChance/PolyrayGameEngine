@@ -21,7 +21,7 @@ public class GLFWindow {
     private int effect = numEffects - 1;
     private int effectKey = GLFW_KEY_G;
 
-    private int button;
+    private int button = -1;
     private float mx, my;
 
     public GLFWindow(String name) {
