@@ -10,11 +10,10 @@ public class GLFramebufferMSAA {
     public final int ID;
     public GLTextureMSAA render, depthTexture;
 
-    public GLFramebufferMSAA(int width, int height, int samples) {
-        // Generate the framebuffer and texture
+    public GLFramebufferMSAA(int width, int height, int colorInterFormat, int depthInterFormat, int samples) {
         ID = glGenFramebuffers();
-        render = new GLTextureMSAA(width, height, GL_RGBA8, samples);
-        depthTexture = new GLTextureMSAA(width, height, GL_DEPTH_COMPONENT24, samples);
+        render = new GLTextureMSAA(width, height, colorInterFormat, samples);
+        depthTexture = new GLTextureMSAA(width, height, depthInterFormat, samples);
 
         bind();
 
@@ -26,6 +25,10 @@ public class GLFramebufferMSAA {
         }
 
         unbind();
+    }
+
+    public GLFramebufferMSAA(int width, int height, int samples) {
+        this(width, height, GL_RGBA8, GL_DEPTH_COMPONENT24, samples);
     }
 
     public final void bind() {
