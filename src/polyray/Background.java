@@ -17,61 +17,39 @@ public class Background {
     public Background(int cameraBufferBinding) {
         String vertexShaderSource = """
                                     #version 420
+                                    #append "Camera3D.glsl";
+                                    
                                     layout(location = 0) in vec2 position;
+                                    
+                                    out vec3 rayDir;
+                                    
+                                    uniform float inv = 1.0;
+                                    
                                     void main() {
                                         gl_Position = vec4(position, 0.0, 1.0);
+                                        vec4 clipSpace = vec4(position, -1.0, 1.0);
+                                        vec4 viewSpace = inverse(projection) * clipSpace;
+                                        vec3 rayDirView = normalize(viewSpace.xyz / viewSpace.w);
+                                        rayDir = mat3(inverse(viewMatrix)) * rayDirView * inv;
                                     }
                                     """;
 
         String fragmentShaderSource = """
                                       #version 420
+                                      
                                       #append "Environment.glsl";
-                                      #append "Camera3D.glsl";
                                       
-                                      uniform vec2 screenSize;
-                                      
-                                      float hash(float n) {
-                                          return fract(sin(n) * 43758.5453123);
-                                      }
-                                      
-                                      vec3 ditherColor(vec3 color) {
-                                          // Calculate thresholds for each color channel
-                                          float thresholdR = fract(color.r * 255.0);
-                                          float thresholdG = fract(color.g * 255.0);
-                                          float thresholdB = fract(color.b * 255.0);
-                                          // Generate random values based on fragment coordinates
-                                          float seedR = hash(gl_FragCoord.x + gl_FragCoord.y * 1.1763);
-                                          float seedG = hash(gl_FragCoord.x + gl_FragCoord.y * 2.8765);
-                                          float seedB = hash(gl_FragCoord.x + gl_FragCoord.y * 3.2906);
-                                          // Compare random values to thresholds and adjust color if needed
-                                          if (seedR > thresholdR) {
-                                              color.r = min(color.r + 1.0 / 255.0, 1.0);
-                                          }
-                                          if (seedG > thresholdG) {
-                                              color.g = min(color.g + 1.0 / 255.0, 1.0);
-                                          }
-                                          if (seedB > thresholdB) {
-                                              color.b = min(color.b + 1.0 / 255.0, 1.0);
-                                          }
-                                          return color;
-                                      }
+                                      in vec3 rayDir;
                                       
                                       out vec4 color;
                                       
                                       void main() {
-                                          vec2 ndc = (gl_FragCoord.xy / screenSize) * 2.0 - 1.0;
-                                          vec4 clipSpace = vec4(ndc, -1.0, 1.0);
-                                          vec4 viewSpace = inverse(projection) * clipSpace;
-                                          vec3 rayDirView = normalize(viewSpace.xyz / viewSpace.w);
-                                          vec3 rayDirWorld = normalize(mat3(inverse(viewMatrix)) * rayDirView);
-                                          float dot = max(dot(rayDirWorld, sunDir), 0.0);
+                                          vec3 dir = normalize(rayDir);
+                                          float dot = max(dot(dir, sunDir), 0.0);
                                           float thresh = 0.999;
                                           float solid = min(max(dot - thresh, 0.0) / (1.0 - thresh) * 10.0, 1.0);
                                           vec3 col = ambientColor + (pow(dot, 100.0) + solid * 5.0) * sunColor;
-                                          //col = vec3((ndc + 1.0) * 0.5, 0.0);            // Visualize NDC
-                                          //col = (rayDirView + 1.0) * 0.5;          // Visualize ray in view space
-                                          //col = (rayDirWorld + 1.0) * 0.5;         // Visualize ray in world space
-                                          color = vec4(ditherColor(col), 1.0);
+                                          color = vec4(col, 1.0);
                                       }
                                       """;
         this.environmentBuffer = new ShaderBuffer(GL_UNIFORM_BUFFER, GL_DYNAMIC_DRAW);
@@ -96,12 +74,15 @@ public class Background {
         this.ambientColor = color;
     }
 
+    public void invertSunDir(boolean invert) {
+        quadProgram.use();
+        quadProgram.setUniform("inv", (invert ? -1.0f : 1.0f));
+        quadProgram.unuse();
+    }
+
     private void setupFullscreenQuad() {
         float[] quadVertices = {
-            // positions
-            -1.0f, 1.0f,
             -1.0f, -1.0f,
-            1.0f, -1.0f,
             -1.0f, 1.0f,
             1.0f, -1.0f,
             1.0f, 1.0f
@@ -118,12 +99,11 @@ public class Background {
         glBindVertexArray(0);
     }
 
-    public void render(float width, float height) {
+    public void render() {
         this.environmentBuffer.uploadData(new float[]{sunDir.x, sunDir.y, sunDir.z, 0.0f, sunColor.x, sunColor.y, sunColor.z, 0.0f, ambientColor.x, ambientColor.y, ambientColor.z, 0.0f});
         quadProgram.use();
-        quadProgram.setUniform("screenSize", width, height);
         glBindVertexArray(quadVao);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
         quadProgram.unuse();
     }

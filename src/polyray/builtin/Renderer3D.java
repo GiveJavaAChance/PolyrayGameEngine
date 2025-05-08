@@ -143,7 +143,7 @@ public class Renderer3D extends RendererBase {
         cameraData.put(cameraTransform.inverse().matrix, 12, 3);
         cameraTransformBuffer.uploadData(cameraData.array());
         uiTransformBuffer.uploadData(uiTransform.toFloatBuffer(FloatBuffer.allocate(12), true).array());
-        background.render(width, height);
+        background.render();
 
         glEnable(GL_DEPTH_TEST);
 

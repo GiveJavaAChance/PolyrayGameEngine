@@ -1,12 +1,10 @@
 package polyray.modular;
 
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 import polyray.FullscreenQuad;
 import polyray.GLFramebuffer;
 import polyray.GLFramebufferMSAA;
 import polyray.GLTexture;
-import polyray.DefaultPostProcess;
 import static org.lwjgl.opengl.GL43.*;
 
 public abstract class RendererBase {
