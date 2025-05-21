@@ -1,5 +1,5 @@
 #define DISCORDPP_IMPLEMENTATION
-#include "jds_JDS.h"
+#include "polyray_systems_jds_JDS.h"
 #include "discordpp.h"
 #include <iostream>
 #include <thread>
@@ -49,7 +49,7 @@ void displayFriendsList() {
     }
 }
 
-JNIEXPORT void JNICALL Java_jds_JDS_setup (JNIEnv* env, jobject obj, jlong a) {
+JNIEXPORT void JNICALL Java_polyray_systems_jds_JDS_setup (JNIEnv* env, jobject obj, jlong a) {
 
     applicationId = static_cast<uint64_t>(a);
     std::signal(SIGINT, signalHandler);
@@ -79,7 +79,7 @@ JNIEXPORT void JNICALL Java_jds_JDS_setup (JNIEnv* env, jobject obj, jlong a) {
                 }
             });
 
-            jclass jcls = env->FindClass("jds/JDS");
+            jclass jcls = env->FindClass("polyray/systems/jds/JDS");
             if (jcls == nullptr) {
                 std::cerr << "Could not find class jds.JDS\n";
                 return;
@@ -131,7 +131,7 @@ JNIEXPORT void JNICALL Java_jds_JDS_setup (JNIEnv* env, jobject obj, jlong a) {
     });
 }
 
-JNIEXPORT void JNICALL Java_jds_JDS_setActivity (JNIEnv* env, jobject, jstring a, jstring b) {
+JNIEXPORT void JNICALL Java_polyray_systems_jds_JDS_setActivity (JNIEnv* env, jobject, jstring a, jstring b) {
     const char* activityState = env->GetStringUTFChars(a, nullptr);
     const char* activityDetails = env->GetStringUTFChars(b, nullptr);
 
@@ -151,6 +151,6 @@ JNIEXPORT void JNICALL Java_jds_JDS_setActivity (JNIEnv* env, jobject, jstring a
     env->ReleaseStringUTFChars(b, activityDetails);
 }
 
-JNIEXPORT void JNICALL Java_jds_JDS_update (JNIEnv* env, jobject) {
+JNIEXPORT void JNICALL Java_polyray_systems_jds_JDS_update (JNIEnv* env, jobject) {
     discordpp::RunCallbacks();
 }

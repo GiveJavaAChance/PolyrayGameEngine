@@ -12,7 +12,7 @@ public class JDS {
     private static boolean READY = false;
 
     /**
-     * Put the JDS API.dll and the discord_partner_sdk.dll next to the java bin
+     * Puts the JDS API.dll and the discord_partner_sdk.dll next to the java bin
      * directory. For standalone JRE's, it's "path\to\JRE\bin". For downloaded
      * java, it's "C:\Program Files\Java\jdk-{JAVA VERSION}\bin".
      *
@@ -42,6 +42,7 @@ public class JDS {
             }
         } catch (IOException e) {
         }
+        System.load(jdsOut.getAbsolutePath());
     }
 
     public static native void setup(long applicationId);
