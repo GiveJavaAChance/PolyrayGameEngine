@@ -31,23 +31,22 @@ float geometrySchlickGGX(float NdotV, float roughness) {
 vec3 PBRLighting(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 lightColor, vec3 albedo) {
     vec3 H = normalize(viewDir + lightDir);
     vec3 F = fresnelSchlick(max(dot(H, viewDir), 0.0), F0);
-
+    
+    float NV = max(dot(normal, viewDir), 0.0);
+    float NL = max(dot(normal, lightDir), 0.0);
+    
     float D = distributionGGX(normal, H, roughness);
-    float G = geometrySchlickGGX(max(dot(normal, viewDir), 0.0), roughness) *
-              geometrySchlickGGX(max(dot(normal, lightDir), 0.0), roughness);
+    float G = geometrySchlickGGX(NV, roughness) *
+              geometrySchlickGGX(NL, roughness);
 
-    vec3 numerator = D * G * F;
-    float denominator = 4.0 * max(dot(normal, viewDir), 0.0) * max(dot(normal, lightDir), 0.0) + 0.001;
-    vec3 specular = numerator / denominator;
+    vec3 specular = D * G * F / max(NV * NL, 0.01) * 0.25;
 
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
 
-    float NdotL = max(dot(normal, lightDir), 0.0);
-
     vec3 diffuse = kD * albedo / PI;
-    return (diffuse + specular) * lightColor * NdotL;
+    return (diffuse + specular) * lightColor * NL;
 }
 
 vec3 PBRLighting(vec3 normal, vec3 viewDir, vec3 pos, PointLight light, vec3 albedo) {
