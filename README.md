@@ -10,6 +10,7 @@
 #### **[Read the Full Technical Report (PDF)](https://givejavaachance.github.io/PolyrayGameEngine/Polyray%20Game%20Engine%20Report.pdf)**
 
 ### Future Features:
+* Discord Social SDK bindings!
 * A Modular Entity system.
 * A Modular Particle system.
 * A Modular item system.
