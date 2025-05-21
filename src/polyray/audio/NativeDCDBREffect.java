@@ -9,9 +9,9 @@ public class NativeDCDBREffect implements Effect {
 
     static {
         try {
-            File tempFile = File.createTempFile("DCDBRNative", ".dll");
+            File tempFile = File.createTempFile("DCDBRNative2", ".dll");
             tempFile.deleteOnExit();
-            try ( FileOutputStream out = new FileOutputStream(tempFile);  InputStream in = NativeDCDBREffect.class.getResourceAsStream("DCDBRNative.dll")) {
+            try ( FileOutputStream out = new FileOutputStream(tempFile);  InputStream in = NativeDCDBREffect.class.getResourceAsStream("DCDBRNative2.dll")) {
                 byte[] buffer = new byte[4096];
                 int bytesRead;
                 while ((bytesRead = in.read(buffer)) != -1) {
