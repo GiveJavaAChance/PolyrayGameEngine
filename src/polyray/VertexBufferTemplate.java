@@ -34,6 +34,20 @@ public class VertexBufferTemplate {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         return vbo;
     }
+    
+    public void build(int idx, int vbo) {
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        int off = 0;
+        for (VertexAttribute attribute : attributes) {
+            attribute.bind(idx, off, totalSize);
+            if (instance) {
+                glVertexAttribDivisor(idx, 1);
+            }
+            idx++;
+            off += attribute.size;
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 
     public int getSize() {
         return this.totalSize;
