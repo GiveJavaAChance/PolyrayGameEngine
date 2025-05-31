@@ -121,11 +121,11 @@ public class ShaderPreprocessor {
         return new ShaderPreprocessor(true, computeSource);
     }
 
-    static ShaderPreprocessor fromLocalFiles(String vertexFile, String fragmentFile) {
+    public static ShaderPreprocessor fromLocalFiles(String vertexFile, String fragmentFile) {
         return new ShaderPreprocessor(false, readLocalFile(vertexFile), readLocalFile(fragmentFile));
     }
 
-    static ShaderPreprocessor fromLocalFiles(String computeFile) {
+    public static ShaderPreprocessor fromLocalFiles(String computeFile) {
         return new ShaderPreprocessor(true, readLocalFile(computeFile));
     }
 
