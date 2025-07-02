@@ -1,7 +1,5 @@
 package polyray.modular;
 
-import java.nio.FloatBuffer;
-import java.util.ArrayList;
 import static org.lwjgl.opengl.GL43.*;
 import polyray.GLTexture;
 import polyray.ShaderBuffer;
@@ -9,15 +7,11 @@ import polyray.ShaderProgram;
 import polyray.Texture;
 import polyray.VertexBufferTemplate;
 
-public abstract class RenderObjectBase {
+public abstract class RenderObjectBase implements Renderable {
 
-    public boolean doRender = true;
     protected boolean removed = false;
 
     protected ShaderProgram shader;
-    protected ArrayList<Vertex> vertices = new ArrayList<>();
-    protected ArrayList<Instance> instances = new ArrayList<>();
-    protected int numVertices = 0, numInstances = 0;
 
     protected int vao;
     protected ShaderBuffer vbo, instanceVbo;
@@ -25,28 +19,31 @@ public abstract class RenderObjectBase {
     protected GLTexture texture;
     protected int mode = GL_TRIANGLES;
 
-    public RenderObjectBase(ShaderProgram shader, ShaderBuffer vbo, ShaderBuffer instanceVbo) {
+    public RenderObjectBase(ShaderProgram shader, ShaderBuffer vbo, ShaderBuffer instanceVbo, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         this.shader = shader;
         this.vbo = vbo;
         this.instanceVbo = instanceVbo;
-    }
+        this.vboLength = vboTemplate.getSize();
 
-    public RenderObjectBase(ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
-        this.shader = shader;
         this.vao = glGenVertexArrays();
         glBindVertexArray(vao);
-        this.vbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, vboTemplate.build(0));
-        this.vboLength = vboTemplate.getSize();
-        if (instanceVboTemplate != null) {
-            this.instanceVbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, instanceVboTemplate.build(vboTemplate.getAttributeCount()));
+        vboTemplate.build(0, vbo.ID);
+        if (instanceVboTemplate != null && instanceVbo != null) {
             this.instanceLength = instanceVboTemplate.getSize();
+            instanceVboTemplate.build(vboTemplate.getAttributeCount(), instanceVbo.ID);
         }
         glBindVertexArray(0);
     }
 
+    public RenderObjectBase(ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
+        this(shader, new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW), instanceVboTemplate == null ? null : new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW), vboTemplate, instanceVboTemplate);
+    }
+
     public RenderObjectBase(Texture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         this(shader, vboTemplate, instanceVboTemplate);
-        this.texture = new GLTexture(texture, GL_RGBA8, false, false);
+        if (texture != null) {
+            this.texture = new GLTexture(texture, GL_RGBA8, false, false);
+        }
     }
 
     public RenderObjectBase(GLTexture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
@@ -66,63 +63,8 @@ public abstract class RenderObjectBase {
         return this.shader;
     }
 
-    public void addVertex(Vertex v) {
-        vertices.add(v);
-    }
-
-    public void addTriangle(Vertex a, Vertex b, Vertex c) {
-        vertices.add(a);
-        vertices.add(b);
-        vertices.add(c);
-    }
-
-    public void addInstance(Instance i) {
-        instances.add(i);
-    }
-    
-    public void removeVertex(Vertex v) {
-        this.vertices.remove(v);
-    }
-    
-    public void removeInstance(Instance i) {
-        this.instances.remove(i);
-    }
-
-    public void upload() {
-        FloatBuffer buffer = FloatBuffer.allocate(vertices.size() * vboLength);
-        for (Vertex v : vertices) {
-            v.put(buffer);
-        }
-        buffer.flip();
-
-        vbo.bind();
-        vbo.uploadData(buffer.array());
-        this.numVertices = vertices.size();
-    }
-
-    public void uploadInstances() {
-        FloatBuffer buffer = FloatBuffer.allocate(instances.size() * instanceLength);
-        for (Instance i : instances) {
-            i.toFloatBuffer(buffer);
-        }
-        buffer.flip();
-
-        instanceVbo.bind();
-        instanceVbo.uploadData(buffer.array());
-        this.numInstances = instances.size();
-    }
-
-    public void clearCPUMemory() {
-        vertices.clear();
-        instances.clear();
-    }
-
     public boolean isRemoved() {
         return removed;
-    }
-
-    public boolean isClear() {
-        return numVertices == 0 || numInstances == 0;
     }
 
     public void remove() {
@@ -141,5 +83,6 @@ public abstract class RenderObjectBase {
         removed = true;
     }
 
+    @Override
     public abstract void render();
 }

@@ -102,11 +102,11 @@ public abstract class RendererBase {
         }
     }
 
-    public void render(int width, int height) {
+    public void render() {
         start();
-        renderInternal(width, height);
+        renderInternal();
         end();
     }
 
-    protected abstract void renderInternal(int width, int height);
+    protected abstract void renderInternal();
 }
