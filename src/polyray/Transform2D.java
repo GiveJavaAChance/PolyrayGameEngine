@@ -133,7 +133,7 @@ public class Transform2D {
         return buffer;
     }
 
-    private static boolean invertMatrix(float[] m, float[] invOut) {
+    public static final boolean invertMatrix(float[] m, float[] invOut) {
         float det = m[0] * m[4] * m[8]
                 - m[0] * m[5] * m[7]
                 - m[1] * m[3] * m[8]
@@ -145,17 +145,15 @@ public class Transform2D {
         }
         det = 1.0f / det;
 
-        float[] inv = new float[9];
-        inv[0] = (m[4] * m[8] - m[7] * m[5]) * det;
-        inv[1] = (m[2] * m[7] - m[1] * m[8]) * det;
-        inv[2] = (m[1] * m[5] - m[2] * m[4]) * det;
-        inv[3] = (m[5] * m[6] - m[3] * m[8]) * det;
-        inv[4] = (m[0] * m[8] - m[2] * m[6]) * det;
-        inv[5] = (m[2] * m[3] - m[0] * m[5]) * det;
-        inv[6] = (m[3] * m[7] - m[4] * m[6]) * det;
-        inv[7] = (m[1] * m[6] - m[0] * m[7]) * det;
-        inv[8] = (m[0] * m[4] - m[1] * m[3]) * det;
-        System.arraycopy(inv, 0, invOut, 0, 9);
+        invOut[0] = (m[4] * m[8] - m[7] * m[5]) * det;
+        invOut[1] = (m[2] * m[7] - m[1] * m[8]) * det;
+        invOut[2] = (m[1] * m[5] - m[2] * m[4]) * det;
+        invOut[3] = (m[5] * m[6] - m[3] * m[8]) * det;
+        invOut[4] = (m[0] * m[8] - m[2] * m[6]) * det;
+        invOut[5] = (m[2] * m[3] - m[0] * m[5]) * det;
+        invOut[6] = (m[3] * m[7] - m[4] * m[6]) * det;
+        invOut[7] = (m[1] * m[6] - m[0] * m[7]) * det;
+        invOut[8] = (m[0] * m[4] - m[1] * m[3]) * det;
         return true;
     }
 }

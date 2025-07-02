@@ -162,7 +162,7 @@ public final class Transform3D {
         return buffer;
     }
 
-    private static boolean invertMatrix(float[] m, float[] invOut) {
+    public static final boolean invertMatrix(float[] m, float[] invOut) {
         float[] inv = new float[16];
         float det;
 
