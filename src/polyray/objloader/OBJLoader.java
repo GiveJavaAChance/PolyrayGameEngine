@@ -37,7 +37,8 @@ public class OBJLoader {
         HashMap<String, OBJMaterial> materials = MTLParser.loadMTLFile(mtlFile);
 
         ArrayList<RenderObject> objects = new ArrayList<>();
-        RenderObject currentObject = null;
+        RenderObject currentObject;
+        ArrayList<Vertex3D> vertices = null;
 
         BufferedReader reader = new BufferedReader(new FileReader(objFile));
         String line;
@@ -86,11 +87,13 @@ public class OBJLoader {
                     } else {
                         Texture tex = new Texture(ImageIO.read(new File(m.mapKd)));
                         currentObject = new RenderObject(tex, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
+                        vertices = new ArrayList<>();
+                        currentObject.setVertices(vertices);
                     }
                     objects.add(currentObject);
                 }
                 case "f" -> {
-                    addFace(tokens, currentObject, v, vn, vt);
+                    addFace(tokens, vertices, v, vn, vt);
                 }
             }
         }
@@ -98,7 +101,7 @@ public class OBJLoader {
         return objects;
     }
 
-    private static void addFace(String[] tokens, RenderObject obj, ArrayList<Vector3f> v, ArrayList<Vector3f> vn, ArrayList<Vector2f> vt) {
+    private static void addFace(String[] tokens, ArrayList<Vertex3D> obj, ArrayList<Vector3f> v, ArrayList<Vector3f> vn, ArrayList<Vector2f> vt) {
         for (int i = 1; i <= 3; i++) {
             String[] indices = tokens[i].split("/");
             int vIdx = parseIndex(indices[0], v.size());
@@ -109,7 +112,7 @@ public class OBJLoader {
             Vector2f texCoord = (tIdx != -1) ? vt.get(tIdx) : new Vector2f();
             Vector3f normal = (nIdx != -1) ? vn.get(nIdx) : new Vector3f();
 
-            obj.addVertex(new Vertex3D(
+            obj.add(new Vertex3D(
                     position.x, position.y, position.z,
                     normal.x, normal.y, normal.z,
                     texCoord.x, texCoord.y
