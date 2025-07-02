@@ -28,9 +28,9 @@ public class Background {
                                     void main() {
                                         gl_Position = vec4(position, 0.0, 1.0);
                                         vec4 clipSpace = vec4(position, -1.0, 1.0);
-                                        vec4 viewSpace = inverse(projection) * clipSpace;
+                                        vec4 viewSpace = inverseProjection * clipSpace;
                                         vec3 rayDirView = normalize(viewSpace.xyz / viewSpace.w);
-                                        rayDir = mat3(inverse(viewMatrix)) * rayDirView * inv;
+                                        rayDir = mat3(inverseCameraTransform) * rayDirView * inv;
                                     }
                                     """;
 
