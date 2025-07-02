@@ -13,7 +13,7 @@ out vec3 pos;
 
 void main() {
     vec3 p = (instanceTransform * vec4(position, 1.0)).xyz;
-    gl_Position = projection * (viewMatrix * vec4(p, 1.0));
+    gl_Position = projection * (cameraTransform * vec4(p - cameraPos, 1.0));
     mat3 normalMatrix = transpose(inverse(mat3(instanceTransform)));
     norm = normalize(normalMatrix * normal);
     uv = uvCoords;
