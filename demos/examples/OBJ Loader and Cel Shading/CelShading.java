@@ -1,3 +1,4 @@
+
 import java.awt.AWTException;
 import java.awt.Dimension;
 import java.awt.MouseInfo;
@@ -18,6 +19,7 @@ import polyray.ResourceLoader;
 import polyray.ShaderPreprocessor;
 import polyray.Transform3D;
 import polyray.Vector3f;
+import polyray.builtin.Camera3D;
 import polyray.builtin.Instance3D;
 import polyray.builtin.RenderObject;
 import polyray.builtin.Renderer3D;
@@ -37,7 +39,7 @@ public class CelShading {
     public Renderer3D u;
 
     public Transform3D cameraTransform;
-    public final Vector3f cameraPos = new Vector3f();
+    public Vector3f cameraPos;
     public final Vector3f cameraAng = new Vector3f();
 
     static {
@@ -60,16 +62,19 @@ public class CelShading {
         w = new GLFWindow("Flat Shading");
         w.createFrame(500, 500, false, true, false);
         u = new Renderer3D(w.getWidth(), w.getHeight(), 16);
-        u.setup(0.1f, 1000.0f);
-        cameraTransform = u.getCameraTransform();
-        
-        Background b = u.getBackground();
+
+        Camera3D cam = new Camera3D(0.1f, 1000.0f);
+        cameraTransform = cam.cameraTransform;
+        cameraPos = cam.pos;
+
+        Background b = new Background(cam.cameraBinding);
+        u.setBackground(b);
         b.setAmbientColor(new Vector3f(0.2f, 0.1f, 0.0f));
         b.setSunColor(new Vector3f(0.8f, 0.5f, 0.3f));
-        
+
         ShaderPreprocessor proc = ShaderPreprocessor.fromFiles("Flat.vert", "Flat.frag");
         proc.appendAll();
-        proc.setInt("CAM3D_IDX", u.getCameraTransformBinding());
+        proc.setInt("CAM3D_IDX", cam.cameraBinding);
         proc.setInt("ENV_IDX", BindingRegistry.bindBufferBase(b.environmentBuffer));
 
         ArrayList<RenderObject> objects = null;
@@ -79,13 +84,15 @@ public class CelShading {
             });
         } catch (IOException e) {
         }
-        if(objects == null) {
+        if (objects == null) {
             return;
         }
         for (RenderObject obj : objects) {
             obj.upload();
             u.add3DObject(obj);
-            obj.addInstance(new Instance3D(new Transform3D()));
+            ArrayList<Instance3D> objInstances = new ArrayList<>();
+            objInstances.add(new Instance3D(new Transform3D()));
+            obj.setInstances(objInstances);
             obj.uploadInstances();
         }
 
@@ -99,7 +106,8 @@ public class CelShading {
             freeCameraMovement(dt);
             updateTransform();
 
-            u.render(w.getWidth(), w.getHeight());
+            cam.upload(w.getWidth(), w.getHeight());
+            u.render();
 
             w.update();
             dt = (System.nanoTime() - startTime) / 1000000000.0f;
@@ -152,7 +160,6 @@ public class CelShading {
 
     public final void updateTransform() {
         cameraTransform.setToIdentity();
-        cameraTransform.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
         cameraTransform.rotateY(cameraAng.y);
         cameraTransform.rotateX(cameraAng.x);
     }
