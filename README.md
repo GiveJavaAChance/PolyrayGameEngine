@@ -57,8 +57,6 @@ Developers end up spending more time figuring out the engine than actually using
 
 But this engine was built from scratch, reinventing many core systems to ensure a unified naming convention and consistent design.
 
-From reinventing, the engine has come from a developer with a different perspective on things, not just performance, features or simplicity, but both, focusing on the user experience just as much as performance.
-
 ### Philosophy
 
 > "An idiot admires complexity, a genius admires simplicity" - Terry Davis
