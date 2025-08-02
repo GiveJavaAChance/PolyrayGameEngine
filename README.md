@@ -8,6 +8,8 @@
 * Shader Preprocessor for quality-of-life GLSL code features.
 * DBR and DCDBR for Real-Time acoustics using ShaderEffector.
 
+
+### **[Polyray Engine Showcase Video](https://www.youtube.com/watch?v=JZVfSlKjolc)**
 #### **[Read the Full Technical Report (PDF)](https://givejavaachance.github.io/PolyrayGameEngine/Polyray%20Game%20Engine%20Report.pdf)**
 
 ## Future Features:
