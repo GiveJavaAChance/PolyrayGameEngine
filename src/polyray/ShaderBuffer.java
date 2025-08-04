@@ -1,10 +1,10 @@
 package polyray;
 
 import java.nio.ByteBuffer;
-import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL46.*;
 
 public class ShaderBuffer {
-
+    
     public final int ID;
     public final int target;
     private int usage;
@@ -68,6 +68,21 @@ public class ShaderBuffer {
     public void uploadPartialData(ByteBuffer data, long offset) {
         glBindBuffer(target, ID);
         glBufferSubData(target, offset, data);
+    }
+    
+    public ByteBuffer map(int access) {
+        glBindBuffer(target, ID);
+        return glMapBuffer(target, access);
+    }
+    
+    public ByteBuffer mapRange(long offset, long length, int access) {
+        glBindBuffer(target, ID);
+        return glMapBufferRange(target, offset, length, access);
+    }
+    
+    public void unmap() {
+        glBindBuffer(target, ID);
+        glUnmapBuffer(target);
     }
 
     public void bind() {

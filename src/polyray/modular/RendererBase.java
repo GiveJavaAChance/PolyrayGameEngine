@@ -24,7 +24,7 @@ public abstract class RendererBase {
         this.antialiasing = antialiasing;
         this.frameBuffer = new GLFramebuffer(width, height);
         this.rendered = frameBuffer.render;
-        this.output = new GLTexture(width, height, GL_RGBA8, GL_RGBA, true, false);
+        this.output = new GLTexture(width, height, GL_RGBA8, true, false);
 
         this.quad = new FullscreenQuad();
     }

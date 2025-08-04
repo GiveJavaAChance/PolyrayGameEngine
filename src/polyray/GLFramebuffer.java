@@ -1,19 +1,18 @@
 package polyray;
 
 import static org.lwjgl.opengl.ARBFramebufferObject.*;
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL14.GL_DEPTH_COMPONENT32;
+import static org.lwjgl.opengl.GL14.*;
 
 public class GLFramebuffer {
 
-    public int ID;
-    public GLTexture render, depthTexture;
+    public final int ID;
+    public final GLTexture render, depthTexture;
 
-    public GLFramebuffer(int width, int height, int colorFormat, int colorInterFormat, int depthFormat, int depthInterFormat) {
+    public GLFramebuffer(int width, int height, int colorFormat, int depthFormat) {
         ID = glGenFramebuffers();
 
-        render = new GLTexture(width, height, colorFormat, colorInterFormat, false, false);
-        depthTexture = new GLTexture(width, height, depthFormat, depthInterFormat, true, false);
+        render = new GLTexture(width, height, colorFormat, false, false);
+        depthTexture = new GLTexture(width, height, depthFormat, false, false);
 
         bind();
 
@@ -28,7 +27,7 @@ public class GLFramebuffer {
     }
 
     public GLFramebuffer(int width, int height) {
-        this(width, height, GL_RGBA8, GL_RGBA, GL_DEPTH_COMPONENT32, GL_DEPTH_COMPONENT);
+        this(width, height, GL_RGBA8, GL_DEPTH_COMPONENT32);
     }
 
     public final void bind() {

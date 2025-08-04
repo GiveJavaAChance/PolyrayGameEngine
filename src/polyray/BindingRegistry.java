@@ -8,7 +8,7 @@ public class BindingRegistry {
     private static final HashMap<String, Integer> usedBindings = new HashMap<>();
 
     public static int bindImageTexture(GLTexture texture, int level, boolean layered, int layer, int access) {
-        return bindImageTexture(texture, level, layered, layer, access, texture.interFormat);
+        return bindImageTexture(texture, level, layered, layer, access, texture.format);
     }
 
     public static int bindImageTexture(GLTexture texture, int level, boolean layered, int layer, int access, int format) {
@@ -70,7 +70,7 @@ public class BindingRegistry {
         String key = "tex" + texture.ID;
         Integer b = usedBindings.get(key);
         if (b != null) {
-            glBindImageTexture(b, 0, 0, false, 0, GL_READ_WRITE, texture.interFormat);
+            glBindImageTexture(b, 0, 0, false, 0, GL_READ_WRITE, texture.format);
             usedBindings.remove(key);
         }
     }
