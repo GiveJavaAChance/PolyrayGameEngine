@@ -3,7 +3,6 @@ package polyray.builtin;
 import polyray.modular.RendererBase;
 import java.util.ArrayList;
 import polyray.Background;
-import polyray.BindingRegistry;
 import static org.lwjgl.opengl.GL43.*;
 import polyray.modular.Renderable;
 
