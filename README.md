@@ -8,6 +8,8 @@
 * Shader Preprocessor for quality-of-life GLSL code features.
 * DBR and DCDBR for Real-Time acoustics using ShaderEffector.
 
+
+### **[Polyray Engine Showcase Video](https://www.youtube.com/watch?v=JZVfSlKjolc)**
 #### **[Read the Full Technical Report (PDF)](https://givejavaachance.github.io/PolyrayGameEngine/Polyray%20Game%20Engine%20Report.pdf)**
 
 ## Future Features:
@@ -56,8 +58,6 @@ But that often leads to patchworks of tools bolted together where one system mig
 Developers end up spending more time figuring out the engine than actually using it.
 
 But this engine was built from scratch, reinventing many core systems to ensure a unified naming convention and consistent design.
-
-From reinventing, the engine has come from a developer with a different perspective on things, not just performance, features or simplicity, but both, focusing on the user experience just as much as performance.
 
 ### Philosophy
 
