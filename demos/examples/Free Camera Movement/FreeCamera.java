@@ -1,9 +1,11 @@
+
 import java.awt.AWTException;
 import java.awt.Dimension;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Robot;
 import java.awt.Toolkit;
+import java.util.ArrayList;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
@@ -18,11 +20,13 @@ import polyray.Material;
 import polyray.TextureUtils;
 import polyray.Transform3D;
 import polyray.Vector3f;
+import polyray.builtin.Camera3D;
 import polyray.builtin.Instance3D;
 import polyray.builtin.RenderObject;
 import polyray.builtin.Renderer3D;
 import polyray.builtin.SolidLoader;
 import polyray.builtin.Vertex3D;
+import polyray.modular.Vertex;
 
 public class FreeCamera {
 
@@ -38,7 +42,7 @@ public class FreeCamera {
     public final Renderer3D u;
 
     public final Transform3D cameraTransform;
-    public final Vector3f cameraPos = new Vector3f();
+    public final Vector3f cameraPos;
     public final Vector3f cameraAng = new Vector3f();
 
     public FreeCamera() {
@@ -52,32 +56,39 @@ public class FreeCamera {
         u = new Renderer3D(w.getWidth(), w.getHeight(), 16);
 
         // Minimum and maximium render distances
-        u.setup(0.1f, 1000.0f);
-        cameraTransform = u.getCameraTransform();
-        Background b = u.getBackground();
+        Camera3D cam = new Camera3D(0.1f, 1000.0f);
+        cameraTransform = cam.cameraTransform;
+        cameraPos = cam.pos;
+        
+        Background b = new Background(cam.cameraBinding);
+        u.setBackground(b);
 
         // A simple cube as an example
-        Material mat = new Material(u.getCameraTransformBinding(), BindingRegistry.bindBufferBase(b.environmentBuffer));
+        Material mat = new Material(cam.cameraBinding, BindingRegistry.bindBufferBase(b.environmentBuffer));
         mat.setMetallic(0.5f);
         mat.setRoughness(0.5f);
         mat.setF0(new Vector3f(0.05f, 0.05f, 0.05f));
-        
+
         // Create the cube object with a single color texture, a material, a vertex data layout and a instance data layout
         RenderObject cube = new RenderObject(TextureUtils.createColorTexture(0xFFFFFFFF), mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
-        
+        ArrayList<Vertex> cubeVerts = new ArrayList<>();
+        cube.setVertices(cubeVerts);
+
         // Add the mesh for a cube
-        SolidLoader.addCube(cube);
+        SolidLoader.addCube(cubeVerts);
         cube.upload();
-        
+
         // Add the cube object to the renderer
         u.add3DObject(cube);
-        
+
         // Add one instance with no transformations
-        cube.addInstance(new Instance3D(new Transform3D()));
+        ArrayList<Instance3D> cubeInstances = new ArrayList<>();
+        cube.setInstances(cubeInstances);
+        cubeInstances.add(new Instance3D(new Transform3D()));
         cube.uploadInstances();
-        
+
         float dt = 1.0f / 165.0f; // Initial delta time
-        
+
         // Hide cursor
         w.hideCursor(true);
         while (w.isWindowOpen()) {
@@ -87,7 +98,8 @@ public class FreeCamera {
             freeCameraMovement(dt);
             updateTransform();
 
-            u.render(w.getWidth(), w.getHeight());
+            cam.upload(w.getWidth(), w.getHeight());
+            u.render();
 
             // NEVER forget to update the window, especially when it is fullscreen
             w.update();
@@ -155,8 +167,6 @@ public class FreeCamera {
     // Update the camera transform to be at the specified position and angle
     public final void updateTransform() {
         cameraTransform.setToIdentity();
-        // Inverse translation
-        cameraTransform.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
         cameraTransform.rotateY(cameraAng.y);
         cameraTransform.rotateX(cameraAng.x);
     }

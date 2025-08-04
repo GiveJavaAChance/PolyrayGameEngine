@@ -14,8 +14,11 @@ public class ServerStream {
     }
 
     public ByteBuffer read(int len) throws IOException {
-        if (len <= 0) {
-            throw new IllegalArgumentException("Invalid length.");
+        if (len < 0) {
+            throw new IllegalArgumentException("Invalid length: " + len);
+        }
+        if(len == 0) {
+            return ByteBuffer.wrap(new byte[0]);
         }
         byte[] b = new byte[len];
         int n = 0;

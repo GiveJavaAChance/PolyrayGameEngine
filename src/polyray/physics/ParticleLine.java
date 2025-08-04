@@ -47,15 +47,12 @@ public class ParticleLine {
         dx *= mul;
         dy *= mul;
         dz *= mul;
-        double sum = a.mass + b.mass;
-        double ratio1 = a.mass / sum;
-        double ratio2 = b.mass / sum;
-        a.pos.x += dx * ratio1;
-        a.pos.y += dy * ratio1;
-        a.pos.z += dz * ratio1;
-        b.pos.x -= dx * ratio2;
-        b.pos.y -= dy * ratio2;
-        b.pos.z -= dz * ratio2;
+        a.pos.x += dx * ratioB;
+        a.pos.y += dy * ratioB;
+        a.pos.z += dz * ratioB;
+        b.pos.x -= dx * ratioA;
+        b.pos.y -= dy * ratioA;
+        b.pos.z -= dz * ratioA;
     }
 
     public static final ParticleLine[] connectAllLines(Particle p, Particle[] particles, double stiffness) {
