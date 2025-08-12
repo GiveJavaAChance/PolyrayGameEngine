@@ -1,33 +1,35 @@
 package polyray.systems;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import polyray.Transform3D;
 import polyray.Vector3f;
 import polyray.builtin.Instance3D;
+import polyray.builtin.RenderObject;
 import polyray.modular.Instance;
-import polyray.modular.RenderObjectBase;
 
 public class Gizmos {
 
     private static final HashSet<Integer> update = new HashSet<>();
-    private static final HashMap<Integer, RenderObjectBase> objects = new HashMap<>();
+    private static final HashMap<Integer, RenderObject> objects = new HashMap<>();
+    private static final HashMap<Integer, Collection<Instance>> instances = new HashMap<>();
     private static final HashMap<Integer, Group> groups = new HashMap<>();
     private static final IDGenerator gen = new IDGenerator();
 
-    public static final int newObject(RenderObjectBase obj) {
+    public static final int newObject(RenderObject obj, Collection<Instance> objInstances) {
         int id = objects.size();
         objects.put(id, obj);
+        instances.put(id, objInstances);
         return id;
     }
 
     public static final void update() {
-        Iterator<Integer> iter = update.iterator();
-        while (iter.hasNext()) {
-            objects.get(iter.next()).uploadInstances();
-            iter.remove();
+        for (Integer i : update) {
+            objects.get(i).uploadInstances();
         }
+        update.clear();
     }
 
     public static int pushLine(int type, Vector3f a, Vector3f b) {
@@ -111,21 +113,18 @@ public class Gizmos {
     private static class Group {
 
         private final int type;
-        public final Instance[] instances;
+        public final Instance[] inst;
 
         public Group(int type, Instance... lines) {
             this.type = type;
-            this.instances = lines;
-            RenderObjectBase obj = objects.get(type);
-            for (Instance i : lines) {
-                obj.addInstance(i);
-            }
+            this.inst = lines;
+            instances.get(type).addAll(Arrays.asList(lines));
         }
 
         public void remove() {
-            RenderObjectBase obj = objects.get(type);
-            for (Instance i : instances) {
-                obj.removeInstance(i);
+            Collection<Instance> obj = instances.get(type);
+            for (Instance i : inst) {
+                obj.remove(i);
             }
         }
     }
