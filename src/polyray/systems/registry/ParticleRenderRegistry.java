@@ -11,15 +11,15 @@ public class ParticleRenderRegistry {
 
     private static final RenderRegistry<ParticleObj> reg = new RenderRegistry<>();
 
-    public static final <T extends Instance> void registerParticleRender(Class<? extends ParticleObj> clazz, RenderObject obj, ArrayList<Instance> instances, Supplier<T> instanceSupplier) {
-        reg.registerRender(clazz, obj, instances, instanceSupplier);
+    public static final <T extends Instance> void registerParticleRender(Class<? extends ParticleObj> clazz, RenderObject<?, Instance> obj, Supplier<T> instanceSupplier) {
+        reg.registerRender(clazz, obj, instanceSupplier);
     }
 
     public static final int getID(Class<? extends ParticleObj> clazz) {
         return reg.getID(clazz);
     }
 
-    public static final RenderObject getRenderObject(Class<? extends ParticleObj> clazz) {
+    public static final RenderObject<?, Instance> getRenderObject(Class<? extends ParticleObj> clazz) {
         return reg.getRenderObject(clazz);
     }
 
@@ -35,7 +35,7 @@ public class ParticleRenderRegistry {
         reg.removeInstance(clazz, i);
     }
 
-    public static final Collection<RenderObject> getRenderObjects() {
+    public static final Collection<RenderObject<?, Instance>> getRenderObjects() {
         return reg.getRenderObjects();
     }
 }

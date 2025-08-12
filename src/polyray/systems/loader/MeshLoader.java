@@ -17,6 +17,7 @@ import polyray.Vector3f;
 import polyray.builtin.Instance3D;
 import polyray.builtin.RenderObject;
 import polyray.builtin.Vertex3D;
+import polyray.modular.Instance;
 
 public class MeshLoader {
 
@@ -52,20 +53,18 @@ public class MeshLoader {
             } else {
                 texture = new GLTexture(TextureUtils.createColorTexture(col(info.r, info.g, info.b, info.a)), GL_RGBA8, false, false);
             }
-            RenderObject obj = new RenderObject(texture, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
-            ArrayList<Vertex3D> verts = new ArrayList<>();
-            obj.setVertices(verts);
+            RenderObject<Vertex3D, Instance> obj = new RenderObject<>(texture, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
             if (info.tex != null) {
                 for (String name : info.names) {
                     try {
-                        loadMeshTex(name, info.tex.T, info.tex.B, verts);
+                        loadMeshTex(name, info.tex.T, info.tex.B, obj.vertices);
                     } catch (IOException e) {
                     }
                 }
             } else {
                 for (String name : info.names) {
                     try {
-                        loadMesh(name, verts);
+                        loadMesh(name, obj.vertices);
                     } catch (IOException e) {
                     }
                 }

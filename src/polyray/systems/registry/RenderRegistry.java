@@ -1,24 +1,22 @@
 package polyray.systems.registry;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.function.Supplier;
 import polyray.builtin.RenderObject;
 import polyray.modular.Instance;
+import polyray.modular.Vertex;
 
 public class RenderRegistry<T> {
 
     private final HashMap<Class<? extends T>, Integer> classReg = new HashMap<>();
-    private final HashMap<Class<? extends T>, RenderObject> renderObjects = new HashMap<>();
-    private final HashMap<Class<? extends T>, ArrayList<Instance>> renderObjectInstances = new HashMap<>();
+    private final HashMap<Class<? extends T>, RenderObject<?, Instance>> renderObjects = new HashMap<>();
     private final HashMap<Class<? extends T>, Supplier<? extends Instance>> instanceSuppliers = new HashMap<>();
 
-    public final <U extends Instance> void registerRender(Class<? extends T> clazz, RenderObject obj, ArrayList<Instance> instances, Supplier<U> instanceSupplier) {
+    public final <U extends Instance> void registerRender(Class<? extends T> clazz, RenderObject<?, Instance> obj, Supplier<U> instanceSupplier) {
         int id = classReg.size();
         classReg.put(clazz, id);
         renderObjects.put(clazz, obj);
-        renderObjectInstances.put(clazz, instances);
         instanceSuppliers.put(clazz, instanceSupplier);
     }
 
@@ -26,21 +24,21 @@ public class RenderRegistry<T> {
         return classReg.get(clazz);
     }
 
-    public final RenderObject getRenderObject(Class<? extends T> clazz) {
+    public final RenderObject<?, Instance> getRenderObject(Class<? extends T> clazz) {
         return renderObjects.get(clazz);
     }
 
     public final void addInstance(Class<? extends T> clazz, Instance i) {
-        ArrayList<Instance> instances = renderObjectInstances.get(clazz);
-        if (instances != null) {
-            instances.add(i);
+        RenderObject<?, Instance> obj = renderObjects.get(clazz);
+        if (obj != null) {
+            obj.addInstance(i);
         }
     }
 
     public final void removeInstance(Class<? extends T> clazz, Instance i) {
-        ArrayList<Instance> instances = renderObjectInstances.get(clazz);
-        if (instances != null) {
-            instances.remove(i);
+        RenderObject<?, Instance> obj = renderObjects.get(clazz);
+        if (obj != null) {
+            obj.removeInstance(i);
         }
     }
 
@@ -49,7 +47,7 @@ public class RenderRegistry<T> {
         return supplier != null ? supplier.get() : null;
     }
 
-    public final Collection<RenderObject> getRenderObjects() {
+    public final Collection<RenderObject<?, Instance>> getRenderObjects() {
         return renderObjects.values();
     }
 }
