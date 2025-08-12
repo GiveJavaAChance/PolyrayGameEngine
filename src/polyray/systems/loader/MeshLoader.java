@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.Stack;
 import javax.imageio.ImageIO;
 import static org.lwjgl.opengl.GL11.GL_RGBA8;
@@ -52,17 +53,19 @@ public class MeshLoader {
                 texture = new GLTexture(TextureUtils.createColorTexture(col(info.r, info.g, info.b, info.a)), GL_RGBA8, false, false);
             }
             RenderObject obj = new RenderObject(texture, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
+            ArrayList<Vertex3D> verts = new ArrayList<>();
+            obj.setVertices(verts);
             if (info.tex != null) {
                 for (String name : info.names) {
                     try {
-                        loadMeshTex(name, info.tex.T, info.tex.B, obj);
+                        loadMeshTex(name, info.tex.T, info.tex.B, verts);
                     } catch (IOException e) {
                     }
                 }
             } else {
                 for (String name : info.names) {
                     try {
-                        loadMesh(name, obj);
+                        loadMesh(name, verts);
                     } catch (IOException e) {
                     }
                 }
@@ -91,7 +94,7 @@ public class MeshLoader {
         return i;
     }
 
-    public static final void loadMesh(String meshName, RenderObject obj) throws IOException {
+    public static final void loadMesh(String meshName, ArrayList<Vertex3D> verts) throws IOException {
         BufferedInputStream in = new BufferedInputStream(ResourceLoader.getLoader().getResourceAsStream(meshName));
         byte[] buffer = new byte[36];
         float[] vertices = new float[9];
@@ -102,11 +105,13 @@ public class MeshLoader {
             Vertex3D b = new Vertex3D(vertices[3], vertices[5], -vertices[4], 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
             Vertex3D c = new Vertex3D(vertices[6], vertices[8], -vertices[7], 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
             alignNormals(a, b, c);
-            obj.addTriangle(a, b, c);
+            verts.add(a);
+            verts.add(b);
+            verts.add(c);
         }
     }
 
-    public static final void loadMeshTex(String meshName, Vector3f T, Vector3f B, RenderObject obj) throws IOException {
+    public static final void loadMeshTex(String meshName, Vector3f T, Vector3f B, ArrayList<Vertex3D> verts) throws IOException {
         BufferedInputStream in = new BufferedInputStream(ResourceLoader.getLoader().getResourceAsStream(meshName));
         byte[] buffer = new byte[36];
         float[] vertices = new float[9];
@@ -120,7 +125,9 @@ public class MeshLoader {
             Vertex3D b = new Vertex3D(bv.x, bv.y, bv.z, 0.0f, 0.0f, 0.0f, Vector3f.dot(T, bv), Vector3f.dot(B, bv));
             Vertex3D c = new Vertex3D(cv.x, cv.y, cv.z, 0.0f, 0.0f, 0.0f, Vector3f.dot(T, cv), Vector3f.dot(B, cv));
             alignNormals(a, b, c);
-            obj.addTriangle(a, b, c);
+            verts.add(a);
+            verts.add(b);
+            verts.add(c);
         }
     }
 
