@@ -1,6 +1,7 @@
 package polyray.systems.entity;
 
-public interface Controller {
+@FunctionalInterface
+public interface Controller extends Component {
 
-    public abstract void update(Entity e, double dt);
+    public void update(Entity e, double dt);
 }
