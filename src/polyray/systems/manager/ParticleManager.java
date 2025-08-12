@@ -43,6 +43,7 @@ public class ParticleManager {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static final void spawn(ParticleObj p) {
         particles.add(p);
         p.instance = ParticleRenderRegistry.createInstance(p.getClass());
