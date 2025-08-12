@@ -7,8 +7,9 @@ import polyray.BindingRegistry;
 import polyray.GLTexture.GLTextureArray;
 import polyray.ShaderBuffer;
 import polyray.ShaderPreprocessor;
+import polyray.ShaderProgram;
 import polyray.builtin.Vertex2D;
-import polyray.modular.RenderObjectBase;
+import polyray.modular.Renderable;
 import polyray.systems.IDGenerator;
 
 public class TextRenderManager {
@@ -28,7 +29,7 @@ public class TextRenderManager {
 
     private static boolean update = true;
 
-    public static final RenderObjectBase setup(int virtualRAM, GLTextureArray characterBitmaps, char staringChar) {
+    public static final Renderable setup(int virtualRAM, GLTextureArray characterBitmaps, char staringChar) {
         VIRTUAL_RAM_SIZE = virtualRAM;
         memoryMask = new BitSet(VIRTUAL_RAM_SIZE >> 2);
         stringBuffer = new ShaderBuffer(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
@@ -120,15 +121,26 @@ public class TextRenderManager {
         return -1;
     }
 
-    private static class Text extends RenderObjectBase {
+    private static class Text implements Renderable {
+
+        private final GLTextureArray texture;
+        private final int vao;
+        private final ShaderBuffer vbo;
+        private final ShaderProgram shader;
 
         public Text(GLTextureArray tex) {
-            super(tex, null, Vertex2D.VBO_TEMPLATE, null);
-            addVertex(new Vertex2D(0.0f, 0.0f, 0.0f, 1.0f));
-            addVertex(new Vertex2D(tex.getWidth(), 0.0f, 1.0f, 1.0f));
-            addVertex(new Vertex2D(0.0f, tex.getHeight(), 0.0f, 0.0f));
-            addVertex(new Vertex2D(tex.getWidth(), tex.getHeight(), 1.0f, 0.0f));
-            upload();
+            this.texture = tex;
+            this.vao = glGenVertexArrays();
+            glBindVertexArray(vao);
+            this.vbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, Vertex2D.VBO_TEMPLATE.build(0));
+            glBindVertexArray(0);
+            float[] data = {
+                0.0f, 0.0f, 0.0f, 1.0f,
+                tex.getWidth(), 0.0f, 1.0f, 1.0f,
+                0.0f, tex.getHeight(), 0.0f, 0.0f,
+                tex.getWidth(), tex.getHeight(), 1.0f, 0.0f
+            };
+            vbo.uploadData(data);
             ShaderPreprocessor proc = ShaderManager.createProcessor("Text.vert", "Text.frag");
             proc.setInt("STR_IDX", stringIdx);
             proc.setInt("INTS_PER_STRING", INTS_PER_STRING);
@@ -136,17 +148,14 @@ public class TextRenderManager {
         }
 
         @Override
-        public boolean isClear() {
-            return false;
-        }
-
-        @Override
         public void render() {
+            shader.use();
             glActiveTexture(GL_TEXTURE0);
             texture.bind();
             glBindVertexArray(vao);
             drawBuffer.bind();
             glMultiDrawArraysIndirect(GL_TRIANGLE_STRIP, 0, strings.size(), 16);
+            shader.unuse();
         }
 
     }
