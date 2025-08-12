@@ -1,9 +1,9 @@
 package polyray.systems.entity;
 
-import polyray.physics.Collider;
 import polyray.Vector3d;
+import polyray.physics.Collider3D;
 
-public abstract class EntityCollider3D implements Component, Collider {
+public abstract class EntityCollider3D implements Component, Collider3D {
 
     public final Vector3d pos, prevPos;
 
