@@ -70,21 +70,17 @@ public class FreeCamera {
         mat.setF0(new Vector3f(0.05f, 0.05f, 0.05f));
 
         // Create the cube object with a single color texture, a material, a vertex data layout and a instance data layout
-        RenderObject cube = new RenderObject(TextureUtils.createColorTexture(0xFFFFFFFF), mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
-        ArrayList<Vertex> cubeVerts = new ArrayList<>();
-        cube.setVertices(cubeVerts);
+        RenderObject<Vertex3D, Instance3D> cube = new RenderObject<>(TextureUtils.createColorTexture(0xFFFFFFFF), mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
 
         // Add the mesh for a cube
-        SolidLoader.addCube(cubeVerts);
+        SolidLoader.addCube(cube.vertices);
         cube.upload();
 
         // Add the cube object to the renderer
         u.add3DObject(cube);
 
         // Add one instance with no transformations
-        ArrayList<Instance3D> cubeInstances = new ArrayList<>();
-        cube.setInstances(cubeInstances);
-        cubeInstances.add(new Instance3D(new Transform3D()));
+        cube.addInstance(new Instance3D(new Transform3D()));
         cube.uploadInstances();
 
         float dt = 1.0f / 165.0f; // Initial delta time

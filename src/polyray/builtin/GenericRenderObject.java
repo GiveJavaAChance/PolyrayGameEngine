@@ -1,37 +1,48 @@
 package polyray.builtin;
 
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
+import java.util.Collection;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
+import static org.lwjgl.opengl.GL13.glActiveTexture;
+import static org.lwjgl.opengl.GL30.glBindVertexArray;
+import static org.lwjgl.opengl.GL31.glDrawArraysInstanced;
 import polyray.GLTexture;
+import polyray.ShaderBuffer;
 import polyray.ShaderProgram;
 import polyray.Texture;
 import polyray.VertexBufferTemplate;
-import static org.lwjgl.opengl.GL43.*;
-import polyray.ShaderBuffer;
 import polyray.modular.Instance;
 import polyray.modular.RenderObjectBase;
 import polyray.modular.Vertex;
 
-public class RenderObject<V extends Vertex, I extends Instance> extends RenderObjectBase {
+public class GenericRenderObject<V extends Vertex, VS extends Collection<V>, I extends Instance, IS extends Collection<I>> extends RenderObjectBase {
 
-    public ArrayList<V> vertices = new ArrayList<>();
-    public ArrayList<I> instances = new ArrayList<>();
+    public VS vertices;
+    public IS instances;
     private int numVertices = 0, numInstances = 0;
 
-    public RenderObject(ShaderProgram shader, ShaderBuffer vbo, ShaderBuffer instanceVbo, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
+    public GenericRenderObject(ShaderProgram shader, ShaderBuffer vbo, ShaderBuffer instanceVbo, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         super(shader, vbo, instanceVbo, vboTemplate, instanceVboTemplate);
     }
 
-    public RenderObject(ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
+    public GenericRenderObject(ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         super(shader, vboTemplate, instanceVboTemplate);
     }
 
-    public RenderObject(Texture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
+    public GenericRenderObject(Texture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         super(texture, shader, vboTemplate, instanceVboTemplate);
     }
 
-    public RenderObject(GLTexture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
+    public GenericRenderObject(GLTexture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         super(texture, shader, vboTemplate, instanceVboTemplate);
+    }
+    
+    public void setVertices(VS vertices) {
+        this.vertices = vertices;
+    }
+    
+    public void setInstances(IS instances) {
+        this.instances = instances;
     }
     
     public void addVertex(V v) {
@@ -96,3 +107,4 @@ public class RenderObject<V extends Vertex, I extends Instance> extends RenderOb
     }
 
 }
+

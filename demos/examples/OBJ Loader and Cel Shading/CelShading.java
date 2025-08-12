@@ -8,8 +8,6 @@ import java.awt.Toolkit;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import static org.lwjgl.glfw.GLFW.*;
@@ -24,6 +22,7 @@ import polyray.Texture;
 import polyray.Transform3D;
 import polyray.Vector3f;
 import polyray.builtin.Camera3D;
+import polyray.builtin.GenericRenderObject;
 import polyray.builtin.Instance3D;
 import polyray.builtin.RenderObject;
 import polyray.builtin.Renderer3D;
@@ -101,13 +100,11 @@ public class CelShading {
             } catch (IOException ex) {
                 throw new ExceptionInInitializerError("Failed to load texture: " + obj.mat.mapKd);
             }
-            RenderObject object = new RenderObject(tex, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
-            object.setVertices(obj.vertices);
+            RenderObject<Vertex3D, Instance3D> object = new RenderObject<>(tex, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
+            object.vertices = obj.vertices;
             object.upload();
             u.add3DObject(object);
-            ArrayList<Instance3D> objInstances = new ArrayList<>();
-            objInstances.add(new Instance3D(new Transform3D()));
-            object.setInstances(objInstances);
+            object.addInstance(new Instance3D(new Transform3D()));
             object.uploadInstances();
         }
     }
