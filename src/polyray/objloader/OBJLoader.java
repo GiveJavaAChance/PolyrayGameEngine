@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
+import static org.lwjgl.opengl.GL11.GL_RGBA8;
+import polyray.GLTexture;
 import polyray.Material;
 import polyray.ShaderProgram;
 import polyray.Texture;
@@ -19,13 +21,7 @@ import polyray.builtin.Vertex3D;
 
 public class OBJLoader {
 
-    public static ArrayList<RenderObject> loadOBJFile(File objFile, File mtlFile, int cameraBinding, int environmentBinding) throws IOException {
-        return loadOBJFile(objFile, mtlFile, () -> {
-            return new Material(cameraBinding, environmentBinding).getShader();
-        });
-    }
-
-    public static ArrayList<RenderObject> loadOBJFile(File objFile, File mtlFile, ShaderBuilder builder) throws IOException {
+    public static ArrayList<RenderData> loadOBJFile(File objFile, File mtlFile) throws IOException {
         if (!objFile.exists() || !mtlFile.exists()) {
             return null;
         }
@@ -36,9 +32,9 @@ public class OBJLoader {
 
         HashMap<String, OBJMaterial> materials = MTLParser.loadMTLFile(mtlFile);
 
-        ArrayList<RenderObject> objects = new ArrayList<>();
-        RenderObject currentObject;
         ArrayList<Vertex3D> vertices = null;
+        String name = null;
+        ArrayList<RenderData> objects = new ArrayList<>();
 
         BufferedReader reader = new BufferedReader(new FileReader(objFile));
         String line;
@@ -52,6 +48,9 @@ public class OBJLoader {
                 continue;
             }
             switch (tokens[0]) {
+                case "o" -> {
+                    name = tokens[1];
+                }
                 case "v" -> {
                     v.add(new Vector3f(
                             Float.parseFloat(tokens[1]),
@@ -72,25 +71,10 @@ public class OBJLoader {
                             Float.parseFloat(tokens[3])
                     ));
                 }
+
                 case "usemtl" -> {
-                    OBJMaterial m = materials.get(tokens[1]);
-                    Material mat = new Material(builder.build());
-                    /*mat.setRoughness(0.5f);
-                    mat.setMetallic(0.5f);
-                    mat.setF0(new Vector3f(0.05f, 0.05f, 0.05f));*/
-                    OBJMaterial.toPBR(m, mat);
-                    if (m.mapKd == null) {
-                        int r = (int) Math.max(Math.min(m.Kd.x * 255.0f, 255.0f), 0.0f);
-                        int g = (int) Math.max(Math.min(m.Kd.y * 255.0f, 255.0f), 0.0f);
-                        int b = (int) Math.max(Math.min(m.Kd.z * 255.0f, 255.0f), 0.0f);
-                        currentObject = new RenderObject(TextureUtils.createColorTexture(0xFF000000 | r << 16 | g << 8 | b), mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
-                    } else {
-                        Texture tex = new Texture(ImageIO.read(new File(m.mapKd)));
-                        currentObject = new RenderObject(tex, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
-                        vertices = new ArrayList<>();
-                        currentObject.setVertices(vertices);
-                    }
-                    objects.add(currentObject);
+                    vertices = new ArrayList<>();
+                    objects.add(new RenderData(name, vertices, materials.get(tokens[1])));
                 }
                 case "f" -> {
                     addFace(tokens, vertices, v, vn, vt);
@@ -101,7 +85,7 @@ public class OBJLoader {
         return objects;
     }
 
-    private static void addFace(String[] tokens, ArrayList<Vertex3D> obj, ArrayList<Vector3f> v, ArrayList<Vector3f> vn, ArrayList<Vector2f> vt) {
+    private static void addFace(String[] tokens, ArrayList<Vertex3D> vertices, ArrayList<Vector3f> v, ArrayList<Vector3f> vn, ArrayList<Vector2f> vt) {
         for (int i = 1; i <= 3; i++) {
             String[] indices = tokens[i].split("/");
             int vIdx = parseIndex(indices[0], v.size());
@@ -112,7 +96,7 @@ public class OBJLoader {
             Vector2f texCoord = (tIdx != -1) ? vt.get(tIdx) : new Vector2f();
             Vector3f normal = (nIdx != -1) ? vn.get(nIdx) : new Vector3f();
 
-            obj.add(new Vertex3D(
+            vertices.add(new Vertex3D(
                     position.x, position.y, position.z,
                     normal.x, normal.y, normal.z,
                     texCoord.x, texCoord.y
@@ -125,8 +109,32 @@ public class OBJLoader {
         return (index < 0) ? (size + index) : (index - 1);
     }
 
-    public static interface ShaderBuilder {
+    public static class RenderData {
 
-        public ShaderProgram build();
+        public final String name;
+        public final ArrayList<Vertex3D> vertices;
+        public final OBJMaterial mat;
+
+        public RenderData(String name, ArrayList<Vertex3D> vertices, OBJMaterial mat) {
+            this.name = name;
+            this.vertices = vertices;
+            this.mat = mat;
+        }
+
+        public RenderObject toDefault(int cameraBinding, int environmentBinding) throws IOException {
+            Material m = new Material(cameraBinding, environmentBinding);
+            OBJMaterial.toPBR(mat, m);
+            return new RenderObject(new GLTexture(getTexture(), GL_RGBA8, true, true), m.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
+        }
+
+        public Texture getTexture() throws IOException {
+            if (mat.mapKd == null) {
+                int r = (int) Math.max(Math.min(mat.Kd.x * 255.0f, 255.0f), 0.0f);
+                int g = (int) Math.max(Math.min(mat.Kd.y * 255.0f, 255.0f), 0.0f);
+                int b = (int) Math.max(Math.min(mat.Kd.z * 255.0f, 255.0f), 0.0f);
+                return TextureUtils.createColorTexture(0xFF000000 | r << 16 | g << 8 | b);
+            }
+            return new Texture(ImageIO.read(new File(mat.mapKd)));
+        }
     }
 }
