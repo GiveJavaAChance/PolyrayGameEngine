@@ -1,39 +1,41 @@
 package polyray.systems.registry;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.function.Supplier;
+import polyray.builtin.RenderObject;
 import polyray.modular.Instance;
-import polyray.modular.RenderObjectBase;
 import polyray.systems.ParticleObj;
 
 public class ParticleRenderRegistry {
 
-    private static final HashMap<Class<? extends ParticleObj>, Integer> classReg = new HashMap<>();
-    private static final HashMap<Class<? extends ParticleObj>, RenderObjectBase> renderObjects = new HashMap<>();
-    private static final HashMap<Class<? extends ParticleObj>, Supplier<? extends Instance>> instanceSuppliers = new HashMap<>();
+    private static final RenderRegistry<ParticleObj> reg = new RenderRegistry<>();
 
-    public static final <T extends Instance> void registerParticleRender(Class<? extends ParticleObj> clazz, RenderObjectBase obj, Supplier<T> instanceSupplier) {
-        int id = classReg.size();
-        classReg.put(clazz, id);
-        renderObjects.put(clazz, obj);
-        instanceSuppliers.put(clazz, instanceSupplier);
+    public static final <T extends Instance> void registerParticleRender(Class<? extends ParticleObj> clazz, RenderObject obj, ArrayList<Instance> instances, Supplier<T> instanceSupplier) {
+        reg.registerRender(clazz, obj, instances, instanceSupplier);
     }
 
     public static final int getID(Class<? extends ParticleObj> clazz) {
-        return classReg.get(clazz);
+        return reg.getID(clazz);
     }
 
-    public static final RenderObjectBase getRenderObject(Class<? extends ParticleObj> clazz) {
-        return renderObjects.get(clazz);
+    public static final RenderObject getRenderObject(Class<? extends ParticleObj> clazz) {
+        return reg.getRenderObject(clazz);
     }
 
     public static final Instance createInstance(Class<? extends ParticleObj> clazz) {
-        Supplier<? extends Instance> supplier = instanceSuppliers.get(clazz);
-        return supplier != null ? supplier.get() : null;
+        return reg.createInstance(clazz);
     }
-    
-    public static final Collection<RenderObjectBase> getRenderObjects() {
-        return renderObjects.values();
+
+    public static final void addInstance(Class<? extends ParticleObj> clazz, Instance i) {
+        reg.addInstance(clazz, i);
+    }
+
+    public static final void removeInstance(Class<? extends ParticleObj> clazz, Instance i) {
+        reg.removeInstance(clazz, i);
+    }
+
+    public static final Collection<RenderObject> getRenderObjects() {
+        return reg.getRenderObjects();
     }
 }
