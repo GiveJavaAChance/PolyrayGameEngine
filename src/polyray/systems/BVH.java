@@ -1,22 +1,25 @@
 package polyray.systems;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 
 public class BVH {
 
     private final int dim;
     private final Node[] nodes;
-    public final ArrayList<float[]> bounds;
+    public final float[][] bounds;
+    public final int[] indices;
     public final int[] stack;
     private int nodeCount = 0;
 
-    public BVH(ArrayList<float[]> bounds, int dimensions) {
+    public BVH(float[][] bounds, int dimensions) {
         this.dim = dimensions;
         this.bounds = bounds;
-        this.nodes = new Node[bounds.size() << 1];
-        buildNode(0, bounds.size());
+        this.indices = new int[bounds.length];
+        for (int i = 0; i < indices.length; i++) {
+            indices[i] = i;
+        }
+        this.nodes = new Node[bounds.length << 1];
+        buildNode(0, bounds.length);
         this.stack = new int[nodes.length];
     }
 
@@ -25,7 +28,7 @@ public class BVH {
         nodes[nodeIndex] = new Node();
 
         if (end - start == 1) {
-            float[] b = bounds.get(start);
+            float[] b = bounds[start];
             System.arraycopy(b, 0, nodes[nodeIndex].bounds, 0, b.length);
             nodes[nodeIndex].left = -1;
             nodes[nodeIndex].right = -1;
@@ -39,7 +42,7 @@ public class BVH {
             bound[i + dim] = Float.NEGATIVE_INFINITY;
         }
         for (int i = start; i < end; i++) {
-            float[] b = this.bounds.get(i);
+            float[] b = bounds[i];
             for (int j = 0; j < dim; j++) {
                 float min = b[j];
                 if (min < bound[j]) {
@@ -68,8 +71,7 @@ public class BVH {
             }
         }
         final int selectAxis = axis;
-        Comparator<float[]> cmp = Comparator.comparingDouble(b -> (b[selectAxis] + b[selectAxis + dim]) * 0.5f);
-        Collections.sort(bounds.subList(start, end), cmp);
+        quickSort(bounds, indices, start, end - 1, Comparator.comparingDouble(b -> (b[selectAxis] + b[selectAxis + dim]) * 0.5f));
 
         int mid = (start + end) >>> 1;
         if (mid == start) {
@@ -87,7 +89,7 @@ public class BVH {
         return nodeIndex;
     }
 
-    public int query(float[] qMin, float[] qMax, int[] hits) {
+    public int query(float[] query, int[] hits) {
         int hitCount = 0;
         int sp = 0;
         stack[sp++] = 0;
@@ -97,7 +99,7 @@ public class BVH {
             Node node = nodes[nodeIdx];
             boolean overlap = true;
             for (int i = 0; i < dim; i++) {
-                if (qMax[i] < node.bounds[i] || qMin[i] > node.bounds[i + dim]) {
+                if (query[i + dim] < node.bounds[i] || query[i] > node.bounds[i + dim]) {
                     overlap = false;
                     break;
                 }
@@ -128,5 +130,37 @@ public class BVH {
         public final float[] bounds;
         public int left, right;
         public int boxIndex;
+    }
+
+    private static void quickSort(float[][] bounds, int[] indices, int low, int high, Comparator<float[]> c) {
+        if (low < high) {
+            int pivotIndex = partition(bounds, indices, low, high, c);
+            quickSort(bounds, indices, low, pivotIndex - 1, c);
+            quickSort(bounds, indices, pivotIndex + 1, high, c);
+        }
+    }
+
+    private static int partition(float[][] bounds, int[] indices, int low, int high, Comparator<float[]> c) {
+        float[] pivot = bounds[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++) {
+            if (c.compare(bounds[j], pivot) <= 0) {
+                i++;
+                swap(bounds, indices, i, j);
+            }
+        }
+        swap(bounds, indices, i + 1, high);
+        return i + 1;
+    }
+
+    public static void swap(float[][] bounds, int[] indices, int a, int b) {
+        float[] tmp1 = bounds[a];
+        bounds[a] = bounds[b];
+        bounds[b] = tmp1;
+
+        int tmp2 = indices[a];
+        indices[a] = indices[b];
+        indices[b] = tmp2;
     }
 }
