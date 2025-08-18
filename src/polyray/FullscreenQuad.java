@@ -8,23 +8,23 @@ public class FullscreenQuad {
 
     private int quadVao, quadVbo;
     private final ShaderProgram quadProgram;
+    private GLTexture texture;
 
     public FullscreenQuad() {
         String vertexShaderSource = "#version 330 core\n"
-                + "layout(location = 0) in vec2 position;\n"
-                + "layout(location = 1) in vec2 texCoords;\n"
-                + "out vec2 v_TexCoords;\n"
+                + "layout(location = 0) in vec2 pos;\n"
+                + "out vec2 uv;\n"
                 + "void main() {\n"
-                + "    v_TexCoords = texCoords;\n"
-                + "    gl_Position = vec4(position, 0.0, 1.0);\n"
+                + "    uv = pos * 0.5 + 0.5;\n"
+                + "    gl_Position = vec4(pos, 0.0, 1.0);\n"
                 + "}\n";
 
         String fragmentShaderSource = "#version 330 core\n"
-                + "in vec2 v_TexCoords;\n"
+                + "in vec2 uv;\n"
                 + "out vec4 color;\n"
                 + "uniform sampler2D screenTexture;\n"
                 + "void main() {\n"
-                + "    color = texture(screenTexture, v_TexCoords);\n"
+                + "    color = texture(screenTexture, uv);\n"
                 + "}\n";
         quadProgram = ShaderProgram.fromSource(vertexShaderSource, fragmentShaderSource, "quadshader", 0);
         setupFullscreenQuad();
@@ -32,13 +32,10 @@ public class FullscreenQuad {
 
     private void setupFullscreenQuad() {
         float[] quadVertices = {
-            // positions  // texCoords
-            -1.0f, 1.0f, 0.0f, 1.0f,
-            -1.0f, -1.0f, 0.0f, 0.0f,
-            1.0f, -1.0f, 1.0f, 0.0f,
-            -1.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, -1.0f, 1.0f, 0.0f,
-            1.0f, 1.0f, 1.0f, 1.0f
+            -1.0f, 1.0f,
+            -1.0f, -1.0f,
+            1.0f, 1.0f,
+            1.0f, -1.0f
         };
 
         quadVao = glGenVertexArrays();
@@ -47,23 +44,21 @@ public class FullscreenQuad {
         glBindBuffer(GL_ARRAY_BUFFER, quadVbo);
         glBufferData(GL_ARRAY_BUFFER, quadVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, false, 4 * Float.BYTES, 0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, false, 4 * Float.BYTES, 2 * Float.BYTES);
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * Float.BYTES, 0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
     }
 
     public void setTexture(GLTexture texture) {
-        quadProgram.use();
-        texture.bind();
-        quadProgram.unuse();
+        this.texture = texture;
     }
 
     public void render() {
         quadProgram.use();
+        glActiveTexture(GL_TEXTURE0);
+        texture.bind();
         glBindVertexArray(quadVao);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
         quadProgram.unuse();
     }
