@@ -3,31 +3,38 @@ package polyray;
 import static org.lwjgl.opengl.ARBVertexArrayObject.glBindVertexArray;
 import static org.lwjgl.opengl.ARBVertexArrayObject.glGenVertexArrays;
 import static org.lwjgl.opengl.GL20.*;
+import polyray.GLTexture.GLTexture2D;
 
 public class FullscreenQuad {
 
     private int quadVao, quadVbo;
     private final ShaderProgram quadProgram;
-    private GLTexture texture;
+    private GLTexture2D texture;
 
-    public FullscreenQuad() {
-        String vertexShaderSource = "#version 330 core\n"
-                + "layout(location = 0) in vec2 pos;\n"
-                + "out vec2 uv;\n"
-                + "void main() {\n"
-                + "    uv = pos * 0.5 + 0.5;\n"
-                + "    gl_Position = vec4(pos, 0.0, 1.0);\n"
-                + "}\n";
-
-        String fragmentShaderSource = "#version 330 core\n"
-                + "in vec2 uv;\n"
-                + "out vec4 color;\n"
-                + "uniform sampler2D screenTexture;\n"
-                + "void main() {\n"
-                + "    color = texture(screenTexture, uv);\n"
-                + "}\n";
+    public FullscreenQuad(String fragmentShaderSource) {
+        String vertexShaderSource = """
+                                    #version 330 core
+                                    layout(location = 0) in vec2 pos;
+                                    out vec2 uv;
+                                    void main() {
+                                        uv = pos * 0.5 + 0.5;
+                                        gl_Position = vec4(pos, 0.0, 1.0);
+                                    }
+                                    """;
         quadProgram = ShaderProgram.fromSource(vertexShaderSource, fragmentShaderSource, "quadshader", 0);
         setupFullscreenQuad();
+    }
+
+    public FullscreenQuad() {
+        this("""
+             #version 330 core
+             in vec2 uv;
+             out vec4 color;
+             uniform sampler2D screenTexture;
+             void main() {
+                 color = texture(screenTexture, uv);
+             }
+             """);
     }
 
     private void setupFullscreenQuad() {
@@ -49,7 +56,7 @@ public class FullscreenQuad {
         glBindVertexArray(0);
     }
 
-    public void setTexture(GLTexture texture) {
+    public void setTexture(GLTexture2D texture) {
         this.texture = texture;
     }
 
