@@ -121,6 +121,70 @@ public class BVH {
         return hitCount;
     }
 
+    public int queryIntersection(float[] pos, float[] dir, float[] dist, RayIntersectionFunction intersectionFunc) {
+        int sp = 0;
+        stack[sp++] = 0;
+        int hitIndex = -1;
+        float closest = Float.POSITIVE_INFINITY;
+
+        while (sp > 0) {
+            int nodeIdx = stack[--sp];
+            Node node = nodes[nodeIdx];
+            if (!rayIntersectsAABB(pos, dir, node.bounds)) {
+                continue;
+            }
+            if (node.boxIndex != -1) {
+                float d = intersectionFunc.hit(node.boxIndex, node.bounds);
+                if (d >= 0.0f && d < closest) {
+                    closest = d;
+                    hitIndex = node.boxIndex;
+                }
+            } else {
+                if (node.left != -1) {
+                    stack[sp++] = node.left;
+                }
+                if (node.right != -1) {
+                    stack[sp++] = node.right;
+                }
+            }
+        }
+        if (hitIndex != -1) {
+            dist[0] = closest;
+        }
+        return hitIndex;
+    }
+
+    private boolean rayIntersectsAABB(float[] pos, float[] dir, float[] bounds) {
+        float tMin = Float.NEGATIVE_INFINITY;
+        float tMax = Float.POSITIVE_INFINITY;
+        for (int i = 0; i < dim; i++) {
+            float invD = 1.0f / dir[i];
+            float t0 = (bounds[i] - pos[i]) * invD;
+            float t1 = (bounds[i + dim] - pos[i]) * invD;
+            if (invD < 0) {
+                float tmp = t0;
+                t0 = t1;
+                t1 = tmp;
+            }
+            if(t0 > tMin) {
+                tMin = t0;
+            }
+            if(t1 < tMax) {
+                tMax = t1;
+            }
+            if (tMax < tMin) {
+                return false;
+            }
+        }
+        return tMax >= 0.0f;
+    }
+
+    @FunctionalInterface
+    public static interface RayIntersectionFunction {
+
+        public float hit(int index, float[] bounds);
+    }
+
     private class Node {
 
         public Node() {
