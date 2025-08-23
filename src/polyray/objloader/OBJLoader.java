@@ -7,10 +7,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
-import static org.lwjgl.opengl.GL11.GL_RGBA8;
-import polyray.GLTexture;
+import static org.lwjgl.opengl.GL11.*;
+import polyray.GLTexture.GLTexture2D;
 import polyray.Material;
-import polyray.ShaderProgram;
 import polyray.Texture;
 import polyray.TextureUtils;
 import polyray.Vector2f;
@@ -124,7 +123,7 @@ public class OBJLoader {
         public RenderObject toDefault(int cameraBinding, int environmentBinding) throws IOException {
             Material m = new Material(cameraBinding, environmentBinding);
             OBJMaterial.toPBR(mat, m);
-            return new RenderObject(new GLTexture(getTexture(), GL_RGBA8, true, true), m.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
+            return new RenderObject(new GLTexture2D(getTexture(), GL_RGBA8).setInterpolation(true).setWrapMode(GL_REPEAT), m.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
         }
 
         public Texture getTexture() throws IOException {

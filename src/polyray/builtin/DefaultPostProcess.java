@@ -4,7 +4,7 @@ import static org.lwjgl.opengl.ARBComputeShader.glDispatchCompute;
 import static org.lwjgl.opengl.ARBShaderImageLoadStore.*;
 import static org.lwjgl.opengl.GL20.*;
 import polyray.BindingRegistry;
-import polyray.GLTexture;
+import polyray.GLTexture.GLTexture2D;
 import polyray.ShaderPreprocessor;
 import polyray.ShaderProgram;
 import polyray.modular.PostProcessor;
@@ -16,7 +16,7 @@ public class DefaultPostProcess extends PostProcessor {
     private final long startTime;
     private float time;
 
-    public DefaultPostProcess(GLTexture input, GLTexture output) {
+    public DefaultPostProcess(GLTexture2D input, GLTexture2D output) {
         super(input, output);
         this.startTime = System.nanoTime();
         this.width = input.getWidth();

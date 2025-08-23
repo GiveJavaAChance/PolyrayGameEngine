@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Stack;
 import javax.imageio.ImageIO;
 import static org.lwjgl.opengl.GL11.GL_RGBA8;
-import polyray.GLTexture;
+import polyray.GLTexture.GLTexture2D;
 import polyray.Material;
 import polyray.ResourceLoader;
 import polyray.Texture;
@@ -43,15 +43,15 @@ public class MeshLoader {
         RenderObject[] objects = new RenderObject[meshes.size()];
         for (int i = 0; i < objects.length; i++) {
             MeshInfo info = meshes.pop();
-            GLTexture texture;
+            GLTexture2D texture;
             if (info.tex != null) {
                 try {
-                    texture = new GLTexture(new Texture(ImageIO.read(ResourceLoader.getLoader().getResourceAsStream(info.tex.name))), GL_RGBA8, false, true);
+                    texture = new GLTexture2D(new Texture(ImageIO.read(ResourceLoader.getLoader().getResourceAsStream(info.tex.name))), GL_RGBA8);
                 } catch (IOException e) {
-                    texture = new GLTexture(TextureUtils.createColorTexture(0xFFFFFFFF), GL_RGBA8, false, false);
+                    texture = new GLTexture2D(TextureUtils.createColorTexture(0xFFFFFFFF), GL_RGBA8);
                 }
             } else {
-                texture = new GLTexture(TextureUtils.createColorTexture(col(info.r, info.g, info.b, info.a)), GL_RGBA8, false, false);
+                texture = new GLTexture2D(TextureUtils.createColorTexture(col(info.r, info.g, info.b, info.a)), GL_RGBA8);
             }
             RenderObject<Vertex3D, Instance> obj = new RenderObject<>(texture, mat.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
             if (info.tex != null) {

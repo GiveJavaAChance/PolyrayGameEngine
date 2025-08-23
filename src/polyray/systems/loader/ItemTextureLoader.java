@@ -59,7 +59,7 @@ public class ItemTextureLoader {
         if(!set) {
             throw new RuntimeException("Texture Size not Set!");
         }
-        GLTextureArray tex = new GLTextureArray(W, H, layers.size(), GL_RGBA8, false, false);
+        GLTextureArray tex = new GLTextureArray(W, H, layers.size(), GL_RGBA8);
         for (int i = 0; i < layers.size(); i++) {
             tex.setLayerData(i, layers.get(i));
         }
