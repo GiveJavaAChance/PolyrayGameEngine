@@ -4,8 +4,8 @@ import java.util.function.BiFunction;
 import polyray.FullscreenQuad;
 import polyray.GLFramebuffer;
 import polyray.GLFramebufferMSAA;
-import polyray.GLTexture;
 import static org.lwjgl.opengl.GL43.*;
+import polyray.GLTexture.GLTexture2D;
 
 public abstract class RendererBase {
 
@@ -13,7 +13,7 @@ public abstract class RendererBase {
     private final boolean antialiasing;
 
     private final GLFramebuffer frameBuffer;
-    private final GLTexture rendered, output;
+    private final GLTexture2D rendered, output;
     private final FullscreenQuad quad;
 
     private PostProcessor post;
@@ -24,8 +24,8 @@ public abstract class RendererBase {
         this.antialiasing = antialiasing;
         this.frameBuffer = new GLFramebuffer(width, height);
         this.rendered = frameBuffer.render;
-        this.output = new GLTexture(width, height, GL_RGBA8, true, false);
-
+        this.output = new GLTexture2D(width, height, GL_RGBA8);
+        this.output.setInterpolation(true);
         this.quad = new FullscreenQuad();
     }
 
@@ -50,15 +50,15 @@ public abstract class RendererBase {
         this.targetFramebuffer = -1;
     }
 
-    public GLTexture getPrePostTexture() {
+    public GLTexture2D getPrePostTexture() {
         return this.rendered;
     }
 
-    public GLTexture getRenderTexture() {
+    public GLTexture2D getRenderTexture() {
         return this.output;
     }
     
-    public void setPostProcess(BiFunction<GLTexture, GLTexture, PostProcessor> post) {
+    public void setPostProcess(BiFunction<GLTexture2D, GLTexture2D, PostProcessor> post) {
         if(post == null) {
             this.post = null;
             return;

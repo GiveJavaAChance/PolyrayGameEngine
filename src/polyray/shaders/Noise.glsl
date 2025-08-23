@@ -1,6 +1,6 @@
 #append "Constants.glsl";
 
-// Using Inigo quilez implementatioan of 2D noise and expanded to 3D as well
+// Using Inigo quilez implementation of 2D noise and expanded to 3D as well
 
 float ramp(float v) {
     return v * v * (3.0 - 2.0 * v);

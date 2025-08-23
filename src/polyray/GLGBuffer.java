@@ -1,7 +1,7 @@
 package polyray;
 
-import static org.lwjgl.opengl.ARBFramebufferObject.*;
-import static org.lwjgl.opengl.GL20.glDrawBuffers;
+import static org.lwjgl.opengl.GL46.*;
+import polyray.GLTexture.GLTexture2D;
 
 public class GLGBuffer {
 
@@ -13,26 +13,25 @@ public class GLGBuffer {
         ID = glGenFramebuffers();
         this.textures = textures;
         this.depth = depth;
-
         bind();
-
         int[] attachments = new int[textures.length];
         for (int i = 0; i < textures.length; i++) {
             GLTexture tex = textures[i];
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, tex.getTarget(), tex.ID, 0);
             attachments[i] = GL_COLOR_ATTACHMENT0 + i;
         }
-        
-        if(depth != null) {
+        if (depth != null) {
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth.getTarget(), depth.ID, 0);
         }
-        
-        glDrawBuffers(attachments);
-
+        if (textures.length > 0) {
+            glDrawBuffers(attachments);
+        } else {
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+        }
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             throw new RuntimeException("Framebuffer not complete!");
         }
-
         unbind();
     }
 
@@ -40,31 +39,30 @@ public class GLGBuffer {
         ID = glGenFramebuffers();
         this.textures = new GLTexture[formats.length];
         if (doDepth) {
-            this.depth = new GLTexture(width, height, depthFormat, false, false);
+            this.depth = new GLTexture2D(width, height, depthFormat);
         } else {
             this.depth = null;
         }
-
         bind();
-
         int[] attachments = new int[textures.length];
         for (int i = 0; i < formats.length; i++) {
-            GLTexture tex = new GLTexture(width, height, formats[i], false, false);
+            GLTexture tex = new GLTexture2D(width, height, formats[i]);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, tex.getTarget(), tex.ID, 0);
             textures[i] = tex;
             attachments[i] = GL_COLOR_ATTACHMENT0 + i;
         }
-        
-        if(doDepth) {
+        if (doDepth) {
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth.getTarget(), depth.ID, 0);
         }
-        
-        glDrawBuffers(attachments);
-
+        if (formats.length > 0) {
+            glDrawBuffers(attachments);
+        } else {
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+        }
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             throw new RuntimeException("Framebuffer not complete!");
         }
-
         unbind();
     }
 

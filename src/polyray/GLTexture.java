@@ -1,209 +1,190 @@
 package polyray;
 
-import static org.lwjgl.opengl.GL43.*;
+import static org.lwjgl.opengl.GL46.*;
 
-public class GLTexture {
+public abstract class GLTexture {
 
     public int ID;
-    protected int width, height;
-    protected int format;
-    protected int interpolationMode;
-    protected int wrapMode;
+    public final int format;
 
-    private GLTexture() {
-    }
+    private final int target;
 
-    public GLTexture(int width, int height, int format, boolean interpolate, boolean wrap) {
-        this.width = width;
-        this.height = height;
+    private int interpolation;
+    private boolean mipmapEnabled;
+
+    private GLTexture(int format, int target) {
         this.format = format;
-        this.interpolationMode = interpolate ? GL_LINEAR : GL_NEAREST;
-        this.wrapMode = wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+        this.target = target;
         this.ID = glGenTextures();
-        bind();
-
-        glTexStorage2D(GL_TEXTURE_2D, 1, format, width, height);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolationMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolationMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
-    }
-
-    public GLTexture(Texture texture, int format, boolean interpolate, boolean wrap) {
-        this.width = texture.getWidth();
-        this.height = texture.getHeight();
-        this.format = format;
-        this.interpolationMode = interpolate ? GL_LINEAR : GL_NEAREST;
-        this.wrapMode = wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE;
-        this.ID = glGenTextures();
-        bind();
-
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolationMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolationMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
-    }
-
-    public void setTextureData(Texture texture) {
-        if (texture.getWidth() != width || texture.getHeight() != height) {
-            this.width = texture.getWidth();
-            this.height = texture.getHeight();
-            this.ID = glGenTextures();
-            bind();
-
-            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
-
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolationMode);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolationMode);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
-        } else {
-            bind();
-
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.getWidth(), texture.getHeight(), GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
-        }
-    }
-
-    public void setTextureData(Texture texture, int x, int y) {
-        bind();
-        glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, texture.getWidth(), texture.getHeight(), GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
-    }
-
-    public void resize(int newWidth, int newHeight) {
-        int fbo = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ID, 0);
-
-        int newTextureID = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, newTextureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, newWidth, newHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glBindTexture(GL_TEXTURE_2D, newTextureID);
-
-        glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, Math.min(width, newWidth), Math.min(height, newHeight));
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDeleteFramebuffers(fbo);
-        glDeleteTextures(ID);
-
-        this.ID = newTextureID;
-        this.width = newWidth;
-        this.height = newHeight;
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, interpolationMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, interpolationMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
+        this.interpolation = 0;
+        this.mipmapEnabled = false;
+        setFiltering();
+        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
 
     public void bind() {
-        glBindTexture(GL_TEXTURE_2D, ID);
+        glBindTexture(target, ID);
     }
 
     public void delete() {
         glDeleteTextures(ID);
     }
 
-    public final int getWidth() {
-        return width;
+    public final int getTarget() {
+        return this.target;
     }
 
-    public final int getHeight() {
-        return height;
+    public GLTexture setInterpolation(boolean interpolate) {
+        interpolation = interpolate ? (interpolation | 1) : (interpolation & 2);
+        setFiltering();
+        return this;
     }
 
-    public int getTarget() {
-        return GL_TEXTURE_2D;
+    public GLTexture setWrapMode(int mode) {
+        bind();
+        glTexParameteri(target, GL_TEXTURE_WRAP_S, mode);
+        glTexParameteri(target, GL_TEXTURE_WRAP_T, mode);
+        return this;
+    }
+
+    public GLTexture setAnisotrophy(float level) {
+        bind();
+        glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY, level);
+        return this;
+    }
+
+    public GLTexture enableMipmap(boolean interpolate) {
+        mipmapEnabled = true;
+        interpolation = interpolate ? (interpolation | 2) : (interpolation & 1);
+        setFiltering();
+        return this;
+    }
+
+    public void disableMipmap() {
+        mipmapEnabled = false;
+        setFiltering();
+    }
+
+    public void generateMipmap() {
+        if (!mipmapEnabled) {
+            throw new IllegalStateException("Can't generate mipmaps since mipmapping is disabled.");
+        }
+        bind();
+        glGenerateMipmap(target);
+    }
+
+    private void setFiltering() {
+        int mode = GL_NEAREST + (interpolation & 1);
+        bind();
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, mipmapEnabled ? (GL_NEAREST_MIPMAP_NEAREST + interpolation) : mode);
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, mode);
+    }
+
+    public static final float getMaxAnisotropy() {
+        return glGetFloat(GL_MAX_TEXTURE_MAX_ANISOTROPY);
+    }
+
+    public static final int getMaxTextureSize() {
+        return glGetInteger(GL_MAX_TEXTURE_SIZE);
+    }
+
+    public static final int getMax3DTextureSize() {
+        return glGetInteger(GL_MAX_3D_TEXTURE_SIZE);
+    }
+
+    public static final int getMaxArrayLayers() {
+        return glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS);
+    }
+
+    public static class GLTexture2D extends GLTexture {
+
+        private final int width, height;
+
+        public GLTexture2D(int width, int height, int format) {
+            super(format, GL_TEXTURE_2D);
+            this.width = width;
+            this.height = height;
+            bind();
+            glTexStorage2D(super.target, 1, format, width, height);
+        }
+
+        public GLTexture2D(Texture texture, int format) {
+            super(format, GL_TEXTURE_2D);
+            this.width = texture.getWidth();
+            this.height = texture.getHeight();
+            bind();
+            glTexImage2D(super.target, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
+        }
+
+        public void setTextureData(Texture texture, int x, int y) {
+            bind();
+            glTexSubImage2D(super.target, 0, x, y, texture.getWidth(), texture.getHeight(), GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
+        }
+
+        public final int getWidth() {
+            return width;
+        }
+
+        public final int getHeight() {
+            return height;
+        }
     }
 
     public static class GLTextureArray extends GLTexture {
 
-        private final int layers;
+        private final int width, height, layers;
 
-        public GLTextureArray(int width, int height, int layers, int format, boolean interpolate, boolean wrap) {
+        public GLTextureArray(int width, int height, int layers, int format) {
+            super(format, GL_TEXTURE_2D_ARRAY);
             this.width = width;
             this.height = height;
             this.layers = layers;
-            this.format = format;
-            this.interpolationMode = interpolate ? GL_LINEAR : GL_NEAREST;
-            this.wrapMode = wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE;
-            this.ID = glGenTextures();
-
-            glBindTexture(GL_TEXTURE_2D_ARRAY, ID);
-
-            glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, format, width, height, layers);
-
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, interpolationMode);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, interpolationMode);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, wrapMode);
-            glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, wrapMode);
-
-            glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-        }
-
-        @Override
-        public void setTextureData(Texture texture) {
-
-        }
-
-        @Override
-        public void setTextureData(Texture texture, int x, int y) {
-
-        }
-
-        @Override
-        public void resize(int newWidth, int newHeight) {
-
+            bind();
+            glTexStorage3D(super.target, 1, format, width, height, layers);
         }
 
         public void setLayerData(int layer, Texture texture) {
-            if (layer < 0 || layer >= layers) {
+            if (layer < 0 || layer >= layers || texture.getWidth() != this.width || texture.getHeight() != this.height) {
                 throw new IllegalArgumentException("Layer index out of bounds.");
             }
-            glBindTexture(GL_TEXTURE_2D_ARRAY, ID);
-            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, layer, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
+            bind();
+            glTexSubImage3D(super.target, 0, 0, 0, layer, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
         }
 
-        @Override
-        public void bind() {
-            glBindTexture(GL_TEXTURE_2D_ARRAY, ID);
+        public final int getWidth() {
+            return width;
         }
 
-        @Override
-        public int getTarget() {
-            return GL_TEXTURE_2D_ARRAY;
+        public final int getHeight() {
+            return height;
+        }
+
+        public final int getLayers() {
+            return layers;
         }
     }
 
     public static class GLTexture3D extends GLTexture {
 
-        protected int depth;
+        private final int width, height, depth;
 
-        public GLTexture3D(int width, int height, int depth, int format, boolean interpolate, boolean wrap) {
+        public GLTexture3D(int width, int height, int depth, int format) {
+            super(format, GL_TEXTURE_3D);
             this.width = width;
             this.height = height;
             this.depth = depth;
-            this.format = format;
-            this.interpolationMode = interpolate ? GL_LINEAR : GL_NEAREST;
-            this.wrapMode = wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE;
-            this.ID = glGenTextures();
-
-            glBindTexture(GL_TEXTURE_3D, ID);
-
-            // Allocate 3D texture
+            bind();
             glTexImage3D(GL_TEXTURE_3D, 0, format, width, height, depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        }
 
-            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, interpolationMode);
-            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, interpolationMode);
-            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrapMode);
-            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrapMode);
-            glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrapMode);
-
-            glBindTexture(GL_TEXTURE_3D, 0);
+        @Override
+        public GLTexture setWrapMode(int mode) {
+            bind();
+            glTexParameteri(super.target, GL_TEXTURE_WRAP_S, mode);
+            glTexParameteri(super.target, GL_TEXTURE_WRAP_T, mode);
+            glTexParameteri(super.target, GL_TEXTURE_WRAP_R, mode);
+            return this;
         }
 
         public void setSliceData(Texture tex, int z) {
@@ -211,37 +192,19 @@ public class GLTexture {
                 throw new IllegalArgumentException("Z index out of bounds.");
             }
             bind();
-            glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, z, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, tex.getData());
+            glTexSubImage3D(super.target, 0, 0, 0, z, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, tex.getData());
         }
 
-        @Override
-        public void bind() {
-            glBindTexture(GL_TEXTURE_3D, ID);
+        public final int getWidth() {
+            return width;
         }
 
-        public int getDepth() {
+        public final int getHeight() {
+            return height;
+        }
+
+        public final int getDepth() {
             return depth;
         }
-
-        @Override
-        public void setTextureData(Texture texture) {
-            throw new UnsupportedOperationException("Use setVolumeData or setSliceData for 3D textures.");
-        }
-
-        @Override
-        public void setTextureData(Texture texture, int x, int y) {
-            throw new UnsupportedOperationException("Use setSliceData for 3D textures.");
-        }
-
-        @Override
-        public void resize(int newWidth, int newHeight) {
-            throw new UnsupportedOperationException("Resize not supported for 3D textures.");
-        }
-
-        @Override
-        public int getTarget() {
-            return GL_TEXTURE_3D;
-        }
     }
-
 }

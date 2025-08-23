@@ -2,6 +2,7 @@ package polyray.modular;
 
 import static org.lwjgl.opengl.GL43.*;
 import polyray.GLTexture;
+import polyray.GLTexture.GLTexture2D;
 import polyray.ShaderBuffer;
 import polyray.ShaderProgram;
 import polyray.Texture;
@@ -42,7 +43,7 @@ public abstract class RenderObjectBase implements Renderable {
     public RenderObjectBase(Texture texture, ShaderProgram shader, VertexBufferTemplate vboTemplate, VertexBufferTemplate instanceVboTemplate) {
         this(shader, vboTemplate, instanceVboTemplate);
         if (texture != null) {
-            this.texture = new GLTexture(texture, GL_RGBA8, false, false);
+            this.texture = new GLTexture2D(texture, GL_RGBA8);
         }
     }
 
