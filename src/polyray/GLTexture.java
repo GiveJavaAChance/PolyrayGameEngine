@@ -6,11 +6,11 @@ public abstract class GLTexture {
 
     public int ID;
     public final int format;
-
+    
+    private boolean mipmapEnabled;
     private final int target;
 
     private int interpolation;
-    private boolean mipmapEnabled;
 
     private GLTexture(int format, int target) {
         this.format = format;
@@ -54,16 +54,10 @@ public abstract class GLTexture {
         return this;
     }
 
-    public GLTexture enableMipmap(boolean interpolate) {
-        mipmapEnabled = true;
+    public GLTexture setMipmapInterpolation(boolean interpolate) {
         interpolation = interpolate ? (interpolation | 2) : (interpolation & 1);
         setFiltering();
         return this;
-    }
-
-    public void disableMipmap() {
-        mipmapEnabled = false;
-        setFiltering();
     }
 
     public void generateMipmap() {
@@ -101,20 +95,28 @@ public abstract class GLTexture {
 
         private final int width, height;
 
-        public GLTexture2D(int width, int height, int format) {
+        public GLTexture2D(int width, int height, int format, int mipLevels) {
             super(format, GL_TEXTURE_2D);
             this.width = width;
             this.height = height;
+            super.mipmapEnabled = true;
             bind();
-            glTexStorage2D(super.target, 1, format, width, height);
+            glTexStorage2D(super.target, mipLevels, format, width, height);
+        }
+
+        public GLTexture2D(Texture texture, int format, int mipLevels) {
+            this(texture.getWidth(), texture.getHeight(), format, mipLevels);
+            glTexSubImage2D(super.target, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
+        }
+
+        public GLTexture2D(int width, int height, int format) {
+            this(width, height, format, 1);
+            super.mipmapEnabled = false;
         }
 
         public GLTexture2D(Texture texture, int format) {
-            super(format, GL_TEXTURE_2D);
-            this.width = texture.getWidth();
-            this.height = texture.getHeight();
-            bind();
-            glTexImage2D(super.target, 0, format, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.getData());
+            this(texture, format, 1);
+            super.mipmapEnabled = false;
         }
 
         public void setTextureData(Texture texture, int x, int y) {
@@ -140,8 +142,19 @@ public abstract class GLTexture {
             this.width = width;
             this.height = height;
             this.layers = layers;
+            super.mipmapEnabled = false;
             bind();
             glTexStorage3D(super.target, 1, format, width, height, layers);
+        }
+        
+        public GLTextureArray(int width, int height, int layers, int format, int mipLevels) {
+            super(format, GL_TEXTURE_2D_ARRAY);
+            this.width = width;
+            this.height = height;
+            this.layers = layers;
+            super.mipmapEnabled = true;
+            bind();
+            glTexStorage3D(super.target, mipLevels, format, width, height, layers);
         }
 
         public void setLayerData(int layer, Texture texture) {
@@ -174,8 +187,19 @@ public abstract class GLTexture {
             this.width = width;
             this.height = height;
             this.depth = depth;
+            super.mipmapEnabled = false;
             bind();
-            glTexImage3D(GL_TEXTURE_3D, 0, format, width, height, depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+            glTexStorage3D(super.target, 1, format, width, height, depth);
+        }
+        
+        public GLTexture3D(int width, int height, int depth, int format, int mipLevels) {
+            super(format, GL_TEXTURE_3D);
+            this.width = width;
+            this.height = height;
+            this.depth = depth;
+            super.mipmapEnabled = true;
+            bind();
+            glTexStorage3D(super.target, mipLevels, format, width, height, depth);
         }
 
         @Override
