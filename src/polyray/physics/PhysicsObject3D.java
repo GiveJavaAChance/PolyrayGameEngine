@@ -3,27 +3,22 @@ package polyray.physics;
 import polyray.Vector3d;
 import polyray.Vector3f;
 
-public class PhysicsObject {
+public class PhysicsObject3D {
 
     public final Vector3d pos = new Vector3d();
     public final Vector3d prevPos = new Vector3d();
     public final Vector3d acc = new Vector3d();
-    public final float friction, restitution;
 
-    public PhysicsObject(float friction, float restitution) {
-        this.friction = friction;
-        this.restitution = restitution;
+    public PhysicsObject3D() {
     }
 
-    public PhysicsObject(Vector3d pos, float friction, float restitution) {
+    public PhysicsObject3D(Vector3d pos) {
         this.pos.x = pos.x;
         this.pos.y = pos.y;
         this.pos.z = pos.z;
         this.prevPos.x = pos.x;
         this.prevPos.y = pos.y;
         this.prevPos.z = pos.z;
-        this.friction = friction;
-        this.restitution = restitution;
     }
 
     public void accelerate(Vector3d a) {

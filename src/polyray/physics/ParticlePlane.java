@@ -4,13 +4,13 @@ import polyray.Vector3d;
 
 public class ParticlePlane {
 
-    private final Particle[] particles;
+    private final Particle3D[] particles;
     private final Vector3d[] pointVectors;
     private final double invAmt;
     public final Vector3d planeOrigin = new Vector3d();
     public final Vector3d planeNormal = new Vector3d();
 
-    public ParticlePlane(Particle[] particles) {
+    public ParticlePlane(Particle3D[] particles) {
         this.particles = particles;
         this.pointVectors = new Vector3d[particles.length];
         this.invAmt = 1.0d / particles.length;
@@ -20,7 +20,7 @@ public class ParticlePlane {
         planeOrigin.x = 0.0d;
         planeOrigin.y = 0.0d;
         planeOrigin.z = 0.0d;
-        for (Particle p : particles) {
+        for (Particle3D p : particles) {
             planeOrigin.x += p.pos.x;
             planeOrigin.y += p.pos.y;
             planeOrigin.z += p.pos.z;
@@ -34,7 +34,7 @@ public class ParticlePlane {
         planeNormal.y = 0.0d;
         planeNormal.z = 0.0d;
         Vector3d prevPointVector = Vector3d.sub(particles[particles.length - 1].pos, planeOrigin);
-        for (Particle p : particles) {
+        for (Particle3D p : particles) {
             Vector3d pointVector = Vector3d.sub(p.pos, planeOrigin);
             pointVectors[i++] = pointVector;
             Vector3d normal = Vector3d.cross(pointVector, prevPointVector);
@@ -56,7 +56,7 @@ public class ParticlePlane {
         planeNormal.z *= mul;
 
         i = 0;
-        for (Particle p : particles) {
+        for (Particle3D p : particles) {
             double height = Vector3d.dot(pointVectors[i++], planeNormal);
             Vector3d correction = Vector3d.mul(planeNormal, -height);
             p.pos.x += correction.x;
