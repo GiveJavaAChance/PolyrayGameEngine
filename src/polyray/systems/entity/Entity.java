@@ -5,7 +5,15 @@ import java.util.Collection;
 
 public class Entity {
 
-    public final ArrayList<Component> components = new ArrayList<>();
+    protected final ArrayList<Component> components = new ArrayList<>();
+    
+    public final void addComponent(Component c) {
+        this.components.add(c);
+    }
+    
+    public final void removeComponent(Component c) {
+        this.components.remove(c);
+    }
     
     @SuppressWarnings("unchecked")
     public final <T extends Component> void getComponents(Class<T> clazz, Collection<T> components) {
