@@ -2,14 +2,14 @@ package polyray.physics;
 
 import polyray.Vector3d;
 
-public class ParticleLine {
+public class ParticleLine3D {
 
-    public final Particle a, b;
+    public final Particle3D a, b;
     public final double length;
     private final double stiffness;
     private final double ratioA, ratioB;
 
-    public ParticleLine(Particle a, Particle b, double length, double stiffness) {
+    public ParticleLine3D(Particle3D a, Particle3D b, double length, double stiffness) {
         this.a = a;
         this.b = b;
         this.length = length;
@@ -55,10 +55,10 @@ public class ParticleLine {
         b.pos.z -= dz * ratioA;
     }
 
-    public static final ParticleLine[] connectAllLines(Particle p, Particle[] particles, double stiffness) {
-        ParticleLine[] lines = new ParticleLine[particles.length];
+    public static final ParticleLine3D[] connectAllLines(Particle3D p, Particle3D[] particles, double stiffness) {
+        ParticleLine3D[] lines = new ParticleLine3D[particles.length];
         for (int i = 0; i < particles.length; i++) {
-            lines[i] = new ParticleLine(p, particles[i], Vector3d.length(Vector3d.sub(p.pos, particles[i].pos)), stiffness);
+            lines[i] = new ParticleLine3D(p, particles[i], Vector3d.length(Vector3d.sub(p.pos, particles[i].pos)), stiffness);
         }
         return lines;
     }

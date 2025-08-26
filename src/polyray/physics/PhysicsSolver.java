@@ -7,7 +7,7 @@ public abstract class PhysicsSolver {
     private final double H;
     private double timeAccu;
 
-    private final ArrayList<PhysicsObject> objects;
+    private final ArrayList<PhysicsObject3D> objects;
 
     public PhysicsSolver(double internalDt) {
         this.H = internalDt;
@@ -15,12 +15,12 @@ public abstract class PhysicsSolver {
         this.objects = new ArrayList<>();
     }
     
-    public int addObject(PhysicsObject o) {
+    public int addObject(PhysicsObject3D o) {
         this.objects.add(o);
         return this.objects.size() - 1;
     }
     
-    public void removeObject(PhysicsObject o) {
+    public void removeObject(PhysicsObject3D o) {
         this.objects.remove(o);
     }
     
@@ -33,12 +33,12 @@ public abstract class PhysicsSolver {
         while (this.timeAccu >= H) {
             this.timeAccu -= H;
             updateGeneral(H);
-            for (PhysicsObject obj : objects) {
+            for (PhysicsObject3D obj : objects) {
                 updateObject(obj, H);
             }
         }
     }
     
-    public abstract void updateObject(PhysicsObject obj, double dt);
+    public abstract void updateObject(PhysicsObject3D obj, double dt);
     public abstract void updateGeneral(double dt);
 }
