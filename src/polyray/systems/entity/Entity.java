@@ -1,33 +1,43 @@
 package polyray.systems.entity;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 
 public class Entity {
 
-    protected final ArrayList<Component> components = new ArrayList<>();
-    
-    public final void addComponent(Component c) {
+    protected final ArrayList<Object> components;
+
+    public Entity() {
+        this.components = new ArrayList<>();
+    }
+
+    public Entity(Object... components) {
+        this();
+        this.components.addAll(Arrays.asList(components));
+    }
+
+    public final void addComponent(Object c) {
         this.components.add(c);
     }
-    
-    public final void removeComponent(Component c) {
+
+    public final void removeComponent(Object c) {
         this.components.remove(c);
     }
-    
+
     @SuppressWarnings("unchecked")
-    public final <T extends Component> void getComponents(Class<T> clazz, Collection<T> components) {
-        for(Component c : this.components) {
-            if(clazz.isAssignableFrom(c.getClass())) {
+    public final <T> void getComponents(Class<T> clazz, Collection<T> components) {
+        for (Object c : this.components) {
+            if (clazz.isAssignableFrom(c.getClass())) {
                 components.add((T) c);
             }
         }
     }
-    
+
     @SuppressWarnings("unchecked")
-    public final <T extends Component> T getComponent(Class<T> clazz) {
-        for(Component c : components) {
-            if(clazz.isAssignableFrom(c.getClass())) {
+    public final <T> T getComponent(Class<T> clazz) {
+        for (Object c : components) {
+            if (clazz.isAssignableFrom(c.getClass())) {
                 return (T) c;
             }
         }

@@ -33,7 +33,7 @@ public class ECS {
         registerPhysicsUpdate(ScriptingSystem::physicsUpdate);
     }
 
-    public static <T extends Component> void registerSystem(Runnable setup, Consumer<Entity> add, Consumer<Entity> remove) {
+    public static void registerSystem(Runnable setup, Consumer<Entity> add, Consumer<Entity> remove) {
         systems.add(new ECSSystem(setup, add, remove));
     }
 

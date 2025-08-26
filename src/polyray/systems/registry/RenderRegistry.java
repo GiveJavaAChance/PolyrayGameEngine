@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.function.Supplier;
 import polyray.builtin.RenderObject;
 import polyray.modular.Instance;
-import polyray.modular.Vertex;
 
 public class RenderRegistry<T> {
 
