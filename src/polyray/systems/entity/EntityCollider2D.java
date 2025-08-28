@@ -6,9 +6,9 @@ import polyray.physics.PhysicsObject2D;
 
 public final class EntityCollider2D {
 
-    protected final Collider2D impl;
-    protected final Vector2d offset;
-    protected PhysicsObject2D obj;
+    public final Collider2D impl;
+    public final Vector2d offset;
+    public PhysicsObject2D obj;
     
     public EntityCollider2D(Collider2D impl, Vector2d offset) {
         this.impl = impl;
