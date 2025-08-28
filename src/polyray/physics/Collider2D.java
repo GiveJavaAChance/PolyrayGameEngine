@@ -14,7 +14,7 @@ public abstract class Collider2D {
     
     public Collider2D(Vector2d pos, Vector2d size, double friction, double restitution) {
         this(pos, size);
-        this.friction = friction;
+        this.friction = 1.0d - friction;
         this.restitution = restitution;
     }
 
