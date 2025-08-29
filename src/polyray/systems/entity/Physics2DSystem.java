@@ -1,6 +1,7 @@
 package polyray.systems.entity;
 
 import java.util.ArrayList;
+import polyray.Vector2d;
 import polyray.physics.PhysicsObject2D;
 import polyray.systems.BVH;
 import polyray.physics.Collider2D;
@@ -95,6 +96,9 @@ public class Physics2DSystem {
         for (PhysicsObject2D obj : objects) {
             obj.update(dt);
         }
+        if (dynamicColliders.isEmpty()) {
+            return;
+        }
         for (EntityCollider2D col : dynamicColliders) {
             col.update();
         }
@@ -108,9 +112,10 @@ public class Physics2DSystem {
         for (EntityCollider2D col : dynamicColliders) {
             col.impl.getBounds(dynamicBounds[idx++]);
         }
+        ArrayList<Collision2D> collisions = new ArrayList<>();
         BVH dynamicBVH = new BVH(dynamicBounds, 2);
         float[] query = new float[4];
-        int[] hits = new int[100];
+        int[] hits = new int[20];
         int aIdx = 0;
         for (EntityCollider2D a : dynamicColliders) {
             a.impl.getBounds(query);
@@ -118,14 +123,15 @@ public class Physics2DSystem {
             if (count != 0) {
                 for (int i = 0; i < count; i++) {
                     int bIdx = dynamicBVH.indices[hits[i]];
-                    if (aIdx == bIdx) {
+                    if (aIdx >= bIdx) {
                         continue;
                     }
                     EntityCollider2D b = dynamicColliders.get(bIdx);
                     CollisionInfo2D c = a.impl.collide(b.impl, dt);
-                    if (c != null) {
-                        // Handle, ooorrr, maybe defer for multithreading?
+                    if (c == null) {
+                        continue;
                     }
+                    collisions.add(new Collision2D(a, b, null, c));
                 }
             }
             count = staticBVH.query(query, hits);
@@ -134,13 +140,69 @@ public class Physics2DSystem {
                     int bIdx = staticBVH.indices[hits[i]];
                     Collider2D b = staticColliders.get(bIdx);
                     CollisionInfo2D c = a.impl.collide(b, dt);
-                    if (c != null) {
-                        // Handle, ooorrr, maybe defer for multithreading?
+                    if (c == null) {
+                        continue;
                     }
+                    collisions.add(new Collision2D(a, null, b, c));
                 }
             }
             aIdx++;
         }
+        for (Collision2D col : collisions) {
+            EntityCollider2D a = col.a;
+            PhysicsObject2D objA = a.obj;
+            Vector2d posA = objA.pos;
+            Vector2d prevPosA = objA.prevPos;
+
+            EntityCollider2D b = col.b;
+
+            CollisionInfo2D info = col.c;
+            Vector2d normal = info.normal;
+            double penetrationDepth = info.penetrationDepth * 0.5d;
+            if (b != null) {
+                penetrationDepth *= 0.5d;
+            }
+            double dx = normal.x * penetrationDepth;
+            double dy = normal.y * penetrationDepth;
+            if (b == null) {
+                double vx = posA.x - prevPosA.x;
+                double vy = posA.y - prevPosA.y;
+                posA.x += dx;
+                posA.y += dy;
+                double height = -(vx * normal.x + vy * normal.y);
+                double nvx = normal.x * height;
+                double nvy = normal.y * height;
+                Collider2D ac = a.impl;
+                double friction = ac.friction;
+                double restitution = ac.restitution;
+                double rx = (vx + nvx) * friction + nvx * restitution;
+                double ry = (vy + nvy) * friction + nvy * restitution;
+                prevPosA.x = posA.x - rx;
+                prevPosA.y = posA.y - ry;
+            } else {
+                posA.x += dx;
+                posA.y += dy;
+                Vector2d posB = b.obj.pos;
+                posB.x -= dx;
+                posB.y -= dy;
+            }
+        }
+        for (EntityCollider2D col : dynamicColliders) {
+            col.update();
+        }
     }
 
+    private static class Collision2D {
+
+        public final EntityCollider2D a, b;
+        public final Collider2D bc;
+        public final CollisionInfo2D c;
+
+        public Collision2D(EntityCollider2D a, EntityCollider2D b, Collider2D bc, CollisionInfo2D c) {
+            this.a = a;
+            this.b = b;
+            this.bc = bc;
+            this.c = c;
+        }
+    }
 }

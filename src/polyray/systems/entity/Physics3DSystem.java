@@ -1,6 +1,7 @@
 package polyray.systems.entity;
 
 import java.util.ArrayList;
+import polyray.Vector3d;
 import polyray.physics.PhysicsObject3D;
 import polyray.systems.BVH;
 import polyray.physics.Collider3D;
@@ -95,6 +96,9 @@ public class Physics3DSystem {
         for (PhysicsObject3D obj : objects) {
             obj.update(dt);
         }
+        if (dynamicColliders.isEmpty()) {
+            return;
+        }
         for (EntityCollider3D col : dynamicColliders) {
             col.update();
         }
@@ -108,9 +112,10 @@ public class Physics3DSystem {
         for (EntityCollider3D col : dynamicColliders) {
             col.impl.getBounds(dynamicBounds[idx++]);
         }
+        ArrayList<Collision3D> collisions = new ArrayList<>();
         BVH dynamicBVH = new BVH(dynamicBounds, 3);
         float[] query = new float[6];
-        int[] hits = new int[100];
+        int[] hits = new int[40];
         int aIdx = 0;
         for (EntityCollider3D a : dynamicColliders) {
             a.impl.getBounds(query);
@@ -118,14 +123,15 @@ public class Physics3DSystem {
             if (count != 0) {
                 for (int i = 0; i < count; i++) {
                     int bIdx = dynamicBVH.indices[hits[i]];
-                    if (aIdx == bIdx) {
+                    if (aIdx >= bIdx) {
                         continue;
                     }
                     EntityCollider3D b = dynamicColliders.get(bIdx);
                     CollisionInfo3D c = a.impl.collide(b.impl, dt);
-                    if (c != null) {
-                        // Handle, ooorrr, maybe defer for multithreading?
+                    if (c == null) {
+                        continue;
                     }
+                    collisions.add(new Collision3D(a, b, null, c));
                 }
             }
             count = staticBVH.query(query, hits);
@@ -134,12 +140,77 @@ public class Physics3DSystem {
                     int bIdx = staticBVH.indices[hits[i]];
                     Collider3D b = staticColliders.get(bIdx);
                     CollisionInfo3D c = a.impl.collide(b, dt);
-                    if (c != null) {
-                        // Handle, ooorrr, maybe defer for multithreading?
+                    if (c == null) {
+                        continue;
                     }
+                    collisions.add(new Collision3D(a, null, b, c));
                 }
             }
             aIdx++;
+        }
+        for (Collision3D col : collisions) {
+            EntityCollider3D a = col.a;
+            PhysicsObject3D objA = a.obj;
+            Vector3d posA = objA.pos;
+            Vector3d prevPosA = objA.prevPos;
+
+            EntityCollider3D b = col.b;
+
+            CollisionInfo3D info = col.c;
+            Vector3d normal = info.normal;
+            double penetrationDepth = info.penetrationDepth * 0.5d;
+            if (b != null) {
+                penetrationDepth *= 0.5d;
+            }
+            double dx = normal.x * penetrationDepth;
+            double dy = normal.y * penetrationDepth;
+            double dz = normal.z * penetrationDepth;
+            if (b == null) {
+                double vx = posA.x - prevPosA.x;
+                double vy = posA.y - prevPosA.y;
+                double vz = posA.z - prevPosA.z;
+                posA.x += dx;
+                posA.y += dy;
+                posA.z += dz;
+                double height = -(vx * normal.x + vy * normal.y + vz * normal.z);
+                double nvx = normal.x * height;
+                double nvy = normal.y * height;
+                double nvz = normal.z * height;
+                Collider3D ac = a.impl;
+                double friction = ac.friction;
+                double restitution = ac.restitution;
+                double rx = (vx + nvx) * friction + nvx * restitution;
+                double ry = (vy + nvy) * friction + nvy * restitution;
+                double rz = (vz + nvz) * friction + nvz * restitution;
+                prevPosA.x = posA.x - rx;
+                prevPosA.y = posA.y - ry;
+                prevPosA.z = posA.z - rz;
+            } else {
+                posA.x += dx;
+                posA.y += dy;
+                posA.z += dz;
+                Vector3d posB = b.obj.pos;
+                posB.x -= dx;
+                posB.y -= dy;
+                posB.z -= dz;
+            }
+        }
+        for (EntityCollider3D col : dynamicColliders) {
+            col.update();
+        }
+    }
+
+    private static class Collision3D {
+
+        public final EntityCollider3D a, b;
+        public final Collider3D bc;
+        public final CollisionInfo3D c;
+
+        public Collision3D(EntityCollider3D a, EntityCollider3D b, Collider3D bc, CollisionInfo3D c) {
+            this.a = a;
+            this.b = b;
+            this.bc = bc;
+            this.c = c;
         }
     }
 }
