@@ -13,6 +13,7 @@ public class ScriptingSystem {
             s.parent = e;
             s.setup();
         }
+        scripts.addAll(sc);
     }
     
     public static final void removeEntity(Entity e) {
@@ -20,7 +21,7 @@ public class ScriptingSystem {
         e.getComponents(Script.class, sc);
         for (Script s : sc) {
             s.parent = null;
-            e.removeComponent(s);
+            scripts.remove(s);
         }
     }
     
