@@ -38,12 +38,12 @@ public class Particle3D extends PhysicsObject3D {
     }
 
     public void resolvePenetration(Vector3d normal, double penetrationDepth) {
-        pos.x += normal.x * penetrationDepth;
-        pos.y += normal.y * penetrationDepth;
-        pos.z += normal.z * penetrationDepth;
         double vx = pos.x - prevPos.x;
         double vy = pos.y - prevPos.y;
         double vz = pos.z - prevPos.z;
+        pos.x += normal.x * penetrationDepth;
+        pos.y += normal.y * penetrationDepth;
+        pos.z += normal.z * penetrationDepth;
         double height = -(vx * normal.x + vy * normal.y + vz * normal.z);
         if (height <= 0.0d) {
             return;

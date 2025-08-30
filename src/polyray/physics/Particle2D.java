@@ -36,10 +36,10 @@ public class Particle2D extends PhysicsObject2D {
     }
 
     public void resolvePenetration(Vector2d normal, double penetrationDepth) {
-        pos.x += normal.x * penetrationDepth;
-        pos.y += normal.y * penetrationDepth;
         double vx = pos.x - prevPos.x;
         double vy = pos.y - prevPos.y;
+        pos.x += normal.x * penetrationDepth;
+        pos.y += normal.y * penetrationDepth;
         double height = -(vx * normal.x + vy * normal.y);
         if (height <= 0.0d) {
             return;
