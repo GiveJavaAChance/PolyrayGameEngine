@@ -4,15 +4,11 @@ import polyray.modular.Instance;
 import java.nio.FloatBuffer;
 import polyray.Transform3D;
 import polyray.VertexBufferTemplate;
-import polyray.VertexBufferTemplate.VertexAttribute;
+import static polyray.VertexBufferTemplate.VertexAttribute.*;
 
 public class Instance3D implements Instance {
 
-    public static final VertexBufferTemplate VBO_TEMPLATE = new VertexBufferTemplate(true)
-            .addAttribute(VertexAttribute.VEC4)
-            .addAttribute(VertexAttribute.VEC4)
-            .addAttribute(VertexAttribute.VEC4)
-            .addAttribute(VertexAttribute.VEC4);
+    public static final VertexBufferTemplate VBO_TEMPLATE = new VertexBufferTemplate(true, VEC4, VEC4, VEC4, VEC4);
 
     public Transform3D transform;
 
