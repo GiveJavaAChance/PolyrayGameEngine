@@ -5,14 +5,11 @@ import java.awt.geom.AffineTransform;
 import java.nio.FloatBuffer;
 import polyray.Transform2D;
 import polyray.VertexBufferTemplate;
-import polyray.VertexBufferTemplate.VertexAttribute;
+import static polyray.VertexBufferTemplate.VertexAttribute.*;
 
 public class Instance2D implements Instance {
 
-    public static final VertexBufferTemplate VBO_TEMPLATE = new VertexBufferTemplate(true)
-            .addAttribute(VertexAttribute.VEC3)
-            .addAttribute(VertexAttribute.VEC3)
-            .addAttribute(VertexAttribute.VEC3);
+    public static final VertexBufferTemplate VBO_TEMPLATE = new VertexBufferTemplate(true, VEC3, VEC3, VEC3);
 
     public Transform2D transform;
 

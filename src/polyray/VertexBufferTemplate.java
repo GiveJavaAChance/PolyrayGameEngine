@@ -1,31 +1,30 @@
 package polyray;
 
-import java.util.ArrayList;
 import static org.lwjgl.opengl.GL43.*;
 
 public class VertexBufferTemplate {
 
-    private final ArrayList<VertexAttribute> attributes = new ArrayList<>();
-    private int totalSize = 0;
-    private final boolean instance;
+    private final VertexAttribute[] attributes;
+    private final int totalSize;
+    private final boolean instanced;
 
-    public VertexBufferTemplate(boolean instance) {
-        this.instance = instance;
+    public VertexBufferTemplate(boolean instanced, VertexAttribute... attributes) {
+        this.instanced = instanced;
+        this.attributes = attributes;
+        int s = 0;
+        for (VertexAttribute a : attributes) {
+            s += a.size;
+        }
+        this.totalSize = s;
     }
-
-    public VertexBufferTemplate addAttribute(VertexAttribute attribute) {
-        this.attributes.add(attribute);
-        this.totalSize += attribute.size;
-        return this;
-    }
-
+    
     public int build(int idx) {
         int vbo = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         int off = 0;
         for (VertexAttribute attribute : attributes) {
             attribute.bind(idx, off, totalSize);
-            if (instance) {
+            if (instanced) {
                 glVertexAttribDivisor(idx, 1);
             }
             idx++;
@@ -40,7 +39,7 @@ public class VertexBufferTemplate {
         int off = 0;
         for (VertexAttribute attribute : attributes) {
             attribute.bind(idx, off, totalSize);
-            if (instance) {
+            if (instanced) {
                 glVertexAttribDivisor(idx, 1);
             }
             idx++;
@@ -54,7 +53,7 @@ public class VertexBufferTemplate {
     }
     
     public int getAttributeCount() {
-        return this.attributes.size();
+        return this.attributes.length;
     }
 
     public static class VertexAttribute {
