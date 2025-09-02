@@ -94,7 +94,7 @@ public class Vector3d {
             return false;
         }
         if (o instanceof Vector3d v) {
-            return !(v.x != this.x || v.y != this.y || v.z == this.z);
+            return !(v.x != this.x || v.y != this.y || v.z != this.z);
         }
         return false;
     }
