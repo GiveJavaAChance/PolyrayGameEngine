@@ -58,7 +58,7 @@ public class Background {
         proc.appendAll();
         proc.setInt("ENV_IDX", BindingRegistry.bindBufferBase(this.environmentBuffer));
         proc.setInt("CAM3D_IDX", cameraBufferBinding);
-        quadProgram = proc.createProgram("quadshader", 0);
+        quadProgram = proc.createProgram();
         setupFullscreenQuad();
     }
 
@@ -109,6 +109,6 @@ public class Background {
     }
 
     public void cleanup() {
-        quadProgram.cleanup();
+        quadProgram.delete();
     }
 }

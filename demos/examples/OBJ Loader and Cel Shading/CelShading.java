@@ -16,13 +16,12 @@ import polyray.BindingRegistry;
 import polyray.GLFWindow;
 import polyray.Input;
 import polyray.Material;
-import polyray.ResourceLoader;
+import polyray.ResourceManager;
 import polyray.ShaderPreprocessor;
 import polyray.Texture;
 import polyray.Transform3D;
 import polyray.Vector3f;
 import polyray.builtin.Camera3D;
-import polyray.builtin.GenericRenderObject;
 import polyray.builtin.Instance3D;
 import polyray.builtin.RenderObject;
 import polyray.builtin.Renderer3D;
@@ -54,7 +53,7 @@ public class CelShading {
         } catch (AWTException e) {
         }
         rob = r;
-        ResourceLoader.setResourceClass(CelShading.class);
+        ResourceManager.addResource(CelShading.class);
         JFileChooser fc = new JFileChooser();
         fc.setFileFilter(new FileNameExtensionFilter("OBJ Files", "obj"));
         if (fc.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
@@ -92,7 +91,7 @@ public class CelShading {
             throw new ExceptionInInitializerError("Loading failed!");
         }
         for (RenderData obj : objects) {
-            Material mat = new Material(proc.createProgram("flat", 0));
+            Material mat = new Material(proc.createProgram());
             OBJMaterial.toPBR(obj.mat, mat);
             Texture tex;
             try {

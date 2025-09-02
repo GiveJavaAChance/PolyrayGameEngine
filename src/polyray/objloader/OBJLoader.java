@@ -10,6 +10,7 @@ import javax.imageio.ImageIO;
 import static org.lwjgl.opengl.GL11.*;
 import polyray.GLTexture.GLTexture2D;
 import polyray.Material;
+import polyray.ShaderProgram;
 import polyray.Texture;
 import polyray.TextureUtils;
 import polyray.Vector2f;
@@ -120,8 +121,8 @@ public class OBJLoader {
             this.mat = mat;
         }
 
-        public RenderObject toDefault(int cameraBinding, int environmentBinding) throws IOException {
-            Material m = new Material(cameraBinding, environmentBinding);
+        public RenderObject create(ShaderProgram shader) throws IOException {
+            Material m = new Material(shader);
             OBJMaterial.toPBR(mat, m);
             return new RenderObject(new GLTexture2D(getTexture(), GL_RGBA8).setInterpolation(true).setWrapMode(GL_REPEAT), m.getShader(), Vertex3D.VBO_TEMPLATE, Instance3D.VBO_TEMPLATE);
         }

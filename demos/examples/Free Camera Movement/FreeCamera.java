@@ -17,6 +17,7 @@ import polyray.BindingRegistry;
 import polyray.GLFWindow;
 import polyray.Input;
 import polyray.Material;
+import polyray.ShaderPreprocessor;
 import polyray.TextureUtils;
 import polyray.Transform3D;
 import polyray.Vector3f;
@@ -26,7 +27,6 @@ import polyray.builtin.RenderObject;
 import polyray.builtin.Renderer3D;
 import polyray.builtin.SolidLoader;
 import polyray.builtin.Vertex3D;
-import polyray.modular.Vertex;
 
 public class FreeCamera {
 
@@ -59,12 +59,19 @@ public class FreeCamera {
         Camera3D cam = new Camera3D(0.1f, 1000.0f);
         cameraTransform = cam.cameraTransform;
         cameraPos = cam.pos;
-        
+
         Background b = new Background(cam.cameraBinding);
         u.setBackground(b);
 
+        // Setup shader:
+        int env = BindingRegistry.bindBufferBase(b.environmentBuffer);
+        ShaderPreprocessor proc = ShaderPreprocessor.fromFiles("Texture3D.vert", "Texture3D.frag");
+        proc.appendAll();
+        proc.setInt("CAM3D_IDX", cam.cameraBinding);
+        proc.setInt("ENV_IDX", env);
+
         // A simple cube as an example
-        Material mat = new Material(cam.cameraBinding, BindingRegistry.bindBufferBase(b.environmentBuffer));
+        Material mat = new Material(proc.createProgram());
         mat.setMetallic(0.5f);
         mat.setRoughness(0.5f);
         mat.setF0(new Vector3f(0.05f, 0.05f, 0.05f));
