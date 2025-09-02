@@ -1,8 +1,5 @@
 package polyray;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
@@ -12,6 +9,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import static org.lwjgl.opengl.GL46.*;
 
 public class ShaderPreprocessor {
 
@@ -21,15 +19,15 @@ public class ShaderPreprocessor {
     private static final Pattern SIGNATURE_PATTERN = Pattern.compile("(#override\\s+)?([a-zA-Z][a-zA-Z0-9_]*)\\s+([a-zA-Z][a-zA-Z0-9_]*)\\s*\\(([^)]*)\\)\\s*\\{", Pattern.DOTALL);
 
     private final String[] shaderCodes;
-    private final boolean isCompute;
+    private final int[] shaderTypes;
 
     static {
         df.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
     }
 
-    private ShaderPreprocessor(boolean isCompute, String... shaderCodes) {
+    private ShaderPreprocessor(String[] shaderCodes, int... shaderTypes) {
         this.shaderCodes = shaderCodes;
-        this.isCompute = isCompute;
+        this.shaderTypes = shaderTypes;
     }
 
     public void setInt(String name, int val) {
@@ -80,17 +78,12 @@ public class ShaderPreprocessor {
                     continue;
                 }
                 appendedFiles.add(fileName);
-                String fileContent = "";
-                try {
-                    fileContent = readFile(fileName);
-                } catch (Exception e) {
-                    try {
-                        fileContent = readLocalFile(fileName);
-                    } catch (Exception ex) {
-                        System.err.println("Could not find file in shader append: " + fileName);
-                    }
+                String content = ResourceManager.getResourceAsString(fileName);
+                if(content == null) {
+                    System.err.println("Could not find file in shader append: " + fileName);
+                    System.exit(1);
                 }
-                matcher.appendReplacement(buffer, Matcher.quoteReplacement(fileContent));
+                matcher.appendReplacement(buffer, Matcher.quoteReplacement(content));
                 appendCount++;
             }
             matcher.appendTail(buffer);
@@ -173,16 +166,13 @@ public class ShaderPreprocessor {
         }
         return -1;
     }
-    
+
     private String clean(String code) {
         return code.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("//.*", "");
     }
 
-    public ShaderProgram createProgram(String name, int index) {
-        if (isCompute) {
-            return ShaderProgram.fromSource(shaderCodes[0], name, index);
-        }
-        return ShaderProgram.fromSource(shaderCodes[0], shaderCodes[1], name, index);
+    public ShaderProgram createProgram() {
+        return ShaderProgram.customFromSource(shaderCodes, shaderTypes);
     }
 
     public String[] getCodes() {
@@ -190,53 +180,37 @@ public class ShaderPreprocessor {
     }
 
     public static ShaderPreprocessor fromFiles(String vertexFile, String fragmentFile) {
-        return new ShaderPreprocessor(false, readFile(vertexFile), readFile(fragmentFile));
+        return fromSource(ResourceManager.getResourceAsString(vertexFile), ResourceManager.getResourceAsString(fragmentFile));
     }
 
     public static ShaderPreprocessor fromFiles(String computeFile) {
-        return new ShaderPreprocessor(true, readFile(computeFile));
+        return fromSource(ResourceManager.getResourceAsString(computeFile));
+    }
+
+    public static ShaderPreprocessor customFromFiles(String[] files, int[] types) {
+        if (files.length != types.length) {
+            throw new IllegalArgumentException("source and type count mismatch.");
+        }
+        String[] sources = new String[files.length];
+        for (int i = 0; i < sources.length; i++) {
+            sources[i] = ResourceManager.getResourceAsString(files[i]);
+        }
+        return new ShaderPreprocessor(sources, types);
     }
 
     public static ShaderPreprocessor fromSource(String vertexSource, String fragmentSource) {
-        return new ShaderPreprocessor(false, vertexSource, fragmentSource);
+        return new ShaderPreprocessor(new String[]{vertexSource, fragmentSource}, GL_VERTEX_SHADER, GL_FRAGMENT_SHADER);
     }
 
     public static ShaderPreprocessor fromSource(String computeSource) {
-        return new ShaderPreprocessor(true, computeSource);
+        return new ShaderPreprocessor(new String[]{computeSource}, GL_COMPUTE_SHADER);
     }
 
-    public static ShaderPreprocessor fromLocalFiles(String vertexFile, String fragmentFile) {
-        return new ShaderPreprocessor(false, readLocalFile(vertexFile), readLocalFile(fragmentFile));
-    }
-
-    public static ShaderPreprocessor fromLocalFiles(String computeFile) {
-        return new ShaderPreprocessor(true, readLocalFile(computeFile));
-    }
-
-    private static String readFile(String filePath) {
-        StringBuilder str = new StringBuilder();
-        try ( BufferedReader br = new BufferedReader(new InputStreamReader(ResourceLoader.getLoader().getResourceAsStream(filePath)))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                str.append(line);
-                str.append("\n");
-            }
-        } catch (IOException e) {
+    public static ShaderPreprocessor customFromSource(String[] sources, int[] types) {
+        if (sources.length != types.length) {
+            throw new IllegalArgumentException("source and type count mismatch.");
         }
-        return str.toString();
-    }
-
-    private static String readLocalFile(String filePath) {
-        StringBuilder str = new StringBuilder();
-        try ( BufferedReader br = new BufferedReader(new InputStreamReader(ShaderProgram.class.getResourceAsStream("shaders/" + filePath)))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                str.append(line);
-                str.append("\n");
-            }
-        } catch (IOException e) {
-        }
-        return str.toString();
+        return new ShaderPreprocessor(sources, types);
     }
 
     private static class FunctionSignature {

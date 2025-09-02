@@ -21,7 +21,7 @@ public class FullscreenQuad {
                                         gl_Position = vec4(pos, 0.0, 1.0);
                                     }
                                     """;
-        quadProgram = ShaderProgram.fromSource(vertexShaderSource, fragmentShaderSource, "quadshader", 0);
+        quadProgram = ShaderProgram.fromSource(vertexShaderSource, fragmentShaderSource);
         setupFullscreenQuad();
     }
 
@@ -71,6 +71,6 @@ public class FullscreenQuad {
     }
 
     public void cleanup() {
-        quadProgram.cleanup();
+        quadProgram.delete();
     }
 }

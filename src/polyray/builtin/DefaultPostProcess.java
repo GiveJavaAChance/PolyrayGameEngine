@@ -23,10 +23,10 @@ public class DefaultPostProcess extends PostProcessor {
         this.height = input.getHeight();
         int inIdx = BindingRegistry.bindImageTexture(source, 0, false, 0, GL_READ_WRITE);
         int outIdx = BindingRegistry.bindImageTexture(target, 0, false, 0, GL_READ_WRITE);
-        ShaderPreprocessor processor = ShaderPreprocessor.fromLocalFiles("post.compute");
+        ShaderPreprocessor processor = ShaderPreprocessor.fromFiles("post.compute");
         processor.setInt("IN_IDX", inIdx);
         processor.setInt("OUT_IDX", outIdx);
-        computeProgram = processor.createProgram("offscreenrenderer", 0);
+        computeProgram = processor.createProgram();
         computeProgram.use();
         computeProgram.setUniform("effect", -1);
         computeProgram.unuse();
@@ -44,7 +44,7 @@ public class DefaultPostProcess extends PostProcessor {
     }
 
     public void cleanup() {
-        computeProgram.cleanup();
+        computeProgram.delete();
     }
 
     @Override

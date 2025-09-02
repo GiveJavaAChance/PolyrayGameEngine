@@ -1,41 +1,20 @@
 package polyray;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import static org.lwjgl.opengl.ARBComputeShader.GL_COMPUTE_SHADER;
-import static org.lwjgl.opengl.ARBGPUShaderFP64.*;
-import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL46.*;
 
 public class ShaderProgram {
 
     private final int program;
-    private int vs, fs, cs;
     private final boolean compute;
-    private boolean isOn = false;
 
-    private ShaderProgram(String vert, String frag, String name, int index) {
-        compute = false;
+    private ShaderProgram(String[] sources, int... types) {
         program = glCreateProgram();
-        vs = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vs, vert);
-        glCompileShader(vs);
-        if (glGetShaderi(vs, GL_COMPILE_STATUS) != 1) {
-            System.err.println(glGetShaderInfoLog(vs));
-            System.exit(1);
+        int[] shaders = new int[sources.length];
+        for (int i = 0; i < sources.length; i++) {
+            int shader = compileShader(sources[i], types[i]);
+            glAttachShader(program, shader);
+            shaders[i] = shader;
         }
-        fs = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fs, frag);
-        glCompileShader(fs);
-        if (glGetShaderi(fs, GL_COMPILE_STATUS) != 1) {
-            System.err.println(glGetShaderInfoLog(fs));
-            System.exit(1);
-        }
-        glAttachShader(program, vs);
-        glAttachShader(program, fs);
-
-        glBindAttribLocation(program, index, name);
-
         glLinkProgram(program);
         if (glGetProgrami(program, GL_LINK_STATUS) != 1) {
             System.err.println(glGetProgramInfoLog(program));
@@ -46,105 +25,63 @@ public class ShaderProgram {
             System.err.println(glGetProgramInfoLog(program));
             System.exit(1);
         }
-        glDeleteShader(vs);
-        glDeleteShader(fs);
+        for (int shader : shaders) {
+            glDeleteShader(shader);
+        }
+        compute = sources.length == 1 && types[0] == GL_COMPUTE_SHADER;
     }
 
-    private ShaderProgram(String comp, String name, int index) {
-        compute = true;
-        program = glCreateProgram();
-        cs = glCreateShader(GL_COMPUTE_SHADER);
-        glShaderSource(cs, comp);
-        glCompileShader(cs);
-        if (glGetShaderi(cs, GL_COMPILE_STATUS) != 1) {
-            System.err.println(glGetShaderInfoLog(cs));
+    private static int compileShader(String source, int type) {
+        int shader = glCreateShader(type);
+        glShaderSource(shader, source);
+        glCompileShader(shader);
+        if (glGetShaderi(shader, GL_COMPILE_STATUS) != 1) {
+            System.err.println(glGetShaderInfoLog(shader));
             System.exit(1);
         }
-        glAttachShader(program, cs);
+        return shader;
+    }
 
-        glBindAttribLocation(program, index, name);
+    public static ShaderProgram fromFiles(String vertexFile, String fragmentFile) {
+        return fromSource(ResourceManager.getResourceAsString(vertexFile), ResourceManager.getResourceAsString(fragmentFile));
+    }
 
-        glLinkProgram(program);
-        if (glGetProgrami(program, GL_LINK_STATUS) != 1) {
-            System.err.println(glGetProgramInfoLog(program));
-            System.exit(1);
+    public static ShaderProgram fromFiles(String computeFile) {
+        return fromSource(ResourceManager.getResourceAsString(computeFile));
+    }
+    
+    public static ShaderProgram customFromFiles(String[] files, int[] types) {
+        if(files.length != types.length) {
+            throw new IllegalArgumentException("source and type count mismatch.");
         }
-        glValidateProgram(program);
-        if (glGetProgrami(program, GL_VALIDATE_STATUS) != 1) {
-            System.err.println(glGetProgramInfoLog(program));
-            System.exit(1);
+        String[] sources = new String[files.length];
+        for (int i = 0; i < sources.length; i++) {
+            sources[i] = ResourceManager.getResourceAsString(files[i]);
         }
-        glDeleteShader(cs);
+        return new ShaderProgram(sources, types);
     }
 
-    public static ShaderProgram fromFiles(String vertexFile, String fragmentFile, String name, int index) {
-        ShaderProgram p = new ShaderProgram(readFile(vertexFile), readFile(fragmentFile), name, index);
-        return p;
+    public static ShaderProgram fromSource(String vertexSource, String fragmentSource) {
+        return new ShaderProgram(new String[]{vertexSource, fragmentSource}, GL_VERTEX_SHADER, GL_FRAGMENT_SHADER);
     }
 
-    public static ShaderProgram fromFiles(String computeFile, String name, int index) {
-        ShaderProgram p = new ShaderProgram(readFile(computeFile), name, index);
-        return p;
+    public static ShaderProgram fromSource(String computeSource) {
+        return new ShaderProgram(new String[]{computeSource}, GL_COMPUTE_SHADER);
     }
-
-    public static ShaderProgram fromSource(String vertexSource, String fragmentSource, String name, int index) {
-        ShaderProgram p = new ShaderProgram(vertexSource, fragmentSource, name, index);
-        return p;
-    }
-
-    public static ShaderProgram fromSource(String computeSource, String name, int index) {
-        ShaderProgram p = new ShaderProgram(computeSource, name, index);
-        return p;
-    }
-
-    static ShaderProgram fromLocalFiles(String vertexFile, String fragmentFile, String name, int index) {
-        ShaderProgram p = new ShaderProgram(readLocalFile(vertexFile), readLocalFile(fragmentFile), name, index);
-        return p;
-    }
-
-    static ShaderProgram fromLocalFiles(String computeFile, String name, int index) {
-        ShaderProgram p = new ShaderProgram(readLocalFile(computeFile), name, index);
-        return p;
-    }
-
-    private static String readFile(String filePath) {
-        StringBuilder str = new StringBuilder();
-        try ( BufferedReader br = new BufferedReader(new InputStreamReader(ResourceLoader.getLoader().getResourceAsStream(filePath)))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                str.append(line);
-                str.append("\n");
-            }
-        } catch (IOException e) {
+    
+    public static ShaderProgram customFromSource(String[] sources, int[] types) {
+        if(sources.length != types.length) {
+            throw new IllegalArgumentException("source and type count mismatch.");
         }
-        return str.toString();
-    }
-
-    private static String readLocalFile(String filePath) {
-        StringBuilder str = new StringBuilder();
-        try ( BufferedReader br = new BufferedReader(new InputStreamReader(ShaderProgram.class.getResourceAsStream("shaders/" + filePath)))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                str.append(line);
-                str.append("\n");
-            }
-        } catch (IOException e) {
-        }
-        return str.toString();
+        return new ShaderProgram(sources, types);
     }
 
     public void use() {
-        if (!isOn) {
-            isOn = true;
-            glUseProgram(program);
-        }
+        glUseProgram(program);
     }
 
     public void unuse() {
-        if (isOn) {
-            isOn = false;
-            glUseProgram(0);
-        }
+        glUseProgram(0);
     }
 
     public int getProgramId() {
@@ -314,7 +251,14 @@ public class ShaderProgram {
         }
     }
 
-    public void cleanup() {
+    public void dispatchCompute(int numGroupsX, int numGroupsY, int numGroupsZ, int barriers) {
+        use();
+        glDispatchCompute(numGroupsX, numGroupsY, numGroupsZ);
+        glMemoryBarrier(barriers);
+        unuse();
+    }
+
+    public void delete() {
         glDeleteProgram(program);
     }
 }
