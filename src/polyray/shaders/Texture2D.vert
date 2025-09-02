@@ -10,7 +10,7 @@ layout(location = 2) in mat3 instanceTransform;
 out vec2 uv;
 
 void main() {
-    vec2 p = (instanceTransform * vec3(inPosition, 1.0)).xy;
-    gl_Position = vec4((cameraTransform * vec3(v, 1.0)).xy, 0.0, 1.0);
+    vec2 p = (instanceTransform * vec3(position, 1.0)).xy;
+    gl_Position = vec4((projection * cameraTransform * vec3(p, 1.0)).xy, 0.0, 1.0);
     uv = uvCoords;
 }
