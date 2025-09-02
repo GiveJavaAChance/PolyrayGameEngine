@@ -7,7 +7,7 @@ layout(std430, binding = STR_IDX) buffer PackedStringBuffer {
     uint packedData[];
 };
 
-#append "UI.glsl";
+#append "Camera2D.glsl";
 
 out vec3 uv;
 out vec4 color;
@@ -32,6 +32,6 @@ void main() {
 
     vec2 p = position + pos + vec2(float(instance) * 11.0, 0.0);
 
-    gl_Position = vec4((cameraTransform * vec3(p, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((projection * cameraTransform * vec3(p, 1.0)).xy, 0.0, 1.0);
     uv = vec3(uvCoords, charID);
 }

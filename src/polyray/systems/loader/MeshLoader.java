@@ -1,5 +1,6 @@
 package polyray.systems.loader;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,7 +11,7 @@ import javax.imageio.ImageIO;
 import static org.lwjgl.opengl.GL11.GL_RGBA8;
 import polyray.GLTexture.GLTexture2D;
 import polyray.Material;
-import polyray.ResourceLoader;
+import polyray.ResourceManager;
 import polyray.Texture;
 import polyray.TextureUtils;
 import polyray.Vector3f;
@@ -45,9 +46,10 @@ public class MeshLoader {
             MeshInfo info = meshes.pop();
             GLTexture2D texture;
             if (info.tex != null) {
-                try {
-                    texture = new GLTexture2D(new Texture(ImageIO.read(ResourceLoader.getLoader().getResourceAsStream(info.tex.name))), GL_RGBA8);
-                } catch (IOException e) {
+                BufferedImage image = ResourceManager.getResourceAsImage(info.tex.name);
+                if (image != null) {
+                    texture = new GLTexture2D(new Texture(image), GL_RGBA8);
+                } else {
                     texture = new GLTexture2D(TextureUtils.createColorTexture(0xFFFFFFFF), GL_RGBA8);
                 }
             } else {
@@ -94,7 +96,7 @@ public class MeshLoader {
     }
 
     public static final void loadMesh(String meshName, ArrayList<Vertex3D> verts) throws IOException {
-        BufferedInputStream in = new BufferedInputStream(ResourceLoader.getLoader().getResourceAsStream(meshName));
+        BufferedInputStream in = new BufferedInputStream(ResourceManager.getResource(meshName));
         byte[] buffer = new byte[36];
         float[] vertices = new float[9];
         FloatBuffer buff = ByteBuffer.wrap(buffer).asFloatBuffer();
@@ -111,7 +113,7 @@ public class MeshLoader {
     }
 
     public static final void loadMeshTex(String meshName, Vector3f T, Vector3f B, ArrayList<Vertex3D> verts) throws IOException {
-        BufferedInputStream in = new BufferedInputStream(ResourceLoader.getLoader().getResourceAsStream(meshName));
+        BufferedInputStream in = new BufferedInputStream(ResourceManager.getResource(meshName));
         byte[] buffer = new byte[36];
         float[] vertices = new float[9];
         FloatBuffer buff = ByteBuffer.wrap(buffer).asFloatBuffer();

@@ -8,7 +8,7 @@ import javax.imageio.ImageIO;
 import static org.lwjgl.opengl.GL11.GL_RGBA8;
 import polyray.GLTexture.GLTexture2D;
 import polyray.GLTexture.GLTextureArray;
-import polyray.ResourceLoader;
+import polyray.ResourceManager;
 import polyray.Texture;
 
 public class TextureLoader {
@@ -20,27 +20,27 @@ public class TextureLoader {
         GLTextureArray tex = textureArrays.get(name);
         if (tex == null) {
             int numModels = numModelsX * numModelsY;
-            try {
-                BufferedImage playerSegment = ImageIO.read(ResourceLoader.getLoader().getResourceAsStream(name));
-                int width = playerSegment.getWidth();
-                int height = playerSegment.getHeight();
-                int modelWidth = width / numModelsX;
-                int modelHeight = height / numModelsY;
-                tex = new GLTextureArray(modelWidth, modelHeight, numModels, interFormat);
-                tex.setInterpolation(interpolate);
-                tex.setWrapMode(wrapMode);
-                for (int y = 0; y < numModelsY; y++) {
-                    int yi = y * numModelsX;
-                    for (int x = 0; x < numModelsX; x++) {
-                        int idx = x + yi;
-                        Texture t = new Texture(modelWidth, modelHeight);
-                        Graphics2D g = t.createGraphics();
-                        g.drawImage(playerSegment, -x * modelWidth, -y * modelHeight, null);
-                        g.dispose();
-                        tex.setLayerData(idx, t);
-                    }
+            BufferedImage image = ResourceManager.getResourceAsImage(name);
+            if (image == null) {
+                return null;
+            }
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int modelWidth = width / numModelsX;
+            int modelHeight = height / numModelsY;
+            tex = new GLTextureArray(modelWidth, modelHeight, numModels, interFormat);
+            tex.setInterpolation(interpolate);
+            tex.setWrapMode(wrapMode);
+            for (int y = 0; y < numModelsY; y++) {
+                int yi = y * numModelsX;
+                for (int x = 0; x < numModelsX; x++) {
+                    int idx = x + yi;
+                    Texture t = new Texture(modelWidth, modelHeight);
+                    Graphics2D g = t.createGraphics();
+                    g.drawImage(image, -x * modelWidth, -y * modelHeight, null);
+                    g.dispose();
+                    tex.setLayerData(idx, t);
                 }
-            } catch (IOException e) {
             }
             textureArrays.put(name, tex);
         }
@@ -50,28 +50,28 @@ public class TextureLoader {
     public static final GLTextureArray loadStaticTextureArray(String name, int modelWidth, int modelHeight, int interFormat, boolean interpolate, int wrapMode) {
         GLTextureArray tex = textureArrays.get(name);
         if (tex == null) {
-            try {
-                BufferedImage playerSegment = ImageIO.read(ResourceLoader.getLoader().getResourceAsStream(name));
-                int width = playerSegment.getWidth();
-                int height = playerSegment.getHeight();
-                int numModelsX = width / modelWidth;
-                int numModelsY = height / modelHeight;
-                int numModels = numModelsX * numModelsY;
-                tex = new GLTextureArray(modelWidth, modelHeight, numModels, interFormat);
-                tex.setInterpolation(interpolate);
-                tex.setWrapMode(wrapMode);
-                for (int y = 0; y < numModelsY; y++) {
-                    int yi = y * numModelsX;
-                    for (int x = 0; x < numModelsX; x++) {
-                        int idx = x + yi;
-                        Texture t = new Texture(modelWidth, modelHeight);
-                        Graphics2D g = t.createGraphics();
-                        g.drawImage(playerSegment, -x * modelWidth, -y * modelHeight, null);
-                        g.dispose();
-                        tex.setLayerData(idx, t);
-                    }
+            BufferedImage image = ResourceManager.getResourceAsImage(name);
+            if (image == null) {
+                return null;
+            }
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int numModelsX = width / modelWidth;
+            int numModelsY = height / modelHeight;
+            int numModels = numModelsX * numModelsY;
+            tex = new GLTextureArray(modelWidth, modelHeight, numModels, interFormat);
+            tex.setInterpolation(interpolate);
+            tex.setWrapMode(wrapMode);
+            for (int y = 0; y < numModelsY; y++) {
+                int yi = y * numModelsX;
+                for (int x = 0; x < numModelsX; x++) {
+                    int idx = x + yi;
+                    Texture t = new Texture(modelWidth, modelHeight);
+                    Graphics2D g = t.createGraphics();
+                    g.drawImage(image, -x * modelWidth, -y * modelHeight, null);
+                    g.dispose();
+                    tex.setLayerData(idx, t);
                 }
-            } catch (IOException e) {
             }
             textureArrays.put(name, tex);
         }
@@ -81,7 +81,11 @@ public class TextureLoader {
     public static final GLTexture2D loadTexture(String name) throws IOException {
         GLTexture2D tex = textures.get(name);
         if (tex == null) {
-            tex = new GLTexture2D(new Texture(ImageIO.read(ResourceLoader.getLoader().getResourceAsStream(name))), GL_RGBA8);
+            BufferedImage image = ResourceManager.getResourceAsImage(name);
+            if (image == null) {
+                return null;
+            }
+            tex = new GLTexture2D(new Texture(image), GL_RGBA8);
             tex.setInterpolation(true);
             textures.put(name, tex);
         }

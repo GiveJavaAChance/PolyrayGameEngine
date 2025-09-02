@@ -1,6 +1,7 @@
 package polyray.systems.manager;
 
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.function.Consumer;
 import polyray.Material;
 import polyray.ShaderPreprocessor;
 import polyray.ShaderProgram;
@@ -8,17 +9,29 @@ import polyray.Vector3f;
 
 public class ShaderManager {
 
-    private static final ArrayList<ShaderValue> values = new ArrayList<>();
+    private static final HashMap<String, Consumer<ShaderPreprocessor>> values = new HashMap<>();
 
-    public static final void addValue(String name, Object value) {
-        values.add(new ShaderValue(name, value));
+    public static final void addValue(String name, int value) {
+        values.put(name, proc -> proc.setInt(name, value));
     }
 
-    public static final ShaderProgram createProgram(String vert, String frag, String name, int index) {
+    public static final void addValue(String name, float value) {
+        values.put(name, proc -> proc.setFloat(name, value));
+    }
+
+    public static final void addValue(String name, double value) {
+        values.put(name, proc -> proc.setDouble(name, value));
+    }
+
+    public static final void addValue(String name, String value) {
+        values.put(name, proc -> proc.setString(name, value));
+    }
+
+    public static final ShaderProgram createProgram(String vert, String frag) {
         ShaderPreprocessor proc = ShaderPreprocessor.fromFiles(vert, frag);
         proc.appendAll();
         setValues(proc);
-        return proc.createProgram(name, index);
+        return proc.createProgram();
     }
 
     public static final ShaderPreprocessor createProcessor(String vert, String frag) {
@@ -28,8 +41,8 @@ public class ShaderManager {
         return proc;
     }
 
-    public static final Material createDefaultMaterial(String vert, String frag, String name, int index) {
-        Material mat = new Material(createProgram(vert, frag, name, index));
+    public static final Material createDefaultMaterial(String vert, String frag) {
+        Material mat = new Material(createProgram(vert, frag));
         mat.setRoughness(0.5f);
         mat.setMetallic(0.5f);
         mat.setF0(new Vector3f(0.05f, 0.05f, 0.05f));
@@ -37,35 +50,8 @@ public class ShaderManager {
     }
 
     private static void setValues(ShaderPreprocessor proc) {
-        for (ShaderValue v : values) {
-            switch (v.value) {
-                case Integer i -> {
-                    proc.setInt(v.name, i);
-                }
-                case Float f -> {
-                    proc.setFloat(v.name, f);
-                }
-                case Double d -> {
-                    proc.setDouble(v.name, d);
-                }
-                case String s -> {
-                    proc.setString(v.name, s);
-                }
-                default -> {
-
-                }
-            }
-        }
-    }
-
-    private static class ShaderValue {
-
-        public final String name;
-        public final Object value;
-
-        public ShaderValue(String name, Object value) {
-            this.name = name;
-            this.value = value;
+        for (Consumer<ShaderPreprocessor> v : values.values()) {
+            v.accept(proc);
         }
     }
 }

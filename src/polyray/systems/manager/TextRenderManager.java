@@ -144,7 +144,7 @@ public class TextRenderManager {
             ShaderPreprocessor proc = ShaderManager.createProcessor("Text.vert", "Text.frag");
             proc.setInt("STR_IDX", stringIdx);
             proc.setInt("INTS_PER_STRING", INTS_PER_STRING);
-            this.shader = proc.createProgram("text", 0);
+            this.shader = proc.createProgram();
         }
 
         @Override
