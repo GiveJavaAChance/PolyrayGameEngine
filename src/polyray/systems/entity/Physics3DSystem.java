@@ -10,6 +10,8 @@ import polyray.physics.CollisionInfo3D;
 public class Physics3DSystem {
 
     private static final ArrayList<PhysicsObject3D> objects = new ArrayList<>();
+    
+    private static final ArrayList<Controller3D> controllers = new ArrayList<>();
 
     private static final ArrayList<EntityCollider3D> dynamicColliders = new ArrayList<>();
     private static float[][] dynamicBounds = new float[0][6];
@@ -18,6 +20,12 @@ public class Physics3DSystem {
     private static float[][] staticBounds = new float[0][6];
     private static BVH staticBVH;
     private static boolean dirtyStatic;
+    
+    private static double resolvingStrength = 0.5d;
+    
+    public static final void setResolvingStrength(double strength) {
+        resolvingStrength = strength;
+    }
 
     public static final void addEntity(Entity e) {
         Collider3D col = e.getComponent(Collider3D.class);
@@ -35,6 +43,12 @@ public class Physics3DSystem {
             c.obj = obj;
             dynamicColliders.add(c);
         }
+        Controller3D co = e.getComponent(Controller3D.class);
+        if (co != null) {
+            co.pos = obj.pos;
+            co.prevPos = obj.prevPos;
+            controllers.add(co);
+        }
     }
 
     public static final void removeEntity(Entity e) {
@@ -51,6 +65,10 @@ public class Physics3DSystem {
         EntityCollider3D c = e.getComponent(EntityCollider3D.class);
         if (c != null) {
             dynamicColliders.remove(c);
+        }
+        Controller3D co = e.getComponent(Controller3D.class);
+        if (co != null) {
+            controllers.remove(co);
         }
     }
 
@@ -95,6 +113,9 @@ public class Physics3DSystem {
     public static final void physicsUpdate(double dt) {
         for (PhysicsObject3D obj : objects) {
             obj.update(dt);
+        }
+        for (Controller3D c : controllers) {
+            c.update(dt);
         }
         if (dynamicColliders.isEmpty()) {
             return;
@@ -158,7 +179,7 @@ public class Physics3DSystem {
 
             CollisionInfo3D info = col.c;
             Vector3d normal = info.normal;
-            double penetrationDepth = info.penetrationDepth * 0.5d;
+            double penetrationDepth = info.penetrationDepth * resolvingStrength;
             if (b != null) {
                 penetrationDepth *= 0.5d;
             }
@@ -173,6 +194,9 @@ public class Physics3DSystem {
                 posA.y += dy;
                 posA.z += dz;
                 double height = -(vx * normal.x + vy * normal.y + vz * normal.z);
+                if (height < 0.0d) {
+                    return;
+                }
                 double nvx = normal.x * height;
                 double nvy = normal.y * height;
                 double nvz = normal.z * height;

@@ -11,6 +11,8 @@ public class Physics2DSystem {
 
     private static final ArrayList<PhysicsObject2D> objects = new ArrayList<>();
 
+    private static final ArrayList<Controller2D> controllers = new ArrayList<>();
+
     private static final ArrayList<EntityCollider2D> dynamicColliders = new ArrayList<>();
     private static float[][] dynamicBounds = new float[0][4];
 
@@ -18,6 +20,12 @@ public class Physics2DSystem {
     private static float[][] staticBounds = new float[0][4];
     private static BVH staticBVH;
     private static boolean dirtyStatic;
+
+    private static double resolvingStrength = 0.5d;
+
+    public static final void setResolvingStrength(double strength) {
+        resolvingStrength = strength;
+    }
 
     public static final void addEntity(Entity e) {
         Collider2D col = e.getComponent(Collider2D.class);
@@ -35,6 +43,12 @@ public class Physics2DSystem {
             c.obj = obj;
             dynamicColliders.add(c);
         }
+        Controller2D co = e.getComponent(Controller2D.class);
+        if (co != null) {
+            co.pos = obj.pos;
+            co.prevPos = obj.prevPos;
+            controllers.add(co);
+        }
     }
 
     public static final void removeEntity(Entity e) {
@@ -51,6 +65,10 @@ public class Physics2DSystem {
         EntityCollider2D c = e.getComponent(EntityCollider2D.class);
         if (c != null) {
             dynamicColliders.remove(c);
+        }
+        Controller2D co = e.getComponent(Controller2D.class);
+        if (co != null) {
+            controllers.remove(co);
         }
     }
 
@@ -95,6 +113,9 @@ public class Physics2DSystem {
     public static final void physicsUpdate(double dt) {
         for (PhysicsObject2D obj : objects) {
             obj.update(dt);
+        }
+        for (Controller2D c : controllers) {
+            c.update(dt);
         }
         if (dynamicColliders.isEmpty()) {
             return;
@@ -158,7 +179,7 @@ public class Physics2DSystem {
 
             CollisionInfo2D info = col.c;
             Vector2d normal = info.normal;
-            double penetrationDepth = info.penetrationDepth * 0.5d;
+            double penetrationDepth = info.penetrationDepth * resolvingStrength;
             if (b != null) {
                 penetrationDepth *= 0.5d;
             }
@@ -170,6 +191,9 @@ public class Physics2DSystem {
                 posA.x += dx;
                 posA.y += dy;
                 double height = -(vx * normal.x + vy * normal.y);
+                if (height < 0.0d) {
+                    return;
+                }
                 double nvx = normal.x * height;
                 double nvy = normal.y * height;
                 Collider2D ac = a.impl;
