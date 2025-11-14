@@ -10,7 +10,7 @@ import polyray.physics.CollisionInfo3D;
 public class Physics3DSystem {
 
     private static final ArrayList<PhysicsObject3D> objects = new ArrayList<>();
-    
+
     private static final ArrayList<Controller3D> controllers = new ArrayList<>();
 
     private static final ArrayList<EntityCollider3D> dynamicColliders = new ArrayList<>();
@@ -20,9 +20,9 @@ public class Physics3DSystem {
     private static float[][] staticBounds = new float[0][6];
     private static BVH staticBVH;
     private static boolean dirtyStatic;
-    
+
     private static double resolvingStrength = 0.5d;
-    
+
     public static final void setResolvingStrength(double strength) {
         resolvingStrength = strength;
     }
@@ -135,6 +135,7 @@ public class Physics3DSystem {
         }
         ArrayList<Collision3D> collisions = new ArrayList<>();
         BVH dynamicBVH = new BVH(dynamicBounds, 3);
+
         float[] query = new float[6];
         int[] hits = new int[40];
         int aIdx = 0;
@@ -143,7 +144,7 @@ public class Physics3DSystem {
             int count = dynamicBVH.query(query, hits);
             if (count != 0) {
                 for (int i = 0; i < count; i++) {
-                    int bIdx = dynamicBVH.indices[hits[i]];
+                    int bIdx = hits[i];
                     if (aIdx >= bIdx) {
                         continue;
                     }
@@ -158,7 +159,7 @@ public class Physics3DSystem {
             count = staticBVH.query(query, hits);
             if (count != 0) {
                 for (int i = 0; i < count; i++) {
-                    int bIdx = staticBVH.indices[hits[i]];
+                    int bIdx = hits[i];
                     Collider3D b = staticColliders.get(bIdx);
                     CollisionInfo3D c = a.impl.collide(b, dt);
                     if (c == null) {
@@ -169,6 +170,7 @@ public class Physics3DSystem {
             }
             aIdx++;
         }
+
         for (Collision3D col : collisions) {
             EntityCollider3D a = col.a;
             PhysicsObject3D objA = a.obj;
@@ -195,7 +197,7 @@ public class Physics3DSystem {
                 posA.z += dz;
                 double height = -(vx * normal.x + vy * normal.y + vz * normal.z);
                 if (height < 0.0d) {
-                    return;
+                    continue;
                 }
                 double nvx = normal.x * height;
                 double nvy = normal.y * height;

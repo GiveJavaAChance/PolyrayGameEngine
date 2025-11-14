@@ -143,7 +143,7 @@ public class Physics2DSystem {
             int count = dynamicBVH.query(query, hits);
             if (count != 0) {
                 for (int i = 0; i < count; i++) {
-                    int bIdx = dynamicBVH.indices[hits[i]];
+                    int bIdx = hits[i];
                     if (aIdx >= bIdx) {
                         continue;
                     }
@@ -158,7 +158,7 @@ public class Physics2DSystem {
             count = staticBVH.query(query, hits);
             if (count != 0) {
                 for (int i = 0; i < count; i++) {
-                    int bIdx = staticBVH.indices[hits[i]];
+                    int bIdx = hits[i];
                     Collider2D b = staticColliders.get(bIdx);
                     CollisionInfo2D c = a.impl.collide(b, dt);
                     if (c == null) {
@@ -200,7 +200,7 @@ public class Physics2DSystem {
                 double friction = ac.friction;
                 double restitution = ac.restitution;
                 double rx = (vx + nvx) * friction + nvx * restitution;
-                double ry = (vy + nvy) * friction + nvy * restitution;
+                double ry = (vy + nvy) * friction + nvy * restitution; 
                 prevPosA.x = posA.x - rx;
                 prevPosA.y = posA.y - ry;
             } else {
