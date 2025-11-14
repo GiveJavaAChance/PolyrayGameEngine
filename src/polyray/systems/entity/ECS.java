@@ -4,13 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
-import polyray.systems.FixedUpdate;
 import polyray.systems.IDGenerator;
 
 public class ECS {
 
-    private static final ArrayList<DoubleConsumer> frameUpdates = new ArrayList<>();
-    private static final FixedUpdate physicsUpdates = new FixedUpdate(0.006d, 0.003d);
+    private static final ArrayList<Update> updates = new ArrayList<>();
+
+    private static double fixedDt = 0.006d;
+    private static double timeoutThreshold = 0.003d;
+    private static double timeRemaining = 0.0d;
 
     private static final ArrayList<ECSSystem> systems = new ArrayList<>();
 
@@ -38,11 +40,11 @@ public class ECS {
     }
 
     public static void registerFrameUpdate(DoubleConsumer frameUpdate) {
-        frameUpdates.add(frameUpdate);
+        updates.add(new Update(frameUpdate, false));
     }
 
     public static void registerPhysicsUpdate(DoubleConsumer physicsUpdate) {
-        physicsUpdates.addUpdate(physicsUpdate);
+        updates.add(new Update(physicsUpdate, true));
     }
 
     public static void setup() {
@@ -52,10 +54,25 @@ public class ECS {
     }
 
     public static void update(double dt) {
-        for (DoubleConsumer frameUpdate : frameUpdates) {
-            frameUpdate.accept(dt);
+        timeRemaining += dt;
+        int substeps = 0;
+        while (timeRemaining >= fixedDt) {
+            timeRemaining -= fixedDt;
+            substeps++;
         }
-        physicsUpdates.update(dt);
+        for (Update update : updates) {
+            if (update.type) {
+                long startTime = System.nanoTime();
+                for (int i = 0; i < substeps; i++) {
+                    update.update.accept(fixedDt);
+                    if ((System.nanoTime() - startTime) / 1000000000.0d > timeoutThreshold) {
+                        break;
+                    }
+                }
+            } else {
+                update.update.accept(dt);
+            }
+        }
     }
 
     public static int spawn(Entity e) {
@@ -106,6 +123,17 @@ public class ECS {
 
         public final void remove(Entity e) {
             remove.accept(e);
+        }
+    }
+
+    private static class Update {
+
+        public final DoubleConsumer update;
+        public final boolean type;
+
+        public Update(DoubleConsumer update, boolean type) {
+            this.update = update;
+            this.type = type;
         }
     }
 }
