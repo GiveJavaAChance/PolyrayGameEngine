@@ -1,14 +1,11 @@
 package polyray.systems;
 
-import java.util.Comparator;
-
 public class BVH {
 
     private final int dim;
     private final Node[] nodes;
     public final float[][] bounds;
-    public final int[] indices;
-    public final int[] stack;
+    private final int[] indices;
     private int nodeCount = 0;
 
     public BVH(float[][] bounds, int dimensions) {
@@ -20,7 +17,6 @@ public class BVH {
         }
         this.nodes = new Node[bounds.length << 1];
         buildNode(0, bounds.length);
-        this.stack = new int[nodes.length];
     }
 
     private int buildNode(int start, int end) {
@@ -70,10 +66,9 @@ public class BVH {
                 axis = i;
             }
         }
-        final int selectAxis = axis;
-        quickSort(bounds, indices, start, end - 1, Comparator.comparingDouble(b -> (b[selectAxis] + b[selectAxis + dim]) * 0.5f));
-
         int mid = (start + end) >>> 1;
+        quickSelect(bounds, indices, start, end - 1, mid, axis, dim);
+        
         if (mid == start) {
             mid++;
         }
@@ -92,6 +87,7 @@ public class BVH {
     public int query(float[] query, int[] hits) {
         int hitCount = 0;
         int sp = 0;
+        int[] stack = new int[nodes.length];
         stack[sp++] = 0;
 
         while (sp > 0) {
@@ -123,6 +119,7 @@ public class BVH {
 
     public int queryIntersection(float[] pos, float[] dir, float[] dist, RayIntersectionFunction intersectionFunc) {
         int sp = 0;
+        int[] stack = new int[nodes.length];
         stack[sp++] = 0;
         int hitIndex = -1;
         float closest = Float.POSITIVE_INFINITY;
@@ -166,10 +163,10 @@ public class BVH {
                 t0 = t1;
                 t1 = tmp;
             }
-            if(t0 > tMin) {
+            if (t0 > tMin) {
                 tMin = t0;
             }
-            if(t1 < tMax) {
+            if (t1 < tMax) {
                 tMax = t1;
             }
             if (tMax < tMin) {
@@ -196,35 +193,38 @@ public class BVH {
         public int boxIndex;
     }
 
-    private static void quickSort(float[][] bounds, int[] indices, int low, int high, Comparator<float[]> c) {
-        if (low < high) {
-            int pivotIndex = partition(bounds, indices, low, high, c);
-            quickSort(bounds, indices, low, pivotIndex - 1, c);
-            quickSort(bounds, indices, pivotIndex + 1, high, c);
+    private static void quickSelect(float[][] bounds, int[] indices, int left, int right, int k, int axis, int dim) {
+        while (left < right) {
+            int pivot = partition(bounds, indices, left, right, axis, dim);
+            if (k < pivot) {
+                right = pivot - 1;
+            } else if (k > pivot) {
+                left = pivot + 1;
+            } else {
+                return;
+            }
         }
     }
 
-    private static int partition(float[][] bounds, int[] indices, int low, int high, Comparator<float[]> c) {
-        float[] pivot = bounds[high];
+    private static int partition(float[][] bounds, int[] indices, int low, int high, int axis, int dim) {
+        float[] pivot = bounds[indices[high]];
+        float pivotVal = (pivot[axis] + pivot[axis + dim]) * 0.5f;
         int i = low - 1;
-
         for (int j = low; j < high; j++) {
-            if (c.compare(bounds[j], pivot) <= 0) {
+            float[] b = bounds[indices[j]];
+            float center = (b[axis] + b[axis + dim]) * 0.5f;
+            if (center <= pivotVal) {
                 i++;
-                swap(bounds, indices, i, j);
+                swap(indices, i, j);
             }
         }
-        swap(bounds, indices, i + 1, high);
+        swap(indices, i + 1, high);
         return i + 1;
     }
 
-    public static void swap(float[][] bounds, int[] indices, int a, int b) {
-        float[] tmp1 = bounds[a];
-        bounds[a] = bounds[b];
-        bounds[b] = tmp1;
-
-        int tmp2 = indices[a];
+    public static void swap(int[] indices, int a, int b) {
+        int tmp = indices[a];
         indices[a] = indices[b];
-        indices[b] = tmp2;
+        indices[b] = tmp;
     }
 }
