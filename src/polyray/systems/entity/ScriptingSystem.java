@@ -26,13 +26,13 @@ public class ScriptingSystem {
     }
     
     public static final void frameUpdate(double dt) {
-        for (Script s : scripts) {
+        for (Script s : scripts.toArray(Script[]::new)) {
             s.frameUpdate(dt);
         }
     }
     
     public static final void physicsUpdate(double dt) {
-        for (Script s : scripts) {
+        for (Script s : scripts.toArray(Script[]::new)) {
             s.physicsUpdate(dt);
         }
     }
