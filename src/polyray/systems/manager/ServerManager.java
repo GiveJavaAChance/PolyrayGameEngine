@@ -22,7 +22,7 @@ public class ServerManager {
         }
     }
 
-    public static final void registerHandler(Class<? extends MultiplayerPacket> type, PacketHandler<?> handler) {
+    public static final <T extends MultiplayerPacket> void registerHandler(Class<T> type, PacketHandler<T> handler) {
         handlers.computeIfAbsent(type, k -> new ArrayList<>()).add(handler);
     }
 
@@ -60,7 +60,7 @@ public class ServerManager {
 
     public static interface PacketHandler<T extends MultiplayerPacket> {
 
-        public abstract void handle(T packet, int ID);
+        public void handle(T packet, int ID);
     }
 
     private static class MultiplayerServer extends Multiplayer {
