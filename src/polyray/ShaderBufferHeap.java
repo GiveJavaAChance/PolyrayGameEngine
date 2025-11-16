@@ -87,6 +87,21 @@ public class ShaderBufferHeap {
         updated.add(ID);
     }
 
+    public final void write(int ID, int offset, float[] data) {
+        Long m = blocks.get(ID);
+        if (m == null) {
+            throw new IllegalArgumentException("ID doesn't exist!");
+        }
+        int newSize = data.length / unitSize;
+        int ptr = (int) (m >>> 32l);
+        int size = (int) (m & 0xFFFFFFFF);
+        if (offset + newSize > size) {
+            throw new IllegalArgumentException("Writing out of bounds!");
+        }
+        buffer.uploadPartialData(data, (ptr + offset) * unitSize);
+        updated.add(ID);
+    }
+
     public final int allocate(int[] data) {
         int size = data.length / unitSize;
         int ptr = locate(size);
@@ -133,6 +148,21 @@ public class ShaderBufferHeap {
         memoryMask.clear(ptr, ptr + size);
         blocks.put(ID, (long) newPtr << 32l | (long) newSize);
         buffer.uploadPartialData(data, newPtr * unitSize);
+        updated.add(ID);
+    }
+
+    public final void write(int ID, int offset, int[] data) {
+        Long m = blocks.get(ID);
+        if (m == null) {
+            throw new IllegalArgumentException("ID doesn't exist!");
+        }
+        int newSize = data.length / unitSize;
+        int ptr = (int) (m >>> 32l);
+        int size = (int) (m & 0xFFFFFFFF);
+        if (offset + newSize > size) {
+            throw new IllegalArgumentException("Writing out of bounds!");
+        }
+        buffer.uploadPartialData(data, (ptr + offset) * unitSize);
         updated.add(ID);
     }
 
