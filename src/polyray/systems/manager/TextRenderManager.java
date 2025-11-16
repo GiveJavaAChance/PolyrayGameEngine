@@ -73,6 +73,7 @@ public class TextRenderManager {
             drawData[idx++] = pointer;
         }
         drawBuffer.uploadData(drawData);
+        stringBuffer.pollUpdates();
     }
 
     public static int push(String str, int color, int x, int y) {
@@ -109,6 +110,15 @@ public class TextRenderManager {
         } else {
             stringBuffer.deactivate(ID);
         }
+        update = true;
+    }
+    
+    public static void modify(int ID, int newColor, int newX, int newY) {
+        int packedPos = ((newX + 32768) & 0xFFFF) << 16 | ((newY + 32768) & 0xFFFF);
+        int[] data = new int[INTS_PER_STRING];
+        data[0] = packedPos;
+        data[1] = newColor;
+        stringBuffer.write(ID, 0, data);
         update = true;
     }
 
