@@ -2,54 +2,82 @@ package polyray.multiplayer;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
-public abstract class Multiplayer {
+public class Multiplayer {
 
+    private final PacketRegistry registry;
     private final int ID;
     private final Socket socket;
-    private final ServerStream in;
+    private final BufferedInputStream in;
     private final BufferedOutputStream out;
     private boolean listening;
-    private final ArrayList<Pack> packets;
+    private final ArrayList<Runnable> packets;
     private final Object packetLock = new Object();
 
-    public Multiplayer(String serverHost, int serverPort) throws IOException {
+    public Multiplayer(PacketRegistry registry, String serverHost, int serverPort) throws IOException {
+        this.registry = registry;
         this.socket = new Socket(serverHost, serverPort);
-        this.in = new ServerStream(socket.getInputStream());
+        this.in = new BufferedInputStream(socket.getInputStream());
         this.out = new BufferedOutputStream(socket.getOutputStream());
         this.listening = false;
         this.packets = new ArrayList<>();
-
-        this.ID = in.read(4).getInt();
+        byte[] buffer = new byte[4];
+        ByteReader.readFully(in, buffer);
+        this.ID = ByteBuffer.wrap(buffer).getInt();
     }
 
     public void start() {
         listen();
     }
 
-    public void send(MultiplayerPacket p) throws IOException {
-        ByteBuffer header = ByteBuffer.allocate(8);
-        header.putInt(ID);
-        header.putInt(PacketRegistry.getId(p.getClass()));
-        out.write(header.array());
-        p.write(out);
-        out.flush();
+    public void send(String tag) {
+        try {
+            int packetID = registry.getID(tag);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PacketType type = registry.getType(packetID);
+            type.statelessSerializer.serialize(new ByteWriter(baos));
+            byte[] data = baos.toByteArray();
+            ByteBuffer header = ByteBuffer.allocate(12);
+            header.putInt(ID);
+            header.putInt(packetID);
+            header.putInt(data.length);
+            out.write(header.array());
+            out.write(data);
+            out.flush();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send packet \"" + tag + "\", reason: " + e);
+        }
     }
 
-    public abstract void onReceive(MultiplayerPacket p, int ID);
+    @SuppressWarnings("unchecked")
+    public <T> void send(String tag, T obj) {
+        try {
+            int packetID = registry.getID(tag);
+            ByteBuffer header = ByteBuffer.allocate(8);
+            header.putInt(ID);
+            header.putInt(packetID);
+            out.write(header.array());
+            PacketType type = registry.getType(packetID);
+            ((ObjectSerializer<T>) type.objectSerializer).serialize(obj, new ByteWriter(out));
+            out.flush();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send packet \"" + tag + "\", reason: " + e);
+        }
+    }
 
     public void pollPackets() {
-        ArrayList<Pack> packFrame;
+        ArrayList<Runnable> packFrame;
         synchronized (packetLock) {
             packFrame = new ArrayList<>(packets);
             packets.clear();
         }
-        for (Pack pack : packFrame) {
-            onReceive(pack.p, pack.ID);
+        for (Runnable r : packFrame) {
+            r.run();
         }
     }
 
@@ -63,34 +91,25 @@ public abstract class Multiplayer {
         }
         listening = true;
         new Thread(() -> {
-            try {
-                while (!socket.isClosed()) {
-                    ByteBuffer header = in.read(8);
-                    int clientID = header.getInt();
-                    int packetID = header.getInt();
-                    MultiplayerPacket p = PacketRegistry.create(packetID);
-                    p.read(in);
-                    synchronized (packetLock) {
-                        packets.add(new Pack(p, clientID));
-                    }
+            byte[] bytes = new byte[8];
+            ByteBuffer header = ByteBuffer.wrap(bytes);
+            while (!socket.isClosed()) {
+                try {
+                    ByteReader.readFully(in, bytes);
+                } catch (IOException e) {
+                    break;
                 }
-            } catch (IOException e) {
+                int clientID = header.getInt(0);
+                int packetID = header.getInt(4);
+                Runnable r = registry.getType(packetID).deserialize(clientID, new ByteReader(in));
+                synchronized (packetLock) {
+                    packets.add(r);
+                }
             }
         }).start();
     }
-    
+
     public int getClientID() {
         return this.ID;
-    }
-
-    private static class Pack {
-
-        public final MultiplayerPacket p;
-        public final int ID;
-
-        public Pack(MultiplayerPacket p, int ID) {
-            this.p = p;
-            this.ID = ID;
-        }
     }
 }
