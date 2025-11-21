@@ -27,12 +27,18 @@ public class BindSet {
     }
 
     public final void onPush() {
+        if (parent != null) {
+            parent.onPush();
+        }
         if (onPush != null) {
             onPush.run();
         }
     }
 
     public final void onPop() {
+        if (parent != null) {
+            parent.onPop();
+        }
         if (onPop != null) {
             onPop.run();
         }
