@@ -1,10 +1,11 @@
 package polyray.audio;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import polyray.ResourceManager;
 
 public class DBREffect implements Effect {
 
@@ -50,7 +51,7 @@ public class DBREffect implements Effect {
     }
 
     public static final DBREffect loadDBRData(String name, float delayMul, float volumeMul, int bufferSize) {
-        try ( BufferedInputStream in = new BufferedInputStream(DBREffect.class.getResourceAsStream(name))) {
+        try ( InputStream in = ResourceManager.getResource(name)) {
             byte[] bytes = in.readAllBytes();
             FloatBuffer floats = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).asFloatBuffer();
             int numFloats = bytes.length >> 3;
