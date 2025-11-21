@@ -38,17 +38,19 @@ public class Multiplayer {
     public void send(String tag) {
         try {
             int packetID = registry.getID(tag);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             PacketType type = registry.getType(packetID);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             type.statelessSerializer.serialize(new ByteWriter(baos));
             byte[] data = baos.toByteArray();
             ByteBuffer header = ByteBuffer.allocate(12);
             header.putInt(ID);
             header.putInt(packetID);
             header.putInt(data.length);
-            out.write(header.array());
-            out.write(data);
-            out.flush();
+            synchronized (out) {
+                out.write(header.array());
+                out.write(data);
+                out.flush();
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to send packet \"" + tag + "\", reason: " + e);
         }
@@ -58,13 +60,15 @@ public class Multiplayer {
     public <T> void send(String tag, T obj) {
         try {
             int packetID = registry.getID(tag);
+            PacketType type = registry.getType(packetID);
             ByteBuffer header = ByteBuffer.allocate(8);
             header.putInt(ID);
             header.putInt(packetID);
-            out.write(header.array());
-            PacketType type = registry.getType(packetID);
-            ((ObjectSerializer<T>) type.objectSerializer).serialize(obj, new ByteWriter(out));
-            out.flush();
+            synchronized (out) {
+                out.write(header.array());
+                ((ObjectSerializer<T>) type.objectSerializer).serialize(obj, new ByteWriter(out));
+                out.flush();
+            }
         } catch (Exception e) {
             throw new RuntimeException("Failed to send packet \"" + tag + "\", reason: " + e);
         }
@@ -102,8 +106,10 @@ public class Multiplayer {
                 int clientID = header.getInt(0);
                 int packetID = header.getInt(4);
                 Runnable r = registry.getType(packetID).deserialize(clientID, new ByteReader(in));
-                synchronized (packetLock) {
-                    packets.add(r);
+                if (r != null) {
+                    synchronized (packetLock) {
+                        packets.add(r);
+                    }
                 }
             }
         }).start();
