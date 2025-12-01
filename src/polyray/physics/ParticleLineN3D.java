@@ -5,8 +5,7 @@ import polyray.Vector3d;
 public class ParticleLineN3D {
 
     private final Particle3D[] particles;
-    private final Vector3d[] pointVectors;
-    private final double invAmt;
+    private final double massSum;
     private final double[] segmentLengths;
     public final Vector3d lineOrigin = new Vector3d();
     public final Vector3d lineVector = new Vector3d();
@@ -14,8 +13,11 @@ public class ParticleLineN3D {
     public ParticleLineN3D(double[] segmentLengths, Particle3D[] particles) {
         this.segmentLengths = segmentLengths;
         this.particles = particles;
-        this.pointVectors = new Vector3d[particles.length];
-        this.invAmt = 1.0d / particles.length;
+        double sum = 0.0d;
+        for (Particle3D p : particles) {
+            sum += p.mass;
+        }
+        this.massSum = sum;
     }
 
     public void update() {
@@ -23,71 +25,65 @@ public class ParticleLineN3D {
         lineOrigin.y = 0.0d;
         lineOrigin.z = 0.0d;
         for (Particle3D p : particles) {
-            lineOrigin.x += p.pos.x;
-            lineOrigin.y += p.pos.y;
-            lineOrigin.z += p.pos.z;
+            lineOrigin.x += p.pos.x * p.mass;
+            lineOrigin.y += p.pos.y * p.mass;
+            lineOrigin.z += p.pos.z * p.mass;
         }
-        lineOrigin.x *= invAmt;
-        lineOrigin.y *= invAmt;
-        lineOrigin.z *= invAmt;
+        lineOrigin.x /= massSum;
+        lineOrigin.y /= massSum;
+        lineOrigin.z /= massSum;
 
         lineVector.x = 0.0d;
         lineVector.y = 0.0d;
         lineVector.z = 0.0d;
-        int i = 0;
         for (Particle3D p : particles) {
-            Vector3d dir = Vector3d.sub(lineOrigin, p.pos);
-            pointVectors[i++] = dir;
-            if (Vector3d.dot(lineVector, dir) < 0.0d) {
-                lineVector.x -= dir.x;
-                lineVector.y -= dir.y;
-                lineVector.z -= dir.z;
+            double dx = (p.pos.x - lineOrigin.x) * p.mass;
+            double dy = (p.pos.y - lineOrigin.y) * p.mass;
+            double dz = (p.pos.z - lineOrigin.z) * p.mass;
+            if (dx * lineVector.x + dy * lineVector.y + dz * lineVector.z < 0.0d) {
+                lineVector.x -= dx;
+                lineVector.y -= dy;
+                lineVector.z -= dz;
             } else {
-                lineVector.x += dir.x;
-                lineVector.y += dir.y;
-                lineVector.z += dir.z;
+                lineVector.x += dx;
+                lineVector.y += dy;
+                lineVector.z += dz;
             }
         }
         double mul = 1.0d / Vector3d.length(lineVector);
         lineVector.x *= mul;
         lineVector.y *= mul;
         lineVector.z *= mul;
-        
-        i = 0;
         for (Particle3D p : particles) {
-            Vector3d pointVector = pointVectors[i++];
-            Vector3d lineNormalBitangent = Vector3d.cross(lineVector, pointVector);
-            Vector3d lineNormal = Vector3d.normalize(Vector3d.cross(lineVector, lineNormalBitangent));
-            double dist = Vector3d.dot(pointVector, lineNormal);
-            if (Math.abs(dist) < 0.0001d) {
-                continue;
-            }
-            Vector3d correction = Vector3d.mul(lineNormal, dist);
-            p.pos.x += correction.x;
-            p.pos.y += correction.y;
-            p.pos.z += correction.z;
+            double dx = p.pos.x - lineOrigin.x;
+            double dy = p.pos.y - lineOrigin.y;
+            double dz = p.pos.z - lineOrigin.z;
+            double t = dx * lineVector.x + dy * lineVector.y + dz * lineVector.z;
+            p.pos.x = lineOrigin.x + lineVector.x * t;
+            p.pos.y = lineOrigin.y + lineVector.y * t;
+            p.pos.z = lineOrigin.z + lineVector.z * t;
         }
         for (int j = 0; j < 10; j++) {
             Particle3D a = particles[0];
-            for (i = 1; i < particles.length; i++) {
+            for (int i = 1; i < particles.length; i++) {
                 Particle3D b = particles[i];
-                applyLine(lineVector, a, b, (Vector3d.dot(Vector3d.sub(b.pos, a.pos), lineVector) - segmentLengths[i - 1]) * 0.5d);
+                applyLine(a, b, (Vector3d.dot(Vector3d.sub(b.pos, a.pos), lineVector) + segmentLengths[i - 1]) * 0.5d);
                 a = b;
             }
         }
     }
 
-    private void applyLine(Vector3d dir, Particle3D a, Particle3D b, double diff) {
-        double sum = a.mass + b.mass;
-        double ratio1 = a.mass / sum;
-        double ratio2 = b.mass / sum;
-        Vector3d ca = Vector3d.mul(dir, diff * ratio1);
-        Vector3d cb = Vector3d.mul(dir, -diff * ratio2);
-        a.pos.x += ca.x;
-        a.pos.y += ca.y;
-        a.pos.z += ca.z;
-        b.pos.x += cb.x;
-        b.pos.y += cb.y;
-        b.pos.z += cb.z;
+    private void applyLine(Particle3D a, Particle3D b, double diff) {
+        double ratio1 = a.mass / (a.mass + b.mass);
+        double ratio2 = ratio1 - 1.0d;
+        double dx = lineVector.x * diff;
+        double dy = lineVector.y * diff;
+        double dz = lineVector.z * diff;
+        a.pos.x += dx * ratio1;
+        a.pos.y += dy * ratio1;
+        a.pos.z += dz * ratio1;
+        b.pos.x += dx * ratio2;
+        b.pos.y += dy * ratio2;
+        b.pos.z += dz * ratio2;
     }
 }
