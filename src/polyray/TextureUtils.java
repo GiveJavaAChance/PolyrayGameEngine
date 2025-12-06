@@ -1,6 +1,7 @@
 package polyray;
 
 import java.awt.Font;
+import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.font.FontRenderContext;
 import java.awt.font.GlyphVector;
@@ -8,6 +9,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import polyray.GLTexture.GLTextureArray;
 
 public class TextureUtils {
 
@@ -84,6 +86,30 @@ public class TextureUtils {
             }
         }
         return new Texture(bitmap);
+    }
+
+    public static GLTextureArray createBitmapTexture(Font font, char startingChar, int aliasingQuality, int interFormat, boolean interpolate, int wrapMode) {
+        Texture bitmap = renderMonospacedFontBitmap(font, startingChar, aliasingQuality);
+        int numModels = 100;
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int modelWidth = width / 10;
+        int modelHeight = height / 10;
+        GLTextureArray tex = new GLTextureArray(modelWidth, modelHeight, numModels, interFormat);
+        tex.setInterpolation(interpolate);
+        tex.setWrapMode(wrapMode);
+        for (int y = 0; y < 10; y++) {
+            int yi = y * 10;
+            for (int x = 0; x < 10; x++) {
+                int idx = x + yi;
+                Texture t = new Texture(modelWidth, modelHeight);
+                Graphics2D g = t.createGraphics();
+                g.drawImage(bitmap.getTexture(), -x * modelWidth, -y * modelHeight, null);
+                g.dispose();
+                tex.setLayerData(idx, t);
+            }
+        }
+        return tex;
     }
 
     private static void rasterShape(int[] pixels, int width, Shape shape, int cellX, int cellY, int cellWidth, int cellHeight, int sampleSize) {
