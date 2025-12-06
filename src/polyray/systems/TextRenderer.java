@@ -1,5 +1,6 @@
-package polyray.systems.manager;
+package polyray.systems;
 
+import polyray.systems.manager.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import static org.lwjgl.opengl.GL43.*;
@@ -9,60 +10,63 @@ import polyray.ShaderBuffer;
 import polyray.ShaderBufferHeap;
 import polyray.ShaderPreprocessor;
 import polyray.ShaderProgram;
+import polyray.Vector2f;
 import polyray.builtin.Vertex2D;
 import polyray.modular.Renderable;
 
-
-/**
- * Use {@link polyray.systems.TextRenderer} instead for rendering text.
- * It Offers the same functionality but can also be instanced multiple times for
- * multiple fonts etc.
- */
-@Deprecated
-public class TextRenderManager {
+public class TextRenderer implements Renderable {
 
     private static final int INTS_PER_STRING = 2;
 
-    private static final HashMap<Integer, Integer> lengths = new HashMap<>();
-    private static ShaderBufferHeap stringBuffer;
-    private static int stringIdx = -1;
-    private static char firstChar;
+    private final HashMap<Integer, Integer> lengths;
+    private final ShaderBufferHeap stringBuffer;
+    private final char firstChar;
+    private final int stringBufferBinding;
+    private final GLTextureArray bitmap;
+    private final int vao;
+    private final ShaderBuffer vbo;
+    private final ShaderBuffer drawBuffer;
+    private final ShaderProgram shader;
+    public final int characterWidth;
+    public final int characterHeight;
 
-    private static GLTextureArray texture;
-    private static int vao;
-    private static ShaderBuffer vbo;
-    private static ShaderBuffer drawBuffer;
-    private static ShaderProgram shader;
+    private boolean update = true;
 
-    private static boolean update = true;
-
-    public static Renderable setup(int bytes, GLTextureArray characterBitmaps, char startingChar, boolean flipY) {
-        stringBuffer = new ShaderBufferHeap(bytes >> 2, 1);
-        stringIdx = BindingRegistry.bindBufferBase(stringBuffer.buffer);
-        firstChar = startingChar;
-        drawBuffer = new ShaderBuffer(GL_DRAW_INDIRECT_BUFFER, GL_DYNAMIC_DRAW);
-        texture = characterBitmaps;
-        vao = glGenVertexArrays();
-        glBindVertexArray(vao);
-        vbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, Vertex2D.VBO_TEMPLATE.build(0));
-        glBindVertexArray(0);
-        float v = flipY ? 0.0f : 1.0f;
-        float[] data = {
-            0.0f, 0.0f, 0.0f, v,
-            characterBitmaps.getWidth(), 0.0f, 1.0f, v,
-            0.0f, characterBitmaps.getHeight(), 0.0f, 1.0f - v,
-            characterBitmaps.getWidth(), characterBitmaps.getHeight(), 1.0f, 1.0f - v
-        };
-        vbo.uploadData(data);
+    private TextRenderer(int bytes, GLTextureArray bitmap, char startingChar, float[] verts, int characterWidth, int characterHeight) {
+        this.lengths = new HashMap<>();
+        this.stringBuffer = new ShaderBufferHeap(bytes >> 2, 1);
+        this.stringBufferBinding = BindingRegistry.bindBufferBase(stringBuffer.buffer);
         ShaderPreprocessor proc = ShaderManager.createProcessor("Text.vert", "Text.frag");
-        proc.setInt("STR_IDX", stringIdx);
+        proc.setInt("STR_IDX", stringBufferBinding);
         proc.setInt("INTS_PER_STRING", INTS_PER_STRING);
-        proc.setInt("CHARACTER_WIDTH", characterBitmaps.getWidth());
-        shader = proc.createProgram();
-        return TextRenderManager::render;
+        proc.setInt("CHARACTER_WIDTH", characterWidth);
+        this.shader = proc.createProgram();
+        this.firstChar = startingChar;
+        this.drawBuffer = new ShaderBuffer(GL_DRAW_INDIRECT_BUFFER, GL_DYNAMIC_DRAW);
+        this.bitmap = bitmap;
+        this.vao = glGenVertexArrays();
+        glBindVertexArray(vao);
+        this.vbo = new ShaderBuffer(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, Vertex2D.VBO_TEMPLATE.build(0));
+        glBindVertexArray(0);
+        vbo.uploadData(verts);
+        this.characterWidth = characterWidth;
+        this.characterHeight = characterHeight;
     }
 
-    public static void update() {
+    public TextRenderer(int bytes, GLTextureArray bitmap, char startingChar, Vector2f rectMin, Vector2f rectMax) {
+        this(bytes, bitmap, startingChar, new float[]{
+            rectMin.x, rectMin.y, 0.0f, 0.0f,
+            rectMax.x, rectMin.y, 1.0f, 0.0f,
+            rectMin.x, rectMax.y, 0.0f, 1.0f,
+            rectMax.x, rectMax.y, 1.0f, 1.0f
+        }, (int) Math.abs(rectMax.x - rectMin.x), (int) Math.abs(rectMax.y - rectMin.y));
+    }
+
+    public TextRenderer(int bytes, GLTextureArray bitmap, char startingChar, boolean flipY) {
+        this(bytes, bitmap, startingChar, new Vector2f(0.0f, flipY ? 0.0f : bitmap.getHeight()), new Vector2f(bitmap.getWidth(), flipY ? bitmap.getHeight() : 0.0f));
+    }
+
+    public void update() {
         if (!update) {
             return;
         }
@@ -84,7 +88,7 @@ public class TextRenderManager {
         stringBuffer.pollUpdates();
     }
 
-    public static int push(String str, int color, int x, int y) {
+    public int push(String str, int color, int x, int y) {
         char[] chars = str.toCharArray();
         int length = (chars.length + 3) / 4 + INTS_PER_STRING;
         int packedPos = ((x + 32768) & 0xFFFF) << 16 | ((y + 32768) & 0xFFFF);
@@ -102,17 +106,17 @@ public class TextRenderManager {
         return id;
     }
 
-    public static int pushCentered(String str, int color, int x, int y) {
-        return push(str, color, x - ((str.length() * 11) >> 1), y - 7);
+    public int pushCentered(String str, int color, int x, int y) {
+        return push(str, color, x - ((str.length() * characterWidth) >> 1), y - (characterHeight >> 1));
     }
 
-    public static void pop(int ID) {
+    public void pop(int ID) {
         stringBuffer.free(ID);
         lengths.remove(ID);
         update = true;
     }
 
-    public static void setVisible(int ID, boolean visible) {
+    public void setVisible(int ID, boolean visible) {
         if (visible) {
             stringBuffer.activate(ID);
         } else {
@@ -120,8 +124,8 @@ public class TextRenderManager {
         }
         update = true;
     }
-    
-    public static void modify(int ID, int newColor, int newX, int newY) {
+
+    public void modify(int ID, int newColor, int newX, int newY) {
         int packedPos = ((newX + 32768) & 0xFFFF) << 16 | ((newY + 32768) & 0xFFFF);
         int[] data = new int[INTS_PER_STRING];
         data[0] = packedPos;
@@ -130,17 +134,18 @@ public class TextRenderManager {
         update = true;
     }
 
-    private static int getChar(char[] c, int idx) {
+    private int getChar(char[] c, int idx) {
         if (idx >= c.length) {
             return 0;
         }
         return c[idx] - firstChar;
     }
 
-    private static void render() {
+    @Override
+    public void render() {
         shader.use();
         glActiveTexture(GL_TEXTURE0);
-        texture.bind();
+        bitmap.bind();
         glBindVertexArray(vao);
         drawBuffer.bind();
         glMultiDrawArraysIndirect(GL_TRIANGLE_STRIP, 0, stringBuffer.getActive().size(), 16);

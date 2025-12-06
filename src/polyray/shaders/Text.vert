@@ -30,7 +30,7 @@ void main() {
     uint packedChars = packedData[base + INTS_PER_STRING + charIndex];
     uint charID = (packedChars >> ((3u - charOffset) << 3u)) & 0xFFu;
 
-    vec2 p = position + pos + vec2(float(instance) * 11.0, 0.0);
+    vec2 p = position + pos + vec2(float(instance * CHARACTER_WIDTH), 0.0);
 
     gl_Position = vec4((projection * cameraTransform * vec3(p, 1.0)).xy, 0.0, 1.0);
     uv = vec3(uvCoords, charID);
