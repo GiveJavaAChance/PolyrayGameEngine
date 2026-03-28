@@ -100,6 +100,10 @@ public class Physics2DSystem {
 
     public static final void refreshStaticColliders() {
         dirtyStatic = false;
+        if (staticColliders.isEmpty()) {
+            staticBVH = null;
+            return;
+        }
         if (staticBounds.length != staticColliders.size()) {
             staticBounds = new float[staticColliders.size()][4];
         }
@@ -155,16 +159,18 @@ public class Physics2DSystem {
                     collisions.add(new Collision2D(a, b, null, c));
                 }
             }
-            count = staticBVH.query(query, hits);
-            if (count != 0) {
-                for (int i = 0; i < count; i++) {
-                    int bIdx = hits[i];
-                    Collider2D b = staticColliders.get(bIdx);
-                    CollisionInfo2D c = a.impl.collide(b, dt);
-                    if (c == null) {
-                        continue;
+            if (staticBVH != null) {
+                count = staticBVH.query(query, hits);
+                if (count != 0) {
+                    for (int i = 0; i < count; i++) {
+                        int bIdx = hits[i];
+                        Collider2D b = staticColliders.get(bIdx);
+                        CollisionInfo2D c = a.impl.collide(b, dt);
+                        if (c == null) {
+                            continue;
+                        }
+                        collisions.add(new Collision2D(a, null, b, c));
                     }
-                    collisions.add(new Collision2D(a, null, b, c));
                 }
             }
             aIdx++;
@@ -200,7 +206,7 @@ public class Physics2DSystem {
                 double friction = ac.friction;
                 double restitution = ac.restitution;
                 double rx = (vx + nvx) * friction + nvx * restitution;
-                double ry = (vy + nvy) * friction + nvy * restitution; 
+                double ry = (vy + nvy) * friction + nvy * restitution;
                 prevPosA.x = posA.x - rx;
                 prevPosA.y = posA.y - ry;
             } else {
