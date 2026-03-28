@@ -18,6 +18,14 @@ public class IDGenerator {
         count++;
         return id;
     }
+    
+    public final void setID(int ID) {
+        if (ID < 0 || set.get(ID)) {
+            return;
+        }
+        set.set(ID);
+        count++;
+    }
 
     public final void freeID(int ID) {
         if (ID < 0 || !set.get(ID)) {
