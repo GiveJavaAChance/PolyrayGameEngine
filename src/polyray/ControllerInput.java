@@ -4,14 +4,16 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import static org.lwjgl.glfw.GLFW.*;
 
 public final class ControllerInput {
 
-    private static final HashMap<Integer, Boolean> BUTTON_MAP = new HashMap<>();
+    private static final HashSet<Integer> BUTTON_MAP = new HashSet<>();
     private static final HashMap<Integer, Float> JOYSTICK_MAP = new HashMap<>();
     private static final ArrayList<Integer> allControllers = new ArrayList<>(16);
     private static final ArrayList<Integer> controllers = new ArrayList<>();
+    private static final HashMap<Integer, ArrayList<Runnable>> BUTTON_CALLBACKS = new HashMap<>();
 
     public static final int BUTTON_PLAYSTATION_X = 0;
     public static final int BUTTON_PLAYSTATION_O = 1;
@@ -51,15 +53,15 @@ public final class ControllerInput {
     }
 
     public static boolean getButton(int controller, int button) {
-        return BUTTON_MAP.getOrDefault(controller | (button << 4), false);
+        return BUTTON_MAP.contains(controller | (button << 4));
     }
 
     public static float getJoystickPosition(int controller, int joystick) {
         return JOYSTICK_MAP.getOrDefault(controller | (joystick << 4), 0.0f);
     }
-
-    private static void setButton(int controller, int button, boolean active) {
-        BUTTON_MAP.put(controller | (button << 4), active);
+    
+    public static void addButtonCallback(int controller, int button, Runnable r) {
+        BUTTON_CALLBACKS.computeIfAbsent(controller | (button << 4), e -> new ArrayList<>()).add(r);
     }
 
     private static void setJoystickPosition(int controller, int joystick, float value) {
@@ -98,7 +100,19 @@ public final class ControllerInput {
                 ByteBuffer buttons = glfwGetJoystickButtons(controller);
                 if (buttons != null) {
                     for (int i = 0; i < buttons.limit(); i++) {
-                        setButton(controller, i, buttons.get(i) == GLFW_PRESS);
+                        int key = controller | (i << 4);
+                        if (buttons.get(i) == GLFW_PRESS) {
+                            if(BUTTON_MAP.add(key)) {
+                                ArrayList<Runnable> callbacks = BUTTON_CALLBACKS.get(key);
+                                if(callbacks != null) {
+                                    for (Runnable r : callbacks) {
+                                        r.run();
+                                    }
+                                }
+                            }
+                        } else {
+                            BUTTON_MAP.remove(key);
+                        }
                     }
                 }
                 FloatBuffer axes = glfwGetJoystickAxes(controller);
