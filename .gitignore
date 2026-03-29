@@ -1,4 +1,12 @@
-/build/
-/dist/
-/nbproject/private/
+*
 
+!demos/
+!demos/**
+!docs/
+!docs/**
+!src/
+!src/**
+!.gitignore
+!CONTRIBUTING.md
+!LICENSE
+!README.md
