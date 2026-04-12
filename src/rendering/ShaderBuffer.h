@@ -4,7 +4,7 @@
 #pragma once
 
 #include <cstdint>
-#include "base/glad/glad.h"
+#include <base/glad/glad.h>
 
 struct ShaderBuffer {
 private:

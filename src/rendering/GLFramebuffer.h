@@ -1,21 +1,25 @@
-#ifndef GLFRAMEBUFFERMSAA_H_INCLUDED
-#define GLFRAMEBUFFERMSAA_H_INCLUDED
+#ifndef GLFRAMEBUFFER_H_INCLUDED
+#define GLFRAMEBUFFER_H_INCLUDED
 
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 
-#include "base/glad/glad.h"
-#include "GLTextureMSAA.h"
+#include <base/glad/glad.h>
+#include <rendering/GLTexture.h>
 
-struct GLFramebufferMSAA {
+struct GLFramebuffer {
     GLuint ID;
 
-    GLTextureMSAA color;
-    GLTextureMSAA depth;
+    GLTexture color;
+    GLTexture depth;
 
-    GLFramebufferMSAA(uint32_t width, uint32_t height, uint32_t samples, GLenum colorFormat = GL_RGBA8, GLenum depthFormat = GL_DEPTH_COMPONENT32) : color(width, height, colorFormat, samples), depth(width, height, depthFormat, samples) {
+    GLFramebuffer(uint32_t width, uint32_t height, GLenum colorFormat = GL_RGBA8, GLenum depthFormat = GL_DEPTH_COMPONENT32) {
         glCreateFramebuffers(1, &ID);
+
+        color = GLTexture::createTexture2D(width, height, colorFormat);
+        depth = GLTexture::createTexture2D(width, height, depthFormat);
 
         glNamedFramebufferTexture(ID, GL_COLOR_ATTACHMENT0, color.ID, 0);
         glNamedFramebufferTexture(ID, GL_DEPTH_ATTACHMENT, depth.ID, 0);

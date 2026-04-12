@@ -1,34 +1,34 @@
-#ifndef GLGBUFFERMSAA_H_INCLUDED
-#define GLGBUFFERMSAA_H_INCLUDED
-
+#ifndef GLGBUFFER_H_INCLUDED
+#define GLGBUFFER_H_INCLUDED
 
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 #include <initializer_list>
 
-#include "Allocator.h"
-#include "base/glad/glad.h"
-#include "GLTexture.h"
+#include <Allocator.h>
+#include <base/glad/glad.h>
+#include <rendering/GLTexture.h>
 
-struct GLGbufferMSAA {
+struct GLGBuffer {
     GLuint ID;
 
-    GLTextureMSAA** textures = nullptr;
+    GLTexture** textures = nullptr;
     uint32_t textureCount;
-    GLTextureMSAA* depth = nullptr;
+    GLTexture* depth = nullptr;
 
-    GLGbufferMSAA(const GLGbufferMSAA&) = delete;
-    GLGbufferMSAA& operator=(const GLGbufferMSAA&) = delete;
+    GLGBuffer(const GLGBuffer&) = delete;
+    GLGBuffer& operator=(const GLGBuffer&) = delete;
 
-    GLGbufferMSAA(std::initializer_list<GLTextureMSAA*> tex, GLTextureMSAA* depthTex = nullptr) : textureCount(tex.size()), depth(depthTex) {
+    GLGBuffer(std::initializer_list<GLTexture*> tex, GLTexture* depthTex = nullptr) : textureCount(tex.size()), depth(depthTex) {
         glCreateFramebuffers(1, &ID);
 
         if(textureCount > 0) {
-            textures = alloc<GLTextureMSAA*>(textureCount);
+            textures = alloc<GLTexture*>(textureCount);
             GLenum* drawBuffers = alloc<GLenum>(textureCount);
             uint32_t i = 0u;
-            for(GLTextureMSAA* t : tex) {
+            for(GLTexture* t : tex) {
                 GLenum attachment = GL_COLOR_ATTACHMENT0 + i;
                 glNamedFramebufferTexture(ID, attachment, t->ID, 0);
                 drawBuffers[i] = attachment;
@@ -46,14 +46,14 @@ struct GLGbufferMSAA {
         }
     }
 
-    GLGbufferMSAA(GLGbufferMSAA&& other) noexcept : ID(other.ID), textures(other.textures), textureCount(other.textureCount), depth(other.depth) {
+    GLGBuffer(GLGBuffer&& other) noexcept : ID(other.ID), textures(other.textures), textureCount(other.textureCount), depth(other.depth) {
         other.ID = 0;
         other.textures = nullptr;
         other.textureCount = 0;
         other.depth = nullptr;
     }
 
-    GLGbufferMSAA& operator=(GLGbufferMSAA&& other) noexcept {
+    GLGBuffer& operator=(GLGBuffer&& other) noexcept {
         if(this != &other) {
             free(textures);
 

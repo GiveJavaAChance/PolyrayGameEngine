@@ -4,8 +4,9 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 
-#include "base/glad/glad.h"
+#include <base/glad/glad.h>
 
 struct GLTexture {
     GLuint ID;
@@ -62,6 +63,7 @@ struct GLTexture {
     void generateMipmap() {
         if (mipLevels <= 1u) {
             std::cerr << "Can't generate mipmaps since mipmapping is disabled." << std::endl;
+            return;
         }
         glGenerateTextureMipmap(ID);
     }

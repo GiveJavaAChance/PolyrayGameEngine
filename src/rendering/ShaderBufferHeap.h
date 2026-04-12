@@ -6,10 +6,10 @@
 #include <cstdint>
 #include <unordered_set>
 
-#include "Allocator.h"
-#include "base/glad/glad.h"
-#include "ShaderBuffer.h"
-#include "UnorderedRegistry.h"
+#include <Allocator.h>
+#include <base/glad/glad.h>
+#include <rendering/ShaderBuffer.h>
+#include <structure/UnorderedRegistry.h>
 
 struct ShaderBufferHeap {
 private:
