@@ -7,7 +7,7 @@
 #include <cstring>
 #include <unordered_map>
 #include <unordered_set>
-#include "ResourceManager.h"
+#include <ResourceManager.h>
 
 struct ShaderPreprocessor {
 private:

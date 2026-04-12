@@ -9,10 +9,10 @@
 #include <string>
 #include <algorithm>
 #include <vector>
-#include "ResourceManager.h"
-#include "ShaderPreprocessor.h"
-#include "ShaderProgram.h"
-#include "UnorderedRegistry.h"
+#include <ResourceManager.h>
+#include <shader/ShaderPreprocessor.h>
+#include <shader/ShaderProgram.h>
+#include <structure/UnorderedRegistry.h>
 
 namespace ShaderManager {
     namespace Internal {
