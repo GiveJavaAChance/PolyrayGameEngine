@@ -9,7 +9,7 @@
 #include <functional>
 #include <initializer_list>
 
-#include "Input.h"
+#include <input/Input.h>
 
 struct BindSet {
 private:

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "BindSet.h"
+#include <input/BindSet.h>
 #include <cstdint>
 
 namespace InputSystem {
