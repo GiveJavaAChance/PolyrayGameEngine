@@ -5,7 +5,7 @@
 
 #include <cstdint>
 #include <climits>
-#include "DynamicArray.h"
+#include <structure/DynamicArray.h>
 
 struct IDGenerator {
 private:

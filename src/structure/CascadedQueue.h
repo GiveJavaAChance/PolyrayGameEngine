@@ -5,8 +5,8 @@
 
 #include <type_traits>
 #include <cstdint>
-#include "Allocator.h"
-#include "DynamicArray.h"
+#include <Allocator.h>
+#include <structure/DynamicArray.h>
 
 template<typename T>
 struct CascadedQueue {

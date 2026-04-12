@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <climits>
 #include <cstring>
-#include "DynamicArray.h"
+#include <structure/DynamicArray.h>
 
 struct BitSet {
 private:

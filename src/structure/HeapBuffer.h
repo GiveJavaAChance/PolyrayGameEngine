@@ -5,7 +5,7 @@
 
 #include <cstdint>
 #include <cstring>
-#include "BitSet.h"
+#include <structure/BitSet.h>
 
 template<typename T>
 struct HeapBuffer {

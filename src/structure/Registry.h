@@ -4,8 +4,8 @@
 #pragma once
 
 #include <cstdint>
-#include "DynamicArray.h"
-#include "IDGenerator.h"
+#include <structure/DynamicArray.h>
+#include <structure/IDGenerator.h>
 
 struct Registry {
 private:
@@ -27,18 +27,20 @@ public:
         return ID;
     }
 
-    template<typename T>
-    inline void remove(const uint32_t ID, T& data) {
+    inline bool remove(const uint32_t ID, uint32_t& loc) {
         gen.free(ID);
         const uint32_t location = locations[ID];
         const uint32_t end = --count;
+        bool out = false;
         if(location != end) {
             const uint32_t endID = IDs[end];
             locations[endID] = location;
             IDs[location] = endID;
-            data[location] = data[end];
+            loc = location;
+            out = true;
         }
         IDs.removeEnd(1u);
+        return out;
     }
 
     inline uint32_t size() const {

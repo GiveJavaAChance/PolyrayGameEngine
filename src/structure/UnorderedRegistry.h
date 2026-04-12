@@ -4,7 +4,7 @@
 #pragma once
 
 #include <vector>
-#include "Registry.h"
+#include <structure/Registry.h>
 
 template<typename T>
 struct UnorderedRegistry {
@@ -31,7 +31,10 @@ struct UnorderedRegistry {
     }
 
     inline void remove(const uint32_t ID) {
-        reg.remove(ID, arr);
+        uint32_t loc;
+        if(reg.remove(ID, loc)) {
+            arr[loc] = std::move(arr.back());
+        }
         arr.pop_back();
     }
 

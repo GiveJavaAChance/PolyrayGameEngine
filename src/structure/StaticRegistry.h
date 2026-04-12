@@ -4,8 +4,8 @@
 #pragma once
 
 #include <cstdint>
-#include "DynamicArray.h"
-#include "IDGenerator.h"
+#include <structure/DynamicArray.h>
+#include <structure/IDGenerator.h>
 
 
 template<void(*move)(const uint32_t dst, const uint32_t src)>

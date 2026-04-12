@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <immintrin.h>
+#include <tuple>
 
 using u32 = uint32_t;
 
@@ -123,7 +124,7 @@ public:
     }
 
     template<u32 i>
-    inline typename std::tuple_element<i, std::tuple<Ts...>>::type* column() {
+    inline typename std::tuple_element<i, std::tuple<Ts...>>::type* column() const {
         return std::get<i>(arrays);
     }
 };

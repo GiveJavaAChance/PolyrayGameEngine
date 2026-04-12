@@ -8,8 +8,8 @@
 #include <immintrin.h>
 #include <vector>
 #include <algorithm>
-#include "Allocator.h"
-#include "perf.h"
+#include <Allocator.h>
+#include <utils/perf.h>
 
 #define POSITIVE_INFINITY 100000000000.0f
 #define NEGATIVE_INFINITY -100000000000.0f
