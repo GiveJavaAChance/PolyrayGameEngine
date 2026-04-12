@@ -9,7 +9,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-#include "AudioFormat.h"
+#include <AudioFormat.h>
 
 #define MAX_BUFFER_SIZE 4096
 #define QUEUE_SIZE 3

@@ -2,13 +2,13 @@
 #define GLFWINDOW_H_INCLUDED
 
 #pragma once
-#include "base/glad/glad.h"
+#include <base/glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <string>
 #include <stdexcept>
 #include <cstdint>
 #include <iostream>
-#include "Input.h"
+#include <input/Input.h>
 
 struct GLFWindow {
 private:

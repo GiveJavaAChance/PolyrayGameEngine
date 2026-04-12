@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "ECS.h"
-#include "typereg.h"
+#include <ecs/ECS.h>
+#include <typereg.h>
 
 struct Script {
 private:

@@ -2,7 +2,7 @@
 #define INPUTSTREAMREADER_H_INCLUDED
 
 #pragma once
-#include "InputStream.h"
+#include <InputStream.h>
 
 class InputStreamReader {
 public:

@@ -4,8 +4,8 @@
 #pragma once
 
 #include <unordered_map>
-#include "GLTexture.h"
-#include "ShaderBuffer.h"
+#include <rendering/GLTexture.h>
+#include <rendering/ShaderBuffer.h>
 
 namespace BindingRegistry {
     namespace Internal {

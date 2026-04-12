@@ -5,11 +5,11 @@
 
 #include <cstdint>
 
-#include "base/glad/glad.h"
-#include "ShaderBuffer.h"
-#include "GLTexture.h"
-#include "ShaderManager.h"
-#include "ShaderProgram.h"
+#include <base/glad/glad.h>
+#include <rendering/ShaderBuffer.h>
+#include <rendering/GLTexture.h>
+#include <shader/ShaderManager.h>
+#include <shader/ShaderProgram.h>
 
 struct RenderObject {
     ShaderProgram shader;

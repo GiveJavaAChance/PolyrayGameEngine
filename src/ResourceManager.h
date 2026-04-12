@@ -11,8 +11,8 @@
 #include <filesystem>
 #include <windows.h>
 #include <immintrin.h>
-#include "stb_image_ex.h"
-#include "GLTexture.h"
+#include <stb_image.h>
+#include <rendering/GLTexture.h>
 
 enum ImageFormat : uint8_t {
     RGBA8,

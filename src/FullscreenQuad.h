@@ -5,11 +5,11 @@
 
 #include <cstdint>
 
-#include "base/glad/glad.h"
-#include "GLTexture.h"
-#include "ShaderBuffer.h"
-#include "ShaderManager.h"
-#include "ShaderProgram.h"
+#include <base/glad/glad.h>
+#include <rendering/GLTexture.h>
+#include <rendering/ShaderBuffer.h>
+#include <shader/ShaderManager.h>
+#include <shader/ShaderProgram.h>
 
 struct FullscreenQuad {
     GLuint vao;

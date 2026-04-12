@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <cstdint>
 #include <string>
-#include "base/InputStream.h"
+#include <base/InputStream.h>
 
 class FileInputStream : public InputStream {
 private:

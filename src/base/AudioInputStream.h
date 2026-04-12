@@ -5,8 +5,8 @@
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
-#include "AudioFormat.h"
-#include "InputStream.h"
+#include <AudioFormat.h>
+#include <InputStream.h>
 
 class AudioInputStream : public InputStream {
 public:

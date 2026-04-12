@@ -5,8 +5,8 @@
 
 #include <cstdint>
 #include <memory>
-#include "DynamicArray.h"
-#include "typereg.h"
+#include <structure/DynamicArray.h>
+#include <typereg.h>
 
 using EventListener = bool(*)(void* const evt);
 

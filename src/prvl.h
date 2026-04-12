@@ -439,7 +439,7 @@ constexpr inline static uint32_t pow(const uint32_t a, const uint32_t b) noexcep
 
 _prvl_SCALAR_OP1(int32_t, sign, x, x < 0 ? -1 : 1)
 _prvl_SCALAR_OP1(float, sign, x, x < 0.0f ? -1.0f : 1.0f)
-_prvl_SCALAR_OP1(double, sign, x, x < 0.0d ? -1.0d : 1.0d)
+_prvl_SCALAR_OP1(double, sign, x, x < 0.0 ? -1.0 : 1.0)
 
 _prvl_SCALAR_OP1(float, fract, x, x - floor(x))
 _prvl_SCALAR_OP1(double, fract, x, x - floor(x))
@@ -1063,17 +1063,17 @@ constexpr inline name##4 inverse(const name##4& m) {            \
 #define _prvl_MAT_NORMALIZE(type, name)                                                 \
 constexpr inline static name##2 normalize(const name##2& m) noexcept {                  \
     type det = determinant(m);                                                          \
-    type scalar = static_cast<type>(1.0d / sqrt(static_cast<double>(det)));             \
+    type scalar = static_cast<type>(1.0 / sqrt(static_cast<double>(det)));             \
     return m * scalar;                                                                  \
 }                                                                                       \
 constexpr inline static name##3 normalize(const name##3& m) noexcept {                  \
     type det = determinant(m);                                                          \
-    type scalar = static_cast<type>(1.0d / pow(static_cast<double>(det), 1.0d / 3.0d)); \
+    type scalar = static_cast<type>(1.0 / pow(static_cast<double>(det), 1.0 / 3.0)); \
     return m * scalar;                                                                  \
 }                                                                                       \
 constexpr inline static name##4 normalize(const name##4& m) noexcept {                  \
     type det = determinant(m);                                                          \
-    type scalar = static_cast<type>(1.0d / pow(static_cast<double>(det), 0.25d));       \
+    type scalar = static_cast<type>(1.0 / pow(static_cast<double>(det), 0.25));       \
     return m * scalar;                                                                  \
 }
 
@@ -1248,9 +1248,9 @@ _prvl_MAT_ALL_CREATE(int32_t, imat, ivec)
 _prvl_MAT_ALL_CREATE(uint32_t, umat, uvec)
 
 _prvl_MAT_INVERSE(float, mat, vec, 1.0f, 0.0001f);
-_prvl_MAT_INVERSE(double, dmat, dvec, 1.0d, 0.00001d);
+_prvl_MAT_INVERSE(double, dmat, dvec, 1.0, 0.00001);
 
-mat3 rotateX(float ang) {
+constexpr inline static mat3 rotateX(float ang) {
     float sin = sinf(ang);
     float cos = cosf(ang);
     mat3 r;
@@ -1262,7 +1262,7 @@ mat3 rotateX(float ang) {
     return r;
 }
 
-mat3 rotateY(float ang) {
+constexpr inline static mat3 rotateY(float ang) {
     float sin = sinf(ang);
     float cos = cosf(ang);
     mat3 r;
@@ -1274,7 +1274,7 @@ mat3 rotateY(float ang) {
     return r;
 }
 
-mat3 rotateZ(float ang) {
+constexpr inline static mat3 rotateZ(float ang) {
     float sin = sinf(ang);
     float cos = cosf(ang);
     mat3 r;
@@ -1286,7 +1286,7 @@ mat3 rotateZ(float ang) {
     return r;
 }
 
-mat3 lookat(const vec3& from, const vec3& to) {
+constexpr inline static mat3 lookat(const vec3& from, const vec3& to) {
     vec3 f = normalize(from - to);
     vec3 r = normalize(vec3(-f.z, 0.0f, f.x));
     vec3 u = vec3(-r.z * f.y, r.z * f.x - r.x * f.z, r.x * f.y);

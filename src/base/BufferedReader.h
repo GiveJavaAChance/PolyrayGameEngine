@@ -7,7 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <stdexcept>
-#include "base/InputStream.h"
+#include <base/InputStream.h>
 
 #define BUFFER_SIZE 4096
 

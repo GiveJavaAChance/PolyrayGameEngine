@@ -2,7 +2,7 @@
 #define BUFFEREDINPUTSTREAM_H_INCLUDED
 
 #pragma once
-#include "base/InputStream.h"
+#include <base/InputStream.h>
 #define BUFFER_SIZE 4096
 
 class BufferedInputStream : public InputStream {

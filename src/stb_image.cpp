@@ -17,4 +17,4 @@ void* _mm_remalloc(void* ptr, size_t oldSize, size_t newSize) {
 #define STBI_REALLOC_SIZED(p, oldsz, newsz) _mm_remalloc(p, oldsz, newsz)
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <stb_image.h>

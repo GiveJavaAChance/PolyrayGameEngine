@@ -5,10 +5,10 @@
 
 #include <cstring>
 
-#include "ECS.h"
-#include "UnorderedRegistry.h"
-#include "Allocator.h"
-#include "RenderObject.h"
+#include <ecs/ECS.h>
+#include <structure/UnorderedRegistry.h>
+#include <Allocator.h>
+#include <RenderObject.h>
 
 template<typename T>
 struct RenderInstance {

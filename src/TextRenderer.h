@@ -6,12 +6,12 @@
 #include <cstdint>
 #include <array>
 
-#include "base/glad/glad.h"
-#include "DynamicArray.h"
-#include "GLTexture.h"
-#include "ShaderBuffer.h"
-#include "ShaderBufferHeap.h"
-#include "UnorderedRegistry.h"
+#include <base/glad/glad.h>
+#include <structure/DynamicArray.h>
+#include <rendering/GLTexture.h>
+#include <rendering/ShaderBuffer.h>
+#include <rendering/ShaderBufferHeap.h>
+#include <structure/UnorderedRegistry.h>
 
 #define INTS_PER_STRING 2
 
@@ -23,7 +23,7 @@ private:
     char firstChar;
     uint32_t characterWidth;
     uint32_t characterHeight;
-    ShaderBuffer drawBuffer; // GL_DRAW_INDIRECT_BUFFER
+    ShaderBuffer drawBuffer;
     ShaderBuffer vbo;
 
     ShaderProgram shader;
