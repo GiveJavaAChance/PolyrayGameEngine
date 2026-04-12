@@ -8,22 +8,47 @@
 #include <cstring>
 #include <type_traits>
 
-#include "typereg.h"
-#include "DynamicArray.h"
-#include "MultiDynamicArray.h"
-#include "Registry.h"
-#include "EventBus.h"
+#include <typereg.h>
+#include <structure/DynamicArray.h>
+#include <structure/MultiDynamicArray.h>
+#include <structure/Registry.h>
+#include <EventBus.h>
+
+#include <ecs/Component.h>
+#include <ecs/ComponentRef.h>
+#include <ecs/Storage.h>
 
 struct ECS;
 
-template<typename T>
-concept Component = std::is_trivially_copyable_v<T>
-                 && std::is_trivially_destructible_v<T>;
-                 //&& std::is_standard_layout_v<T>;
+struct Entity {
+    uint32_t entityID;
 
-template<Component T>
-struct ComponentRef {
-    uint32_t ID;
+    constexpr explicit Entity(uint32_t id, ECS* ecs) noexcept : entityID(id), ecs(ecs) {
+    }
+
+    template<Component T>
+    inline void addComponent(const T& component);
+
+    template<Component T>
+    inline bool setComponent(const T& component);
+
+    template<Component T>
+    inline void removeComponent();
+
+    template<Component T>
+    inline bool getComponent(T& out);
+
+    template<Component T>
+    inline T* getComponentPtr();
+
+    template<Component T>
+    inline uint32_t getComponentCount();
+
+    template<Component T>
+    inline uint32_t getComponents(T* const ptr);
+
+private:
+    ECS* ecs;
 };
 
 template<Component T>
@@ -50,11 +75,6 @@ public:
     }
 };
 
-enum Layout : uint8_t {
-    AoS,
-    SoA
-};
-
 enum UpdateOrder : uint8_t {
     PRE_PHYSICS,
     PHYSICS,
@@ -62,64 +82,6 @@ enum UpdateOrder : uint8_t {
     FRAME,
     PRE_RENDER,
     RENDERING
-};
-
-template<Component T, Layout L = Layout::AoS>
-struct Storage;
-
-template<typename T>
-struct Storage<T, Layout::AoS> {
-    DynamicArray<T> data;
-    Registry reg;
-
-    inline uint32_t add(const T& component) noexcept {
-        data.add(component);
-        return reg.create();
-    }
-
-    inline void set(uint32_t componentID, const T& component) noexcept {
-        data[reg[componentID]] = component;
-    }
-
-    inline void remove(uint32_t componentID) noexcept {
-        reg.remove(componentID, data);
-        data.removeEnd(1u);
-    }
-
-    inline T& get(uint32_t id) const noexcept {
-        return data[reg[id]];
-    }
-};
-
-struct Entity {
-    uint32_t entityID;
-
-    constexpr explicit Entity(uint32_t id, ECS* ecs) : entityID(id), ecs(ecs) {
-    }
-
-    template<Component T>
-    inline void addComponent(const T& component);
-
-    template<Component T>
-    inline bool setComponent(const T& component);
-
-    template<Component T>
-    inline void removeComponent();
-
-    template<Component T>
-    inline bool getComponent(T& out);
-
-    template<Component T>
-    inline T* getComponentPtr();
-
-    template<Component T>
-    inline uint32_t getComponentCount();
-
-    template<Component T>
-    inline uint32_t getComponents(T* const ptr);
-
-private:
-    ECS* ecs;
 };
 
 struct ECS {
@@ -161,8 +123,8 @@ private:
     DynamicArray<SystemCallback<>> renderInitUpdateCallbacks;
     DynamicArray<SystemCallback<>> renderUpdateCallbacks;
 
-    double fixedDT = 0.006d;
-    double remaining = 0.0d;
+    double fixedDT = 0.006;
+    double remaining = 0.0;
 
     uint64_t** entities;
 
@@ -209,8 +171,8 @@ private:
     }
 
     template<Component T>
-    Storage<T, Layout::AoS>* getStorage() {
-        return reinterpret_cast<Storage<T, Layout::AoS>*>(storages[ComponentTypes::getTypeId<T>()]);
+    Storage<T, StorageInfo<T>::layout>* getStorage() {
+        return reinterpret_cast<Storage<T, StorageInfo<T>::layout>*>(storages[ComponentTypes::getTypeId<T>()]);
     }
 
     template<Component T>
@@ -245,7 +207,7 @@ private:
 
     TYPE_REGISTRY(ComponentTypes)
 public:
-    template<Component T, Layout L = Layout::AoS>
+    template<Component T>
     void registerComponentType() {
         uint32_t idx = ComponentTypes::getTypeId<T>();
         while(idx >= storages.size()) {
@@ -255,7 +217,7 @@ public:
             listeners.emplace(1u);
         }
         if(!storages[idx]) {
-            storages[idx] = new Storage<T, L>{};
+            storages[idx] = new Storage<T, StorageInfo<T>::layout>{};
         }
     }
 
@@ -314,7 +276,7 @@ public:
     bool setComponent(const Entity& e, const T& component) {
         static uint32_t type = ComponentTypes::getTypeId<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T, Layout::AoS>* storage = getStorage<T>();
+        Storage<T, StorageInfo<T>::layout>* storage = getStorage<T>();
         const uint64_t* entity = entities[e.entityID];
         const uint32_t size = componentCount[e.entityID];
         for(uint32_t i = 0u; i < size; i++) {
@@ -330,7 +292,7 @@ public:
     void removeComponent(const Entity& e) {
         static uint32_t type = ComponentTypes::getTypeId<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T, Layout::AoS>* storage = getStorage<T>();
+        Storage<T, StorageInfo<T>::layout>* storage = getStorage<T>();
         uint64_t* entity = entities[e.entityID];
         const uint32_t size = componentCount[e.entityID];
         for(uint32_t i = 0u; i < size; i++) {
@@ -348,7 +310,7 @@ public:
     bool getComponent(const Entity& e, T& out) {
         static uint32_t type = ComponentTypes::getTypeId<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T, Layout::AoS>* storage = getStorage<T>();
+        Storage<T, StorageInfo<T>::layout>* storage = getStorage<T>();
         const uint64_t* entity = entities[e.entityID];
         const uint32_t size = componentCount[e.entityID];
         for(uint32_t i = 0u; i < size; i++) {
@@ -364,7 +326,7 @@ public:
     T* getComponentPtr(const Entity& e) {
         static uint32_t type = ComponentTypes::getTypeId<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T, Layout::AoS>* storage = getStorage<T>();
+        Storage<T, StorageInfo<T>::layout>* storage = getStorage<T>();
         const uint64_t* entity = entities[e.entityID];
         const uint32_t size = componentCount[e.entityID];
         for(uint32_t i = 0u; i < size; i++) {
@@ -393,7 +355,7 @@ public:
     uint32_t getComponents(const Entity& e, T* const ptr) {
         static uint32_t type = ComponentTypes::getTypeId<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T, Layout::AoS>*& storage = getStorage<T>();
+        Storage<T, StorageInfo<T>::layout>*& storage = getStorage<T>();
         const uint64_t* entity = entities[e.entityID];
         const uint32_t size = componentCount[e.entityID];
         uint32_t idx = 0u;
@@ -406,7 +368,7 @@ public:
     }
 
     template<Component T>
-    Storage<T, Layout::AoS>& view() {
+    Storage<T, StorageInfo<T>::layout>& view() {
         return *getStorage<T>();
     }
 
