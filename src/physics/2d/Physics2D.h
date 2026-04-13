@@ -16,7 +16,6 @@
 #include <structure/BVH.h>
 #include <structure/StaticRegistry.h>
 #include <structure/DynamicArray.h>
-#include <structure/MultiDynamicArray.h>
 #include <typereg.h>
 
 #include <utils/perf.h>
@@ -29,49 +28,6 @@
 #include <ecs/ECS.h>
 
 using CollisionFunc2D = bool(*)(Collider2D&, void*, Collider2D&, void*, CollisionInfo2D&);
-
-template<>
-struct Storage<PhysicsObject2D, StorageDataLayout::CUSTOM> {
-    MultiDynamicArray<double, double, double, double, double, double> objects;
-    Registry reg;
-
-    inline uint32_t add(const PhysicsObject2D& component) noexcept {
-        objects.add(
-            component.posX, component.posY,
-            component.prevPosX, component.prevPosY,
-            component.accX, component.accY
-        );
-        return reg.create();
-    }
-
-    inline void set(uint32_t componentID, const PhysicsObject2D& component) noexcept {
-        objects.setIndex(reg[componentID],
-            component.posX, component.posY,
-            component.prevPosX, component.prevPosY,
-            component.accX, component.accY
-        );
-    }
-
-    inline void remove(uint32_t componentID) noexcept {
-        uint32_t loc;
-        if(reg.remove(componentID, loc)) {
-            objects.set(loc, objects, objects.size() - 1u);
-        }
-        objects.removeEnd();
-    }
-
-    inline PhysicsObject2D get(uint32_t id) const noexcept {
-        uint32_t loc = reg[id];
-        return PhysicsObject2D{
-            objects.column<0>()[loc],
-            objects.column<1>()[loc],
-            objects.column<2>()[loc],
-            objects.column<3>()[loc],
-            objects.column<4>()[loc],
-            objects.column<5>()[loc]
-        };
-    }
-};
 
 struct Physics2D {
 private:
@@ -214,7 +170,7 @@ public:
         const __m256d zero = _mm256_set1_pd(0.0);
         const __m256d two = _mm256_set1_pd(2.0);
         uint32_t updateI = 0u;
-        for (; updateI + 3u < objects.size(); updateI += 4) {
+        for (; updateI + 3u < objects.size(); updateI += 4u) {
             double* srcPosX = objects.column<0>() + updateI;
             double* srcPrevPosX = objects.column<2>() + updateI;
             double* srcAccelerationX = objects.column<4>() + updateI;
