@@ -30,52 +30,6 @@
 
 using CollisionFunc3D = bool(*)(Collider3D&, void*, Collider3D&, void*, CollisionInfo3D&);
 
-template<>
-struct Storage<PhysicsObject3D, StorageDataLayout::CUSTOM> {
-    MultiDynamicArray<double, double, double, double, double, double, double, double, double> objects;
-    Registry reg;
-
-    inline uint32_t add(const PhysicsObject3D& component) noexcept {
-        objects.add(
-            component.posX, component.posY, component.posZ,
-            component.prevPosX, component.prevPosY, component.prevPosZ,
-            component.accX, component.accY, component.accZ
-        );
-        return reg.create();
-    }
-
-    inline void set(uint32_t componentID, const PhysicsObject3D& component) noexcept {
-        objects.setIndex(reg[componentID],
-            component.posX, component.posY, component.posZ,
-            component.prevPosX, component.prevPosY, component.prevPosZ,
-            component.accX, component.accY, component.accZ
-        );
-    }
-
-    inline void remove(uint32_t componentID) noexcept {
-        uint32_t loc;
-        if(reg.remove(componentID, loc)) {
-            objects.set(loc, objects, objects.size() - 1u);
-        }
-        objects.removeEnd();
-    }
-
-    inline PhysicsObject3D get(uint32_t id) const noexcept {
-        uint32_t loc = reg[id];
-        return PhysicsObject3D{
-            objects.column<0>()[loc],
-            objects.column<1>()[loc],
-            objects.column<2>()[loc],
-            objects.column<3>()[loc],
-            objects.column<4>()[loc],
-            objects.column<5>()[loc],
-            objects.column<6>()[loc],
-            objects.column<7>()[loc],
-            objects.column<8>()[loc]
-        };
-    }
-};
-
 struct Physics3D {
 private:
     DynamicArray<CollisionFunc3D> collisionRegistry;
@@ -146,6 +100,8 @@ private:
         dirtyStatic = true;
     }
 
+    uint32_t prevCount = 0u;
+
 public:
     Physics3D(ECS* ecs) : ecs(ecs) {
         ecs->registerComponentType<PhysicsObject3D>();
@@ -185,7 +141,7 @@ public:
             return;
         }
         int idx = 0;
-        staticBounds.ensureCapacity(staticColliders.size() * 6);
+        staticBounds.ensureCapacity(staticColliders.size() * 6u);
         for (uint32_t i = 0u; i < staticColliders.size(); i++) {
             const Collider3D& col = staticColliders[i];
             staticBounds[idx++] = static_cast<float>(col.posX);
@@ -220,7 +176,7 @@ public:
         const __m256d zero = _mm256_set1_pd(0.0);
         const __m256d two = _mm256_set1_pd(2.0);
         uint32_t updateI = 0u;
-        for (; updateI + 5u < objects.size(); updateI += 6u) {
+        for (; updateI + 3u < objects.size(); updateI += 4u) {
             double* srcPosX = objects.column<0>() + updateI;
             double* srcPrevPosX = objects.column<3>() + updateI;
             double* srcAccelerationX = objects.column<6>() + updateI;
