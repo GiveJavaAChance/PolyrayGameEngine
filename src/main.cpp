@@ -114,7 +114,7 @@ struct MyScript : Script {
     void physicsUpdate(double dt) {
         PhysicsObject3D obj;
         if(getComponent<PhysicsObject3D>(obj)) {
-            obj.accY = -0.1;
+            obj.accY = -3.0;
             setComponent(obj);
         }
     }
@@ -135,8 +135,11 @@ struct MyScript : Script {
 InstancedRenderSystem<mat4>* renderSystem;
 ScriptSystem<MyScript>* scriptSystem;
 Physics3D* physicsSystem;
+Scene3D* scene;
 
 struct AABB {
+};
+struct Sphere {
 };
 
 bool collideAABB_AABB(Collider3D& a, AABB* aData, Collider3D& b, AABB* bData, CollisionInfo3D& out) {
@@ -180,6 +183,87 @@ bool collideAABB_AABB(Collider3D& a, AABB* aData, Collider3D& b, AABB* bData, Co
     return true;
 }
 
+bool collideSphere_Sphere(Collider3D& a, Sphere* aData, Collider3D& b, Sphere* bData, CollisionInfo3D& out) {
+    double halfAx = a.sizeX * 0.5;
+    double halfAy = a.sizeY * 0.5;
+    double halfAz = a.sizeZ * 0.5;
+    double halfBx = b.sizeX * 0.5;
+    double halfBy = b.sizeY * 0.5;
+    double halfBz = b.sizeZ * 0.5;
+    double ax = a.posX + halfAx;
+    double ay = a.posY + halfAy;
+    double az = a.posZ + halfAz;
+    double bx = b.posX + halfBx;
+    double by = b.posY + halfBy;
+    double bz = b.posZ + halfBz;
+
+    double ra = halfAx;
+    double rb = halfBx;
+
+    double dx = ax - bx;
+    double dy = ay - by;
+    double dz = az - bz;
+
+    double dist2 = dx * dx + dy * dy + dz * dz;
+    double r = ra + rb;
+    if(dist2 > r * r) {
+        return false;
+    }
+    double dist = sqrt(dist2);
+    double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
+
+    out.collisionNormalX = dx * invDist;
+    out.collisionNormalY = dy * invDist;
+    out.collisionNormalZ = dz * invDist;
+    out.penetrationDepth = r - dist;
+    return true;
+}
+
+bool collideSphere_AABB(Collider3D& a, Sphere* aData, Collider3D& b, AABB* bData, CollisionInfo3D& out) {
+    double halfAx = a.sizeX * 0.5;
+    double halfAy = a.sizeY * 0.5;
+    double halfAz = a.sizeZ * 0.5;
+    double halfBx = b.sizeX * 0.5;
+    double halfBy = b.sizeY * 0.5;
+    double halfBz = b.sizeZ * 0.5;
+    double ax = a.posX + halfAx;
+    double ay = a.posY + halfAy;
+    double az = a.posZ + halfAz;
+    double bx = b.posX + halfBx;
+    double by = b.posY + halfBy;
+    double bz = b.posZ + halfBz;
+
+    double r = halfAx;
+
+    double cx = max(bx - halfBx, min(ax, bx + halfBx));
+    double cy = max(by - halfBy, min(ay, by + halfBy));
+    double cz = max(bz - halfBz, min(az, bz + halfBz));
+
+    double dx = ax - cx;
+    double dy = ay - cy;
+    double dz = az - cz;
+
+    double dist2 = dx * dx + dy * dy + dz * dz;
+
+    if (dist2 > r * r) {
+        return false;
+    }
+    double dist = sqrt(dist2);
+    double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
+
+    out.collisionNormalX = dx * invDist;
+    out.collisionNormalY = dy * invDist;
+    out.collisionNormalZ = dz * invDist;
+    out.penetrationDepth = r - dist;
+
+    return true;
+}
+
+GLFWindow w("testing");
+
+float cameraAngX = 0.0f;
+float cameraAngY = 0.0f;
+
 int main() {
     ecs.registerComponentType<mat4>();
     ResourceManager::addLocalResource("res/shaders");
@@ -188,9 +272,12 @@ int main() {
     renderSystem = new InstancedRenderSystem<mat4>(&ecs);
     scriptSystem = new ScriptSystem<MyScript>(&ecs);
     physicsSystem = new Physics3D(&ecs);
-    physicsSystem->registerCollision<AABB, AABB, collideAABB_AABB>();
+    scene = new Scene3D(&ecs);
 
-    GLFWindow w("testing");
+    physicsSystem->registerCollision<AABB, AABB, collideAABB_AABB>();
+    physicsSystem->registerCollision<Sphere, Sphere, collideSphere_Sphere>();
+    physicsSystem->registerCollision<Sphere, AABB, collideSphere_AABB>();
+
     w.createFrame(500, 500, false, true, false);
 
     cam.projection = reverseZPerspectiveProjection(1.57079632679f, static_cast<float>(w.getWidth()) / static_cast<float>(w.getHeight()), 0.1f);
@@ -229,70 +316,81 @@ int main() {
     obj.mode = GL_TRIANGLES;
 
     Vertex3D vertices[]{
-        {{ 1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{ 1.0f, 1.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{-1.0f, 1.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{ 1.0f, 1.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
+        {{ 1.0f,  1.0f, -1.0f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 0.0f}},
+        {{-1.0f,  1.0f, -1.0f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}},
+        {{ 1.0f,  1.0f,  1.0f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}},
+        {{-1.0f,  1.0f, -1.0f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}},
+        {{-1.0f,  1.0f,  1.0f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 1.0f}},
+        {{ 1.0f,  1.0f,  1.0f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}},
 
-        {{ 1.0f, -1.0f, -1.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{ 1.0f, -1.0f,  1.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{-1.0f, -1.0f, -1.0f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{-1.0f, -1.0f,  1.0f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-1.0f, -1.0f, -1.0f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{ 1.0f, -1.0f,  1.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
+        {{ 1.0f, -1.0f, -1.0f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f}},
+        {{ 1.0f, -1.0f,  1.0f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 1.0f}},
+        {{-1.0f, -1.0f, -1.0f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.0f}},
+        {{-1.0f, -1.0f,  1.0f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f}},
+        {{-1.0f, -1.0f, -1.0f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.0f}},
+        {{ 1.0f, -1.0f,  1.0f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 1.0f}},
 
-        {{ 1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{ 1.0f,  1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{-1.0f,  1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{ 1.0f,  1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+        {{ 1.0f, -1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f}},
+        {{-1.0f, -1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}},
+        {{ 1.0f,  1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}},
+        {{-1.0f, -1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}},
+        {{-1.0f,  1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f}},
+        {{ 1.0f,  1.0f,  1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}},
 
-        {{ 1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-        {{ 1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-        {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
-        {{-1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-        {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
-        {{ 1.0f,  1.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
+        {{ 1.0f, -1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 0.0f}},
+        {{ 1.0f,  1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}},
+        {{-1.0f, -1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}},
+        {{-1.0f,  1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f}},
+        {{-1.0f, -1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}},
+        {{ 1.0f,  1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}},
 
-        {{1.0f,  1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{1.0f,  1.0f,  1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
-        {{1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{1.0f, -1.0f,  1.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
-        {{1.0f,  1.0f,  1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+        {{ 1.0f,  1.0f, -1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
+        {{ 1.0f, -1.0f, -1.0f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+        {{ 1.0f,  1.0f,  1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
+        {{ 1.0f, -1.0f, -1.0f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+        {{ 1.0f, -1.0f,  1.0f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
+        {{ 1.0f,  1.0f,  1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
 
-        {{-1.0f,  1.0f, -1.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-1.0f,  1.0f,  1.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
-        {{-1.0f, -1.0f, -1.0f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{-1.0f, -1.0f,  1.0f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-1.0f, -1.0f, -1.0f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{-1.0f,  1.0f,  1.0f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}
+        {{-1.0f,  1.0f, -1.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
+        {{-1.0f,  1.0f,  1.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
+        {{-1.0f, -1.0f, -1.0f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+        {{-1.0f, -1.0f,  1.0f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
+        {{-1.0f, -1.0f, -1.0f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+        {{-1.0f,  1.0f,  1.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}}
     };
     obj.uploadVertices(vertices, 36);
 
     uint32_t objectID = renderSystem->addObject(&obj);
 
-    Entity e = ecs.createEntity();
-    e.addComponent(diag(vec4(1.0)));
-    e.addComponent(RenderInstance<mat4>(objectID));
-    e.addComponent(PhysicsObject3D{0.0, 3.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0});
-    uint32_t id;
-    ecs.getComponentID<PhysicsObject3D>(e, id);
-    e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<AABB>(nullptr, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 0.0, 0.0), -1.0, -1.0, -1.0});
-    e.addComponent(MyScript{});
+    GLTexture gridTex = GLTexture::createTexture2D(2, 2);
+    uint32_t pixels[]{
+        0xFFAAAAAAu, 0xFF444444u,
+        0xFF444444u, 0xFFAAAAAAu
+    };
+    gridTex.set2DTextureData(pixels, 2u, 2u, 0, 0, GL_RGBA, GL_UNSIGNED_INT);
+    gridTex.setWrapMode(GL_REPEAT);
+    RenderObject plane{shader, &gridTex};
+    plane.mode = GL_TRIANGLE_STRIP;
+
+    Vertex3D planeVerts[]{
+        {{ 100.0f,  0.0f, -100.0f}, { 0.0f,  1.0f,  0.0f}, {  0.0f,   0.0f}},
+        {{-100.0f,  0.0f, -100.0f}, { 0.0f,  1.0f,  0.0f}, {200.0f,   0.0f}},
+        {{ 100.0f,  0.0f,  100.0f}, { 0.0f,  1.0f,  0.0f}, {  0.0f, 200.0f}},
+        {{-100.0f,  0.0f,  100.0f}, { 0.0f,  1.0f,  0.0f}, {200.0f, 200.0f}}
+    };
+    plane.uploadVertices(planeVerts, 4);
+
+    uint32_t planeID = renderSystem->addObject(&plane);
 
     Entity e2 = ecs.createEntity();
-    e2.addComponent(mat4(
-        vec4(10.0, 0.0, 0.0,  0.0),
-        vec4(0.0,  1.0, 0.0,  0.0),
-        vec4(0.0,  0.0, 10.0, 0.0),
-        vec4(0.0, -0.5, 0.0,  1.0)
-    ));
-    e2.addComponent(RenderInstance<mat4>(objectID));
-    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -5.0, -0.5, -5.0, 10.0, 1.0, 10.0, 0.0, 0.0));
+    e2.addComponent(diag(vec4(1.0)));
+    e2.addComponent(RenderInstance<mat4>(planeID));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -100.0, -1.0, -100.0, 200.0, 2.0, 200.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -1.0, -10.0, 20.0, 20.0, 2.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -1.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -1.0,   8.0, 20.0, 20.0, 2.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr,   8.0, -1.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, 18.0, -10.0, 20.0, 2.0, 20.0, 0.0, 0.0));
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glDepthFunc(GL_GREATER);
@@ -311,23 +409,61 @@ int main() {
 
     float t = 0.0f;
     double dt = 1.0 / 165.0;
-    while(w.isWindowOpen()) {
+    for(uint32_t frame = 0u; w.isWindowOpen(); frame++) {
         uint64_t startTime = Time::nanoTime();
-        if(t == 0.0f || Input::getKey(GLFW_KEY_SPACE)) {
-            cam.cameraPos = vec3(0.0f, cosf(t * 0.01f) * 2.0f + 3.0f, -3.0f) * rotateY(-t * 0.01f);
-            mat3 newTx = rotateZ(sinf(t * 0.1f) * 0.025f + sinf(t * 0.23473f) * 0.0125f) * lookat(cam.cameraPos, vec3(0.0f, sinf(t * 0.1f) * 0.1f, 0.0f));
-            cam.cameraTransform = mat4(vec4(newTx[0], 0.0f), vec4(newTx[1], 0.0f), vec4(newTx[2], 0.0f), vec4(0.0f, 0.0f, 0.0f, 1.0f));
-            cam.inverseCameraTransform = inverse(cam.cameraTransform);
-            cameraBuffer.uploadPartialData(&cam, 1, 0);
-            t++;
+
+        if(frame % 10u == 0u) {
+            for(int j = 0; j < 10; j++) {
+                Entity e = ecs.createEntity();
+                e.addComponent(diag(vec4(0.1)));
+                e.addComponent(RenderInstance<mat4>(objectID));
+                e.addComponent(PhysicsObject3D{0.0, 10.0, 0.2 * j, 0.001, 10.0, 0.0005 + 0.2 * j, 0.0, 0.0, 0.0});
+                uint32_t id;
+                ecs.getComponentID<PhysicsObject3D>(e, id);
+                e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<Sphere>(nullptr, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.0, 0.0), -0.1, -0.1, -0.1});
+                e.addComponent(MyScript{});
+            }
+        }
+
+        double px, py;
+        w.getMousePos(px, py);
+        float cx = w.getWidth() * 0.5f;
+        float cy = w.getHeight() * 0.5f;
+        float dx = (static_cast<float>(px) - cx) / cx;
+        float dy = (static_cast<float>(py) - cy) / cy;
+        cameraAngX += dy;
+        cameraAngY -= dx;
+        cam.cameraTransform = mat4(rotateX(cameraAngX) * rotateY(cameraAngY));
+        cam.inverseCameraTransform = transpose(cam.cameraTransform);
+        w.setMousePos(cx, cy);
+
+        vec3 movement;
+
+        if(Input::getKey(GLFW_KEY_W)) {
+            movement -= vec3(cam.inverseCameraTransform[2]);
+        }
+        if(Input::getKey(GLFW_KEY_S)) {
+            movement += vec3(cam.inverseCameraTransform[2]);
+        }
+        if(Input::getKey(GLFW_KEY_A)) {
+            movement -= vec3(cam.inverseCameraTransform[0]);
+        }
+        if(Input::getKey(GLFW_KEY_D)) {
+            movement += vec3(cam.inverseCameraTransform[0]);
+        }
+        if(dot(movement, movement) > 0.01f) {
+            cam.cameraPos += 10.0f * static_cast<float>(dt) * normalize(movement);
         }
 
         ecs.update(dt);
 
-        std::cout << (Time::nanoTime() - startTime) << std::endl;
+        cameraBuffer.uploadPartialData(&cam, 1, 0);
+
+        //std::cout << (Time::nanoTime() - startTime) << std::endl;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         render(obj);
+        render(plane);
         w.update();
         dt = static_cast<double>(Time::nanoTime() - startTime) / 1000000000.0;
     }
