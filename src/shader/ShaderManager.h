@@ -154,7 +154,6 @@ namespace ShaderManager {
         }
         if(preprocess) {
             proc.process(src);
-            std::cout << src << std::endl;
         }
         const char* processed = src.c_str();
         glShaderSource(shader, 1, &processed, nullptr);
