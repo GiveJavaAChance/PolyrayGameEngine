@@ -18,6 +18,8 @@
 #include <ecs/ComponentRef.h>
 #include <ecs/Storage.h>
 
+#include <utils/perf.h>
+
 struct ECS;
 
 struct Entity {
@@ -409,9 +411,14 @@ public:
     void update(double dt) {
         invokeAll<double>(prePhysicsUpdateCallbacks, dt);
         remaining += dt;
+        uint64_t start = Time::nanoTime();
         while(remaining >= fixedDT) {
             invokeAll<double>(physicsUpdateCallbacks, fixedDT);
             remaining -= fixedDT;
+            if(Time::nanoTime() - start > 3000000ull) {
+                remaining = 0.0;
+                break;
+            }
         }
         invokeAll<double>(postPhysicsUpdateCallbacks, dt);
         invokeAll<double>(frameUpdateCallbacks, dt);
