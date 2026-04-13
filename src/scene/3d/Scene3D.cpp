@@ -42,6 +42,7 @@ void Scene3D::removeNodes(uint32_t node) {
 
 Scene3D::Scene3D(ECS* ecs) : ecs(ecs) {
     ecs->registerComponentType<Node3D>();
+    ecs->registerUpdateCallback<Scene3D, frameUpdate, UpdateOrder::FRAME>(this);
 }
 
 inline uint32_t Scene3D::getRootNode() {
@@ -84,7 +85,10 @@ void Scene3D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
     }
 }
 
-void Scene3D::update() {
+void Scene3D::frameUpdate(double dt) {
+    if(nodes.size() == 0u) {
+        return;
+    }
     if(Node3D* rootData = ecs->getPtr(nodes[root].ref)) {
         if(rootData->dirtyGlobal) {
             rootData->local = rootData->global;

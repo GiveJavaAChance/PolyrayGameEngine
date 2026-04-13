@@ -42,6 +42,7 @@ void Scene2D::removeNodes(uint32_t node) {
 
 Scene2D::Scene2D(ECS* ecs) : ecs(ecs) {
     ecs->registerComponentType<Node2D>();
+    ecs->registerUpdateCallback<Scene2D, frameUpdate, UpdateOrder::FRAME>(this);
 }
 
 inline uint32_t Scene2D::getRootNode() {
@@ -84,7 +85,10 @@ void Scene2D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
     }
 }
 
-void Scene2D::update() {
+void Scene2D::frameUpdate(double dt) {
+    if(nodes.size() == 0u) {
+        return;
+    }
     if(Node2D* rootData = ecs->getPtr(nodes[root].ref)) {
         if(rootData->dirtyGlobal) {
             rootData->local = rootData->global;

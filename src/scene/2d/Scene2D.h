@@ -42,7 +42,7 @@ public:
 
     void setParent(uint32_t node, uint32_t newParent, bool rebase = true);
 
-    void update();
+    void frameUpdate(double dt);
 };
 
 #endif
