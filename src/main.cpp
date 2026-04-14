@@ -141,6 +141,11 @@ struct AABB {
 };
 struct Sphere {
 };
+struct Bean {
+    dvec3 deltaA;
+    dvec3 deltaB;
+    double radius;
+};
 
 bool collideAABB_AABB(Collider3D& a, AABB* aData, Collider3D& b, AABB* bData, CollisionInfo3D& out) {
     double halfAx = a.sizeX * 0.5;
@@ -259,6 +264,116 @@ bool collideSphere_AABB(Collider3D& a, Sphere* aData, Collider3D& b, AABB* bData
     return true;
 }
 
+inline static dvec3 project(dvec3 p, dvec3 a, dvec3 d) {
+    return a + d * clamp(dot(p - a, d) / dot(d, d), 0.0, 1.0);
+}
+
+bool collideBean_Bean(Collider3D& a, Bean* aData, Collider3D& b, Bean* bData, CollisionInfo3D& out) {
+    dvec3 a0 = dvec3(a.posX, a.posY, a.posZ) + aData->deltaA;
+    dvec3 d0 = aData->deltaB - aData->deltaA;
+    dvec3 a1 = dvec3(b.posX, b.posY, b.posZ) + bData->deltaA;
+    dvec3 b1 = dvec3(b.posX, b.posY, b.posZ) + bData->deltaB;
+    dvec3 d1 = bData->deltaB - bData->deltaA;
+
+    double minDist = aData->radius + bData->radius;
+    dvec3 A0 = project(a1, a0, d0);
+    dvec3 B0 = project(b1, a0, d0);
+    dvec3 A1 = project(A0, a1, d1);
+    dvec3 B1 = project(B0, a1, d1);
+    dvec3 D0 = A0 - A1;
+    dvec3 D1 = B0 - B1;
+    double dist0 = length(D0);
+    double dist1 = length(D1);
+
+    double dist = dist0 < dist1 ? dist0 : dist1;
+    if (dist > minDist) {
+        return false;
+    }
+    double penetration = minDist - dist;
+    dvec3 D = dist0 < dist1 ? D0 : D1;
+    double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
+    out.collisionNormalX = D.x * invDist;
+    out.collisionNormalY = D.y * invDist;
+    out.collisionNormalZ = D.z * invDist;
+    out.penetrationDepth = penetration;
+    return true;
+}
+
+bool collideBean_AABB(Collider3D& a, Bean* aData, Collider3D& b, AABB* bData, CollisionInfo3D& out) {
+    dvec3 min = dvec3(b.posX, b.posY, b.posZ);
+    dvec3 max = min + dvec3(b.sizeX, b.sizeY, b.sizeZ);
+    dvec3 corners[]{
+        {min.x, min.y, min.z},
+        {max.x, min.y, min.z},
+        {min.x, max.y, min.z},
+        {max.x, max.y, min.z},
+        {min.x, min.y, max.z},
+        {max.x, min.y, max.z},
+        {min.x, max.y, max.z},
+        {max.x, max.y, max.z}
+    };
+    double minDistSq = 1000000000.0;
+    dvec3 nearest;
+    dvec3 lineA = dvec3(a.posX, a.posY, a.posZ) + aData->deltaA;
+    dvec3 lineD = aData->deltaB - aData->deltaA;
+    for (uint32_t i = 0u; i < 8u; i++) {
+        dvec3& corner = corners[i];
+        dvec3 proj = project(corner, lineA, lineD);
+        dvec3 d = proj - corner;
+        double distSq = dot(d, d);
+        if (distSq < minDistSq) {
+            minDistSq = distSq;
+            nearest = d;
+        }
+    }
+    if (minDistSq < aData->radius * aData->radius) {
+        double minDist = sqrt(minDistSq);
+        double invDist = (minDist > 1e-12) ? 1.0 / minDist : 0.0;
+        out.collisionNormalX = nearest.x * invDist;
+        out.collisionNormalY = nearest.y * invDist;
+        out.collisionNormalZ = nearest.z * invDist;
+        out.penetrationDepth = aData->radius - minDist;
+        return true;
+    }
+    dvec3 facePoint = clamp(lineA, min, max);
+
+    dvec3 projOnLine = project(facePoint, lineA, lineD);
+    dvec3 delta = projOnLine - facePoint;
+    double distSideSq = dot(delta, delta);
+    if (distSideSq > aData->radius * aData->radius) {
+        return false;
+    }
+    double distSide = sqrt(distSideSq);
+    double invDist = (distSide > 1e-12) ? 1.0 / distSide : 0.0;
+    out.collisionNormalX = delta.x * invDist;
+    out.collisionNormalY = delta.y * invDist;
+    out.collisionNormalZ = delta.z * invDist;
+    out.penetrationDepth = aData->radius - distSide;
+    return true;
+}
+
+bool collideBean_Sphere(Collider3D& a, Bean* aData, Collider3D& b, Sphere* bData, CollisionInfo3D& out) {
+    dvec3 lineA = dvec3(a.posX, a.posY, a.posZ) + aData->deltaA;
+    dvec3 lineD = aData->deltaB - aData->deltaA;
+    double rb = b.sizeX * 0.5;
+    dvec3 pos = dvec3(b.posX, b.posY, b.posZ) + rb;
+    dvec3 d = pos - project(pos, lineA, lineD);
+
+    double dist2 = dot(d, d);
+    double r = aData->radius + rb;
+    if(dist2 > r * r) {
+        return false;
+    }
+    double dist = sqrt(dist2);
+    double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
+
+    out.collisionNormalX = d.x * invDist;
+    out.collisionNormalY = d.y * invDist;
+    out.collisionNormalZ = d.z * invDist;
+    out.penetrationDepth = r - dist;
+    return true;
+}
+
 GLFWindow w("testing");
 
 float cameraAngX = 0.0f;
@@ -274,9 +389,12 @@ int main() {
     physicsSystem = new Physics3D(&ecs);
     scene = new Scene3D(&ecs);
 
-    physicsSystem->registerCollision<AABB, AABB, collideAABB_AABB>();
+    physicsSystem->registerCollision<AABB,   AABB,   collideAABB_AABB>();
     physicsSystem->registerCollision<Sphere, Sphere, collideSphere_Sphere>();
-    physicsSystem->registerCollision<Sphere, AABB, collideSphere_AABB>();
+    physicsSystem->registerCollision<Sphere, AABB,   collideSphere_AABB>();
+    physicsSystem->registerCollision<Bean,   Bean,   collideBean_Bean>();
+    physicsSystem->registerCollision<Bean,   AABB,   collideBean_AABB>();
+    physicsSystem->registerCollision<Bean,   Sphere, collideBean_Sphere>();
 
     w.createFrame(500, 500, false, true, false);
 
@@ -367,16 +485,16 @@ int main() {
         0xFFAAAAAAu, 0xFF444444u,
         0xFF444444u, 0xFFAAAAAAu
     };
-    gridTex.set2DTextureData(pixels, 2u, 2u, 0, 0, GL_RGBA, GL_UNSIGNED_INT);
+    gridTex.set2DTextureData(pixels, 2u, 2u, 0, 0, GL_RGBA, GL_UNSIGNED_BYTE);
     gridTex.setWrapMode(GL_REPEAT);
     RenderObject plane{shader, &gridTex};
     plane.mode = GL_TRIANGLE_STRIP;
 
     Vertex3D planeVerts[]{
         {{ 100.0f,  0.0f, -100.0f}, { 0.0f,  1.0f,  0.0f}, {  0.0f,   0.0f}},
-        {{-100.0f,  0.0f, -100.0f}, { 0.0f,  1.0f,  0.0f}, {200.0f,   0.0f}},
-        {{ 100.0f,  0.0f,  100.0f}, { 0.0f,  1.0f,  0.0f}, {  0.0f, 200.0f}},
-        {{-100.0f,  0.0f,  100.0f}, { 0.0f,  1.0f,  0.0f}, {200.0f, 200.0f}}
+        {{-100.0f,  0.0f, -100.0f}, { 0.0f,  1.0f,  0.0f}, {100.0f,   0.0f}},
+        {{ 100.0f,  0.0f,  100.0f}, { 0.0f,  1.0f,  0.0f}, {  0.0f, 100.0f}},
+        {{-100.0f,  0.0f,  100.0f}, { 0.0f,  1.0f,  0.0f}, {100.0f, 100.0f}}
     };
     plane.uploadVertices(planeVerts, 4);
 
@@ -385,11 +503,11 @@ int main() {
     Entity e2 = ecs.createEntity();
     e2.addComponent(diag(vec4(1.0)));
     e2.addComponent(RenderInstance<mat4>(planeID));
-    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -100.0, -1.0, -100.0, 200.0, 2.0, 200.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -1.0, -10.0, 20.0, 20.0, 2.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -1.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -1.0,   8.0, 20.0, 20.0, 2.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr,   8.0, -1.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -100.0, -2.0, -100.0, 200.0, 2.0, 200.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -2.0, -10.0, 20.0, 20.0, 2.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, -2.0,   8.0, 20.0, 20.0, 2.0, 0.0, 0.0));
+    e2.addComponent(physicsSystem->createCollider<AABB>(nullptr,   8.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
     e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, 18.0, -10.0, 20.0, 2.0, 20.0, 0.0, 0.0));
 
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
@@ -405,22 +523,28 @@ int main() {
     //mat3 preRot = rotateX(0.01f) * rotateY(0.01f);
     //mat3 rot = rotateZ(0.01f);
 
+    Bean* beanShape = new Bean{{0.1, 0.1, 0.1}, {0.1, 0.3, 0.1}, 0.1};
+
     ecs.setup();
 
-    float t = 0.0f;
+    w.hideCursor(true);
+
     double dt = 1.0 / 165.0;
+    int count = 0;
     for(uint32_t frame = 0u; w.isWindowOpen(); frame++) {
         uint64_t startTime = Time::nanoTime();
 
-        if(frame % 10u == 0u) {
+        if(frame % 10u == 0u && count < 2000) {
+            count += 10;
             for(int j = 0; j < 10; j++) {
                 Entity e = ecs.createEntity();
                 e.addComponent(diag(vec4(0.1)));
+                (*e.getComponentPtr<mat4>())[1].y = 0.2;
                 e.addComponent(RenderInstance<mat4>(objectID));
-                e.addComponent(PhysicsObject3D{0.0, 10.0, 0.2 * j, 0.001, 10.0, 0.0005 + 0.2 * j, 0.0, 0.0, 0.0});
+                e.addComponent(PhysicsObject3D{0.0, 10.0, 0.5 * j, 0.001, 10.0, 0.5 * j, 0.0, 0.0, 0.001});
                 uint32_t id;
                 ecs.getComponentID<PhysicsObject3D>(e, id);
-                e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<Sphere>(nullptr, 0.0, 0.0, 0.0, 0.2, 0.2, 0.2, 0.0, 0.0), -0.1, -0.1, -0.1});
+                e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.0, 0.0), -0.1, -0.1, -0.1});
                 e.addComponent(MyScript{});
             }
         }
