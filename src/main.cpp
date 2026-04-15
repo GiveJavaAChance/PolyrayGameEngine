@@ -374,10 +374,37 @@ bool collideBean_Sphere(Collider3D& a, Bean* aData, Collider3D& b, Sphere* bData
     return true;
 }
 
+struct Gizmos {
+    DynamicArray<vec3> gizmosData;
+    RenderObject* obj;
+
+    Gizmos(RenderObject* obj) : obj(obj) {
+    }
+
+    void setSize(int count) {
+        gizmosData.ensureCapacity(count * 3);
+    }
+
+    void pushCube(vec3 pos, vec3 size, vec3 color) {
+        gizmosData.add(pos);
+        gizmosData.add(size);
+        gizmosData.add(color);
+    }
+
+    void update(double dt) {
+        obj->uploadInstances(gizmosData.data(), gizmosData.size());
+        obj->instanceCount = gizmosData.size() / 3;
+        gizmosData.clear();
+    }
+};
+
 GLFWindow w("testing");
 
 float cameraAngX = 0.0f;
 float cameraAngY = 0.0f;
+
+Gizmos* gizmos;
+bool first = true;
 
 int main() {
     ecs.registerComponentType<mat4>();
@@ -431,9 +458,9 @@ int main() {
     //uint32_t pixel = 0xFFFFFFFFu;
     //tex.set2DTextureData(&pixel, 1, 1, 0, 0, GL_RGBA, GL_UNSIGNED_BYTE);
     RenderObject obj{shader, &tex};
-    obj.mode = GL_TRIANGLES;
+    obj.mode = GL_TRIANGLE_STRIP;
 
-    Vertex3D vertices[]{
+    /*Vertex3D vertices[]{
         {{ 1.0f,  1.0f, -1.0f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 0.0f}},
         {{-1.0f,  1.0f, -1.0f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}},
         {{ 1.0f,  1.0f,  1.0f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}},
@@ -476,7 +503,18 @@ int main() {
         {{-1.0f, -1.0f, -1.0f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
         {{-1.0f,  1.0f,  1.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}}
     };
-    obj.uploadVertices(vertices, 36);
+    obj.uploadVertices(vertices, 36);*/
+    int detail = 32;
+    Vertex3D vertices[detail * 2];
+    for(int i = 0; i < detail; i++) {
+        float t = static_cast<float>(i) / static_cast<float>(detail - 1);
+        float a = t * 6.28318530718f;
+        float s = sin(a);
+        float c = cos(a);
+        vertices[i * 2] = {{c, -1.0f, s}, {c, 0.0f, s}, {t, 0.0f}};
+        vertices[i * 2 + 1] = {{c,  1.0f, s}, {c, 0.0f, s}, {t, 1.0f}};
+    }
+    obj.uploadVertices(vertices, detail * 2);
 
     uint32_t objectID = renderSystem->addObject(&obj);
 
@@ -510,6 +548,59 @@ int main() {
     e2.addComponent(physicsSystem->createCollider<AABB>(nullptr,   8.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
     e2.addComponent(physicsSystem->createCollider<AABB>(nullptr, -10.0, 18.0, -10.0, 20.0, 2.0, 20.0, 0.0, 0.0));
 
+    GLuint cubeVert = ShaderManager::compileShaderFile("Cube3D.vert", GL_VERTEX_SHADER);
+    GLuint cubeFrag = ShaderManager::compileShaderFile("Cube3D.frag", GL_FRAGMENT_SHADER);
+
+    ShaderProgram cubeShader = ShaderManager::createProgram({cubeVert, cubeFrag});
+
+    RenderObject cubeObj{cubeShader};
+    cubeObj.mode = GL_LINES;
+    
+    vec3 cubeVerts[]{
+        {0.0f, 0.0f, 0.0f},
+        {1.0f, 0.0f, 0.0f},
+        {1.0f, 0.0f, 0.0f},
+        {1.0f, 0.0f, 1.0f},
+        {1.0f, 0.0f, 1.0f},
+        {0.0f, 0.0f, 1.0f},
+        {0.0f, 0.0f, 1.0f},
+        {0.0f, 0.0f, 0.0f},
+
+        {0.0f, 1.0f, 0.0f},
+        {1.0f, 1.0f, 0.0f},
+        {1.0f, 1.0f, 0.0f},
+        {1.0f, 1.0f, 1.0f},
+        {1.0f, 1.0f, 1.0f},
+        {0.0f, 1.0f, 1.0f},
+        {0.0f, 1.0f, 1.0f},
+        {0.0f, 1.0f, 0.0f},
+
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        {1.0f, 0.0f, 0.0f},
+        {1.0f, 1.0f, 0.0f},
+        {1.0f, 0.0f, 1.0f},
+        {1.0f, 1.0f, 1.0f},
+        {0.0f, 0.0f, 1.0f},
+        {0.0f, 1.0f, 1.0f}
+    };
+    cubeObj.uploadVertices(cubeVerts, 24);
+    gizmos = new Gizmos(&cubeObj);
+
+    physicsSystem->addDynamicQueryCallback([](BVH<3>& bvh) {
+        if(first) {
+            first = false;
+            int count = bvh.getNodeCount();
+            float* b = bvh.getNodeBounds();
+            gizmos->setSize(count);
+            for(int i = 0; i < count; i++) {
+                vec3 min = vec3(b[i * 6 + 0], b[i * 6 + 1], b[i * 6 + 2]);
+                vec3 max = vec3(b[i * 6 + 3], b[i * 6 + 4], b[i * 6 + 5]);
+                gizmos->pushCube(min, max - min, vec3(1.0f, 0.0f, 0.0f));
+            }
+        }
+    });
+
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
     glDepthFunc(GL_GREATER);
     glClearDepth(0.0);
@@ -530,21 +621,21 @@ int main() {
     w.hideCursor(true);
 
     double dt = 1.0 / 165.0;
-    int count = 0;
+    uint32_t count = 0u;
     for(uint32_t frame = 0u; w.isWindowOpen(); frame++) {
         uint64_t startTime = Time::nanoTime();
 
-        if(frame % 10u == 0u && count < 2000) {
-            count += 10;
-            for(int j = 0; j < 10; j++) {
+        if(frame % 5u == 0u && count < 5000u) {
+            count += 5u;
+            for(uint32_t j = 0u; j < 5u; j++) {
                 Entity e = ecs.createEntity();
-                e.addComponent(diag(vec4(0.1)));
+                e.addComponent(diag(vec4(0.1f)));
                 (*e.getComponentPtr<mat4>())[1].y = 0.2;
                 e.addComponent(RenderInstance<mat4>(objectID));
-                e.addComponent(PhysicsObject3D{0.0, 10.0, 0.5 * j, 0.001, 10.0, 0.5 * j, 0.0, 0.0, 0.001});
+                e.addComponent(PhysicsObject3D{7.9, 1.2, 7.0 - 0.3 * j, 7.95, 1.2, 7.0 - 0.3 * j, 0.0, 0.0, 0.0001});
                 uint32_t id;
                 ecs.getComponentID<PhysicsObject3D>(e, id);
-                e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.0, 0.0), -0.1, -0.1, -0.1});
+                e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.0, 0.0), -0.1, -0.2, -0.1});
                 e.addComponent(MyScript{});
             }
         }
@@ -579,7 +670,10 @@ int main() {
             cam.cameraPos += 10.0f * static_cast<float>(dt) * normalize(movement);
         }
 
+        first = true;
         ecs.update(dt);
+
+        gizmos->update(dt);
 
         cameraBuffer.uploadPartialData(&cam, 1, 0);
 
@@ -588,6 +682,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         render(obj);
         render(plane);
+        render(cubeObj);
         w.update();
         dt = static_cast<double>(Time::nanoTime() - startTime) / 1000000000.0;
     }
