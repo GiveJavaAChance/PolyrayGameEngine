@@ -122,6 +122,14 @@ public:
         return hitIndex;
     }
 
+    inline float* getNodeBounds() const {
+        return nodeBounds;
+    }
+
+    inline int getNodeCount() const {
+        return nodeCount;
+    }
+
 private:
     static constexpr int Dim2 = Dim << 1;
     static constexpr int BIN_COUNT = 8;
@@ -185,7 +193,10 @@ private:
             nodeBoxIndex[nodeIdx] = box;
             return nodeIdx;
         }
-
+        for (int i = 0; i < Dim; i++) {
+            nodeBound[i] = POSITIVE_INFINITY;
+            nodeBound[i + Dim] = NEGATIVE_INFINITY;
+        }
         if(nodeIdx == 0) {
             alignas(32) float buffer[Dim2 * 8];
             alignas(32) float b[8 * Dim2];
@@ -234,10 +245,6 @@ private:
                 }
             }
         } else {
-            for (int i = 0; i < Dim; i++) {
-                nodeBound[i] = POSITIVE_INFINITY;
-                nodeBound[i + Dim] = NEGATIVE_INFINITY;
-            }
             for (int i = start; i < end; i++) {
                 const float* b = bounds + indices[i] * Dim2;
                 for (int j = 0; j < Dim; j++) {
