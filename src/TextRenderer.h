@@ -7,11 +7,16 @@
 #include <array>
 
 #include <base/glad/glad.h>
+
+#include <prvl.h>
 #include <structure/DynamicArray.h>
 #include <rendering/GLTexture.h>
 #include <rendering/ShaderBuffer.h>
 #include <rendering/ShaderBufferHeap.h>
 #include <structure/UnorderedRegistry.h>
+#include <shader/ShaderManager.h>
+#include <shader/ShaderProgram.h>
+#include <BindingRegistry.h>
 
 #define INTS_PER_STRING 2
 
@@ -58,7 +63,7 @@ public:
         }.data(), static_cast<uint32_t>(abs(rectMax.x - rectMin.x)), static_cast<uint32_t>(abs(rectMax.y - rectMin.y))) {
     }
 
-    TextRenderer(uint32_t bytes, GLTexture* bitmap, char startingChar, bool flipY) : TextRenderer(bytes, bitmap, startingChar, vec2(0.0f, flipY ? 0.0f : bitmap->height), vec2(bitmap->width, flipY ? bitmap->height : 0.0f)) {
+    TextRenderer(uint32_t bytes, GLTexture* bitmap, char startingChar, bool flipY) : TextRenderer(bytes, bitmap, startingChar, prvl::vec2(0.0f, flipY ? 0.0f : bitmap->height), prvl::vec2(bitmap->width, flipY ? bitmap->height : 0.0f)) {
     }
 
     void update() {

@@ -7,6 +7,9 @@
 #include <cstdlib>
 #include <cmath>
 
+namespace prvl {
+}
+
 #define _prvl_VEC2(type, name)                                                  \
 struct name##2 {                                                                \
     union {                                                                     \
@@ -23,90 +26,96 @@ struct name##2 {                                                                
             type t;                                                             \
         };                                                                      \
     };                                                                          \
-    constexpr name##2() noexcept : x{}, y{} {}                                  \
-    constexpr name##2(const type x, const type y) noexcept;                     \
-    constexpr name##2(const name##3& v) noexcept;                               \
-    constexpr name##2(const name##4& v) noexcept;                               \
-    explicit constexpr name##2(const type v) noexcept;                          \
     constexpr inline type& operator[](const uint32_t idx) noexcept {            \
-        return *(&x + idx);                                                     \
+        return (&x)[idx];                                                       \
     }                                                                           \
     constexpr inline const type& operator[](const uint32_t idx) const noexcept {\
-        return *(&x + idx);                                                     \
+        return (&x)[idx];                                                       \
     }                                                                           \
-};
+};                                                                              \
+namespace prvl {                                                                \
+    constexpr inline struct name##2 name##2() noexcept;                         \
+    constexpr inline struct name##2 name##2(type x, type y) noexcept;           \
+    constexpr inline struct name##2 name##2(const struct name##3& v) noexcept;  \
+    constexpr inline struct name##2 name##2(const struct name##4& v) noexcept;  \
+    constexpr inline struct name##2 name##2(type v) noexcept;                   \
+}
 
-#define _prvl_VEC3(type, name)                                                  \
-struct name##3 {                                                                \
-    union {                                                                     \
-        struct {                                                                \
-            type x;                                                             \
-            type y;                                                             \
-            type z;                                                             \
-        };                                                                      \
-        struct {                                                                \
-            type r;                                                             \
-            type g;                                                             \
-            type b;                                                             \
-        };                                                                      \
-        struct {                                                                \
-            type s;                                                             \
-            type t;                                                             \
-            type p;                                                             \
-        };                                                                      \
-    };                                                                          \
-    constexpr name##3() noexcept : x{}, y{}, z{} {}                             \
-    constexpr name##3(const type x, const type y, const type z) noexcept;       \
-    constexpr name##3(const name##2& xy, const type z) noexcept;                \
-    constexpr name##3(const type x, const name##2& yz) noexcept;                \
-    constexpr name##3(const name##4& v) noexcept;                               \
-    explicit constexpr name##3(const type v) noexcept;                          \
-    constexpr inline type& operator[](const uint32_t idx) noexcept {            \
-        return *(&x + idx);                                                     \
-    }                                                                           \
-    constexpr inline const type& operator[](const uint32_t idx) const noexcept {\
-        return *(&x + idx);                                                     \
-    }                                                                           \
-};
-
-#define _prvl_VEC4(type, name)                                                          \
-struct name##4 {                                                                        \
+#define _prvl_VEC3(type, name)                                                          \
+struct name##3 {                                                                        \
     union {                                                                             \
         struct {                                                                        \
             type x;                                                                     \
             type y;                                                                     \
             type z;                                                                     \
-            type w;                                                                     \
         };                                                                              \
         struct {                                                                        \
             type r;                                                                     \
             type g;                                                                     \
             type b;                                                                     \
-            type a;                                                                     \
         };                                                                              \
         struct {                                                                        \
             type s;                                                                     \
             type t;                                                                     \
             type p;                                                                     \
-            type q;                                                                     \
         };                                                                              \
     };                                                                                  \
-    constexpr name##4() noexcept : x{}, y{}, z{}, w{} {}                                \
-    constexpr name##4(const type x, const type y, const type z, const type w) noexcept; \
-    constexpr name##4(const name##2& xy, const type z, const type w) noexcept;          \
-    constexpr name##4(const type x, const name##2& yz, const type w) noexcept;          \
-    constexpr name##4(const type x, const type y, const name##2& zw) noexcept;          \
-    constexpr name##4(const name##2& xy, const name##2& zw) noexcept;                   \
-    constexpr name##4(const name##3& xyz, const type w) noexcept;                       \
-    constexpr name##4(const type x, const name##3& yzw) noexcept;                       \
-    explicit constexpr name##4(const type v) noexcept;                                  \
     constexpr inline type& operator[](const uint32_t idx) noexcept {                    \
-        return *(&x + idx);                                                             \
+        return (&x)[idx];                                                               \
     }                                                                                   \
     constexpr inline const type& operator[](const uint32_t idx) const noexcept {        \
-        return *(&x + idx);                                                             \
+        return (&x)[idx];                                                               \
     }                                                                                   \
-};
+};                                                                                      \
+namespace prvl {                                                                        \
+    constexpr inline struct name##3 name##3() noexcept;                                 \
+    constexpr inline struct name##3 name##3(type x, type y, type z) noexcept;           \
+    constexpr inline struct name##3 name##3(const struct name##2& xy, type z) noexcept; \
+    constexpr inline struct name##3 name##3(type x, const struct name##2& yz) noexcept; \
+    constexpr inline struct name##3 name##3(const struct name##4& v) noexcept;          \
+    constexpr inline struct name##3 name##3(type v) noexcept;                           \
+}
+
+#define _prvl_VEC4(type, name)                                                                              \
+struct name##4 {                                                                                            \
+    union {                                                                                                 \
+        struct {                                                                                            \
+            type x;                                                                                         \
+            type y;                                                                                         \
+            type z;                                                                                         \
+            type w;                                                                                         \
+        };                                                                                                  \
+        struct {                                                                                            \
+            type r;                                                                                         \
+            type g;                                                                                         \
+            type b;                                                                                         \
+            type a;                                                                                         \
+        };                                                                                                  \
+        struct {                                                                                            \
+            type s;                                                                                         \
+            type t;                                                                                         \
+            type p;                                                                                         \
+            type q;                                                                                         \
+        };                                                                                                  \
+    };                                                                                                      \
+    constexpr inline type& operator[](const uint32_t idx) noexcept {                                        \
+        return (&x)[idx];                                                                                   \
+    }                                                                                                       \
+    constexpr inline const type& operator[](const uint32_t idx) const noexcept {                            \
+        return (&x)[idx];                                                                                   \
+    }                                                                                                       \
+};                                                                                                          \
+namespace prvl {                                                                                            \
+    constexpr inline struct name##4 name##4() noexcept;                                                     \
+    constexpr inline struct name##4 name##4(type x, type y, type z, type w) noexcept;                       \
+    constexpr inline struct name##4 name##4(const struct name##2& xy, type z, type w) noexcept;             \
+    constexpr inline struct name##4 name##4(type x, const struct name##2& yz, type w) noexcept;             \
+    constexpr inline struct name##4 name##4(type x, type y, const struct name##2& zw) noexcept;             \
+    constexpr inline struct name##4 name##4(const struct name##2& xy, const struct name##2& zw) noexcept;   \
+    constexpr inline struct name##4 name##4(const struct name##3& xyz, type w) noexcept;                    \
+    constexpr inline struct name##4 name##4(type x, const struct name##3& yzw) noexcept;                    \
+    constexpr inline struct name##4 name##4(type v) noexcept;                                               \
+}
 
 
 #define _prvl_VEC_ALL(type, name)   \
@@ -117,57 +126,106 @@ _prvl_VEC2(type, name)              \
 _prvl_VEC3(type, name)              \
 _prvl_VEC4(type, name)
 
-#define _prvl_IMPL_VEC2(type, name)                                             \
-constexpr name##2::name##2(const type x, const type y) noexcept : x(x), y(y) {} \
-constexpr name##2::name##2(const name##3& v) noexcept : x(v.x), y(v.y) {}       \
-constexpr name##2::name##2(const name##4& v) noexcept : x(v.x), y(v.y) {}       \
-constexpr name##2::name##2(const type v) noexcept : x(v), y(v) {}
+#define _prvl_IMPL_VEC2(type, name)                                                 \
+constexpr inline struct name##2 prvl::name##2() noexcept {                          \
+    return (struct name##2){0, 0};                                                  \
+}                                                                                   \
+constexpr inline struct name##2 prvl::name##2(type x, type y) noexcept {            \
+    return (struct name##2){x, y};                                                  \
+}                                                                                   \
+constexpr inline struct name##2 prvl::name##2(const struct name##3& v) noexcept {   \
+    return (struct name##2){v.x, v.y};                                              \
+}                                                                                   \
+constexpr inline struct name##2 prvl::name##2(const struct name##4& v) noexcept {   \
+    return (struct name##2){v.x, v.y};                                              \
+}                                                                                   \
+constexpr inline struct name##2 prvl::name##2(type v) noexcept {                    \
+    return (struct name##2){v, v};                                                  \
+}
 
-#define _prvl_IMPL_VEC3(type, name)                                                                 \
-constexpr name##3::name##3(const type x, const type y, const type z) noexcept : x(x), y(y), z(z) {} \
-constexpr name##3::name##3(const name##2& xy, const type z) noexcept : x(xy.x), y(xy.y), z(z) {}    \
-constexpr name##3::name##3(const type x, const name##2& yz) noexcept : x(x), y(yz.x), z(yz.y) {}    \
-constexpr name##3::name##3(const name##4& v) noexcept : x(v.x), y(v.y), z(v.z) {}                   \
-constexpr name##3::name##3(const type v) noexcept : x(v), y(v), z(v) {}
+#define _prvl_IMPL_VEC3(type, name)                                                         \
+constexpr inline struct name##3 prvl::name##3() noexcept {                                  \
+    return (struct name##3){0, 0, 0};                                                       \
+}                                                                                           \
+constexpr inline struct name##3 prvl::name##3(type x, type y, type z) noexcept {            \
+    return (struct name##3){x, y, z};                                                       \
+}                                                                                           \
+constexpr inline struct name##3 prvl::name##3(const struct name##2& xy, type z) noexcept {  \
+    return (struct name##3){xy.x, xy.y, z};                                                 \
+}                                                                                           \
+constexpr inline struct name##3 prvl::name##3(type x, const struct name##2& yz) noexcept {  \
+    return (struct name##3){x, yz.x, yz.y};                                                 \
+}                                                                                           \
+constexpr inline struct name##3 prvl::name##3(const struct name##4& v) noexcept {           \
+    return (struct name##3){v.x, v.y, v.z};                                                 \
+}                                                                                           \
+constexpr inline struct name##3 prvl::name##3(type v) noexcept {                            \
+    return (struct name##3){v, v, v};                                                       \
+}
 
-#define _prvl_IMPL_VEC4(type, name)                                                                                     \
-constexpr name##4::name##4(const type x, const type y, const type z, const type w) noexcept : x(x), y(y), z(z), w(w) {} \
-constexpr name##4::name##4(const name##2& xy, const type z, const type w) noexcept : x(xy.x), y(xy.y), z(z), w(w) {}    \
-constexpr name##4::name##4(const type x, const name##2& yz, const type w) noexcept : x(x), y(yz.x), z(yz.y), w(w) {}    \
-constexpr name##4::name##4(const type x, const type y, const name##2& zw) noexcept : x(x), y(y), z(zw.x), w(zw.y) {}    \
-constexpr name##4::name##4(const name##2& xy, const name##2& zw) noexcept : x(xy.x), y(xy.y), z(zw.x), w(zw.y) {}       \
-constexpr name##4::name##4(const name##3& xyz, const type w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}           \
-constexpr name##4::name##4(const type x, const name##3& yzw) noexcept : x(x), y(yzw.x), z(yzw.y), w(yzw.z) {}           \
-constexpr name##4::name##4(const type v) noexcept : x(v), y(v), z(v), w(v) {}
+#define _prvl_IMPL_VEC4(type, name)                                                                         \
+constexpr inline struct name##4 prvl::name##4() noexcept {                                                  \
+    return (struct name##4){0, 0, 0, 0};                                                                    \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(type x, type y, type z, type w) noexcept {                    \
+    return (struct name##4){x, y, z, w};                                                                    \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(const struct name##2& xy, type z, type w) noexcept {          \
+    return (struct name##4){xy.x, xy.y, z, w};                                                              \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(type x, const struct name##2& yz, type w) noexcept {          \
+    return (struct name##4){x, yz.x, yz.y, w};                                                              \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(type x, type y, const struct name##2& zw) noexcept {          \
+    return (struct name##4){x, y, zw.x, zw.y};                                                              \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(const struct name##2& xy, const struct name##2& zw) noexcept {\
+    return (struct name##4){xy.x, xy.y, zw.x, zw.y};                                                        \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(const struct name##3& xyz, type w) noexcept {                 \
+    return (struct name##4){xyz.x, xyz.y, xyz.z, w};                                                        \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(type x, const struct name##3& yzw) noexcept {                 \
+    return (struct name##4){x, yzw.x, yzw.y, yzw.z};                                                        \
+}                                                                                                           \
+constexpr inline struct name##4 prvl::name##4(type v) noexcept {                                            \
+    return (struct name##4){v, v, v, v};                                                                    \
+}
 
 #define _prvl_IMPL_ALL(type, name)  \
 _prvl_IMPL_VEC2(type, name)         \
 _prvl_IMPL_VEC3(type, name)         \
 _prvl_IMPL_VEC4(type, name)
 
-#define _prvl_CAST2(nameA, nameB, typeA)                            \
-constexpr inline static nameA _##nameA(const nameB& v) noexcept {   \
-    return nameA(static_cast<typeA>(v.x), static_cast<typeA>(v.y)); \
+#define _prvl_CAST2(nameA, nameB, typeA)                                            \
+namespace prvl {                                                                    \
+    constexpr inline struct nameA##2 nameA##2(const struct nameB##2& v) noexcept {  \
+        return nameA##2(static_cast<typeA>(v.x), static_cast<typeA>(v.y));          \
+    }                                                                               \
 }
 
-#define _prvl_CAST3(nameA, nameB, typeA)                                                    \
-constexpr inline static nameA _##nameA(const nameB& v) noexcept {                           \
-    return nameA(static_cast<typeA>(v.x), static_cast<typeA>(v.y), static_cast<typeA>(v.z));\
+#define _prvl_CAST3(nameA, nameB, typeA)                                                            \
+namespace prvl {                                                                                    \
+    constexpr inline struct nameA##3 nameA##3(const struct nameB##3& v) noexcept {                  \
+        return nameA##3(static_cast<typeA>(v.x), static_cast<typeA>(v.y), static_cast<typeA>(v.z)); \
+    }                                                                                               \
 }
 
-#define _prvl_CAST4(nameA, nameB, typeA)                                                                                \
-constexpr inline static nameA _##nameA(const nameB& v) noexcept {                                                       \
-    return nameA(static_cast<typeA>(v.x), static_cast<typeA>(v.y), static_cast<typeA>(v.z), static_cast<typeA>(v.w));   \
+#define _prvl_CAST4(nameA, nameB, typeA)                                                                                    \
+namespace prvl {                                                                                                            \
+    constexpr inline struct nameA##4 nameA##4(const struct nameB##4& v) noexcept {                                          \
+        return nameA##4(static_cast<typeA>(v.x), static_cast<typeA>(v.y), static_cast<typeA>(v.z), static_cast<typeA>(v.w));\
+    }                                                                                                                       \
 }
 
 #define _prvl_CAST_ALL(to, from, type)  \
-_prvl_CAST2(to##2, from##2, type)       \
-_prvl_CAST3(to##3, from##3, type)       \
-_prvl_CAST4(to##4, from##4, type)
+_prvl_CAST2(to, from, type)       \
+_prvl_CAST3(to, from, type)       \
+_prvl_CAST4(to, from, type)
 
 #define _prvl_VEC_BINARY_OP(name, op)                                                       \
 constexpr inline static name##2 operator op(const name##2& a, const name##2& b) noexcept {  \
-    return name##2(a.x op b.x, a.y op b.y);                                                 \
+    return prvl::name##2(a.x op b.x, a.y op b.y);                                           \
 }                                                                                           \
 constexpr inline static name##2& operator op##=(name##2& a, const name##2& b) noexcept {    \
     a.x op##= b.x;                                                                          \
@@ -175,7 +233,7 @@ constexpr inline static name##2& operator op##=(name##2& a, const name##2& b) no
     return a;                                                                               \
 }                                                                                           \
 constexpr inline static name##3 operator op(const name##3& a, const name##3& b) noexcept {  \
-    return name##3(a.x op b.x, a.y op b.y, a.z op b.z);                                     \
+    return prvl::name##3(a.x op b.x, a.y op b.y, a.z op b.z);                               \
 }                                                                                           \
 constexpr inline static name##3& operator op##=(name##3& a, const name##3& b) noexcept {    \
     a.x op##= b.x;                                                                          \
@@ -184,7 +242,7 @@ constexpr inline static name##3& operator op##=(name##3& a, const name##3& b) no
     return a;                                                                               \
 }                                                                                           \
 constexpr inline static name##4 operator op(const name##4& a, const name##4& b) noexcept {  \
-    return name##4(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w);                         \
+    return prvl::name##4(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w);                   \
 }                                                                                           \
 constexpr inline static name##4& operator op##=(name##4& a, const name##4& b) noexcept {    \
     a.x op##= b.x;                                                                          \
@@ -196,18 +254,18 @@ constexpr inline static name##4& operator op##=(name##4& a, const name##4& b) no
 
 #define _prvl_VEC_UNARY_OP(name, op)                                    \
 constexpr inline static name##2 operator op(const name##2& v) noexcept {\
-    return name##2(op v.x, op v.y);                                     \
+    return prvl::name##2(op v.x, op v.y);                               \
 }                                                                       \
 constexpr inline static name##3 operator op(const name##3& v) noexcept {\
-    return name##3(op v.x, op v.y, op v.z);                             \
+    return prvl::name##3(op v.x, op v.y, op v.z);                       \
 }                                                                       \
 constexpr inline static name##4 operator op(const name##4& v) noexcept {\
-    return name##4(op v.x, op v.y, op v.z, op v.w);                     \
+    return prvl::name##4(op v.x, op v.y, op v.z, op v.w);               \
 }
 
 #define _prvl_VEC_SCALAR_OP(type, name, op)                                             \
 constexpr inline static name##2 operator op(const name##2& a, const type b) noexcept {  \
-    return name##2(a.x op b, a.y op b);                                                 \
+    return prvl::name##2(a.x op b, a.y op b);                                           \
 }                                                                                       \
 constexpr inline static name##2& operator op##=(name##2& a, const type b) noexcept {    \
     a.x op##= b;                                                                        \
@@ -215,10 +273,10 @@ constexpr inline static name##2& operator op##=(name##2& a, const type b) noexce
     return a;                                                                           \
 }                                                                                       \
 constexpr inline static name##2 operator op(const type a, const name##2& b) noexcept {  \
-    return name##2(a op b.x, a op b.y);                                                 \
+    return prvl::name##2(a op b.x, a op b.y);                                           \
 }                                                                                       \
 constexpr inline static name##3 operator op(const name##3& a, const type b) noexcept {  \
-    return name##3(a.x op b, a.y op b, a.z op b);                                       \
+    return prvl::name##3(a.x op b, a.y op b, a.z op b);                                 \
 }                                                                                       \
 constexpr inline static name##3& operator op##=(name##3& a, const type b) noexcept {    \
     a.x op##= b;                                                                        \
@@ -227,10 +285,10 @@ constexpr inline static name##3& operator op##=(name##3& a, const type b) noexce
     return a;                                                                           \
 }                                                                                       \
 constexpr inline static name##3 operator op(const type a, const name##3& b) noexcept {  \
-    return name##3(a op b.x, a op b.y, a op b.z);                                       \
+    return prvl::name##3(a op b.x, a op b.y, a op b.z);                                 \
 }                                                                                       \
 constexpr inline static name##4 operator op(const name##4& a, const type b) noexcept {  \
-    return name##4(a.x op b, a.y op b, a.z op b, a.w op b);                             \
+    return prvl::name##4(a.x op b, a.y op b, a.z op b, a.w op b);                       \
 }                                                                                       \
 constexpr inline static name##4& operator op##=(name##4& a, const type b) noexcept {    \
     a.x op##= b;                                                                        \
@@ -240,18 +298,18 @@ constexpr inline static name##4& operator op##=(name##4& a, const type b) noexce
     return a;                                                                           \
 }                                                                                       \
 constexpr inline static name##4 operator op(const type a, const name##4& b) noexcept {  \
-    return name##4(a op b.x, a op b.y, a op b.z, a op b.w);                             \
+    return prvl::name##4(a op b.x, a op b.y, a op b.z, a op b.w);                       \
 }                                                                                       \
 
 #define _prvl_VEC_CMP(name, cmp)                                                            \
 constexpr inline static bvec2 operator cmp(const name##2& a, const name##2& b) noexcept {   \
-    return bvec2(a.x cmp b.x, a.y cmp b.y);                                                 \
+    return prvl::bvec2(a.x cmp b.x, a.y cmp b.y);                                           \
 }                                                                                           \
 constexpr inline static bvec3 operator cmp(const name##3& a, const name##3& b) noexcept {   \
-    return bvec3(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z);                                    \
+    return prvl::bvec3(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z);                              \
 }                                                                                           \
 constexpr inline static bvec4 operator cmp(const name##4& a, const name##4& b) noexcept {   \
-    return bvec4(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z, a.w cmp b.w);                       \
+    return prvl::bvec4(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z, a.w cmp b.w);                 \
 }
 
 #define _prvl_VEC_DOT(type, name)                                               \
@@ -265,9 +323,9 @@ constexpr inline static type dot(const name##4& a, const name##4& b) noexcept { 
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;                       \
 }
 
-#define _prvl_VEC_CROSS(name)                                                           \
-constexpr inline static name##3 cross(const name##3& a, const name##3& b) noexcept {    \
-    return name##3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);\
+#define _prvl_VEC_CROSS(name)                                                                   \
+constexpr inline static name##3 cross(const name##3& a, const name##3& b) noexcept {            \
+    return prvl::name##3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);  \
 }
 
 #define _prvl_VEC_LENGTH(type, name)                            \
@@ -297,37 +355,37 @@ constexpr inline static ret mix(const type a, const type b, const interpolator t
     return a + t * (b - a);                                                                 \
 }
 
-#define _prvl_VEC_FUNC1(name, func, a)                              \
-constexpr inline static name##2 func(const name##2& a) noexcept {   \
-    return name##2(func(a.x), func(a.y));                           \
-}                                                                   \
-constexpr inline static name##3 func(const name##3& a) noexcept {   \
-    return name##3(func(a.x), func(a.y), func(a.z));                \
-}                                                                   \
-constexpr inline static name##4 func(const name##4& a) noexcept {   \
-    return name##4(func(a.x), func(a.y), func(a.z), func(a.w));     \
+#define _prvl_VEC_FUNC1(name, func, a)                                  \
+constexpr inline static name##2 func(const name##2& a) noexcept {       \
+    return prvl::name##2(func(a.x), func(a.y));                         \
+}                                                                       \
+constexpr inline static name##3 func(const name##3& a) noexcept {       \
+    return prvl::name##3(func(a.x), func(a.y), func(a.z));              \
+}                                                                       \
+constexpr inline static name##4 func(const name##4& a) noexcept {       \
+    return prvl::name##4(func(a.x), func(a.y), func(a.z), func(a.w));   \
 }
 
-#define _prvl_VEC_FUNC2(name, func, a, b)                                           \
-constexpr inline static name##2 func(const name##2& a, const name##2& b) noexcept { \
-    return name##2(func(a.x, b.x), func(a.y, b.y));                                 \
-}                                                                                   \
-constexpr inline static name##3 func(const name##3& a, const name##3& b) noexcept { \
-    return name##3(func(a.x, b.x), func(a.y, b.y), func(a.z, b.z));                 \
-}                                                                                   \
-constexpr inline static name##4 func(const name##4& a, const name##4& b) noexcept { \
-    return name##4(func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, b.w)); \
+#define _prvl_VEC_FUNC2(name, func, a, b)                                                   \
+constexpr inline static name##2 func(const name##2& a, const name##2& b) noexcept {         \
+    return prvl::name##2(func(a.x, b.x), func(a.y, b.y));                                   \
+}                                                                                           \
+constexpr inline static name##3 func(const name##3& a, const name##3& b) noexcept {         \
+    return prvl::name##3(func(a.x, b.x), func(a.y, b.y), func(a.z, b.z));                   \
+}                                                                                           \
+constexpr inline static name##4 func(const name##4& a, const name##4& b) noexcept {         \
+    return prvl::name##4(func(a.x, b.x), func(a.y, b.y), func(a.z, b.z), func(a.w, b.w));   \
 }
 
-#define _prvl_VEC_FUNC3(name, func, a, b, c)                                                            \
-constexpr inline static name##2 func(const name##2& a, const name##2& b, const name##2& c) noexcept {   \
-    return name##2(func(a.x, b.x, c.x), func(a.y, b.y, c.y));                                           \
-}                                                                                                       \
-constexpr inline static name##3 func(const name##3& a, const name##3& b, const name##3& c) noexcept {   \
-    return name##3(func(a.x, b.x, c.x), func(a.y, b.y, c.y), func(a.z, b.z, c.z));                      \
-}                                                                                                       \
-constexpr inline static name##4 func(const name##4& a, const name##4& b, const name##4& c) noexcept {   \
-    return name##4(func(a.x, b.x, c.x), func(a.y, b.y, c.y), func(a.z, b.z, c.z), func(a.w, b.w, c.w)); \
+#define _prvl_VEC_FUNC3(name, func, a, b, c)                                                                    \
+constexpr inline static name##2 func(const name##2& a, const name##2& b, const name##2& c) noexcept {           \
+    return prvl::name##2(func(a.x, b.x, c.x), func(a.y, b.y, c.y));                                             \
+}                                                                                                               \
+constexpr inline static name##3 func(const name##3& a, const name##3& b, const name##3& c) noexcept {           \
+    return prvl::name##3(func(a.x, b.x, c.x), func(a.y, b.y, c.y), func(a.z, b.z, c.z));                        \
+}                                                                                                               \
+constexpr inline static name##4 func(const name##4& a, const name##4& b, const name##4& c) noexcept {           \
+    return prvl::name##4(func(a.x, b.x, c.x), func(a.y, b.y, c.y), func(a.z, b.z, c.z), func(a.w, b.w, c.w));   \
 }
 
 #define _prvl_VEC_MIX(type, name)   \
@@ -543,6 +601,134 @@ constexpr inline static bool all(const bvec4& v) noexcept {
     return v.x && v.y && v.z && v.w;
 }
 
+struct quat {
+    float x;
+    float y;
+    float z;
+    float w;
+
+    constexpr quat() noexcept : x{}, y{}, z{}, w{1.0f} {}
+    constexpr quat(float x, float y, float z, float w) noexcept : x{x}, y{y}, z{z}, w{w} {}
+    constexpr quat(const vec3& axis, float angle) noexcept {
+        float half = angle * 0.5f;
+        float s = sinf(half);
+        x = axis.x * s;
+        y = axis.y * s;
+        z = axis.z * s;
+        w = cosf(half);
+    }
+};
+
+struct dquat {
+    double x;
+    double y;
+    double z;
+    double w;
+
+    constexpr dquat() noexcept : x{}, y{}, z{}, w{1.0} {}
+    constexpr dquat(double x, double y, double z, double w) noexcept : x{x}, y{y}, z{z}, w{w} {}
+    constexpr dquat(const dvec3& axis, double angle) noexcept {
+        double half = angle * 0.5;
+        double s = sin(half);
+        x = axis.x * s;
+        y = axis.y * s;
+        z = axis.z * s;
+        w = cos(half);
+    }
+};
+
+constexpr inline static float dot(const quat& a, const quat& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
+constexpr inline static quat normalize(const quat& q) {
+    float inv = 1.0f / sqrtf(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return quat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+}
+
+constexpr inline quat operator+(const quat& a, const quat& b) {
+    return quat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+}
+
+constexpr inline quat& operator+=(quat& a, const quat& b) {
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+    a.w += b.w;
+    return a;
+}
+
+constexpr inline quat operator*(const quat& q, float s) {
+    return quat(q.x * s, q.y * s, q.z * s, q.w * s);
+}
+
+constexpr inline quat operator*(const quat& a, const quat& b) {
+    return quat(
+        a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+        a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+        a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
+    );
+}
+
+constexpr inline quat& operator*=(quat& a, const quat& b) {
+    float x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
+    float y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x;
+    float z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w;
+    float w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z;
+    a.x = x;
+    a.y = y;
+    a.z = z;
+    a.w = w;
+    return a;
+}
+
+constexpr inline static double dot(const dquat& a, const dquat& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
+constexpr inline static dquat normalize(const dquat& q) {
+    double inv = 1.0 / sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return dquat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+}
+
+constexpr inline dquat operator+(const dquat& a, const dquat& b) {
+    return dquat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+}
+
+constexpr inline dquat& operator+=(dquat& a, const dquat& b) {
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+    a.w += b.w;
+    return a;
+}
+
+constexpr inline dquat operator*(const dquat& q, double s) {
+    return dquat(q.x * s, q.y * s, q.z * s, q.w * s);
+}
+
+constexpr inline dquat operator*(const dquat& a, const dquat& b) {
+    return dquat(
+        a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+        a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+        a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
+    );
+}
+
+constexpr inline dquat& operator*=(dquat& a, const dquat& b) {
+    double x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
+    double y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x;
+    double z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w;
+    double w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z;
+    a.x = x;
+    a.y = y;
+    a.z = z;
+    a.w = w;
+    return a;
+}
+
 template<typename T>
 struct is_matrix : std::false_type {};
 
@@ -577,6 +763,8 @@ struct name##3x##h {                                                            
     vecname##h _cols[3];                                                                            \
     constexpr name##3x##h() : _cols{} {}                                                            \
     constexpr name##3x##h(const vecname##h& a, const vecname##h& b, const vecname##h& c) noexcept;  \
+    constexpr name##3x##h(const quat& q) noexcept;                                                  \
+    constexpr name##3x##h(const dquat& q) noexcept;                                                 \
     template<typename Other, typename = std::enable_if_t<is_matrix<Other>::value>>                  \
     explicit constexpr name##3x##h(const Other& other) noexcept;                                    \
     constexpr inline vecname##h& operator[](const uint32_t idx) noexcept {                          \
@@ -634,7 +822,7 @@ constexpr name##2x##h::name##2x##h(const Other& other) noexcept {               
     }                                                                                   \
     if constexpr (COLS > copyCols) {                                                    \
         for (uint32_t c = copyCols; c < COLS; ++c) {                                    \
-            _cols[c] = vecname##h{};                                                    \
+            _cols[c] = prvl::vecname##h();                                              \
         }                                                                               \
     }                                                                                   \
     if constexpr (ROWS > copyRows) {                                                    \
@@ -658,6 +846,104 @@ constexpr name##3x##h::name##3x##h(const vecname##h& a, const vecname##h& b, con
     this->_cols[1] = b;                                                                                     \
     this->_cols[2] = c;                                                                                     \
 }                                                                                                           \
+constexpr name##3x##h::name##3x##h(const quat& q) noexcept {                                                \
+    float xx = q.x * q.x;                                                                                   \
+    float xy = q.x * q.y;                                                                                   \
+    float xz = q.x * q.z;                                                                                   \
+    float xw = q.x * q.w;                                                                                   \
+    float yy = q.y * q.y;                                                                                   \
+    float yz = q.y * q.z;                                                                                   \
+    float yw = q.y * q.w;                                                                                   \
+    float zz = q.z * q.z;                                                                                   \
+    float zw = q.z * q.w;                                                                                   \
+    vec3 other[]{                                                                                           \
+        prvl::vec3(                                                                                         \
+            1.0f - 2.0f * (yy + zz),                                                                        \
+            2.0f * (xy + zw),                                                                               \
+            2.0f * (xz - yw)                                                                                \
+        ),                                                                                                  \
+        prvl::vec3(                                                                                         \
+            2.0f * (xy - zw),                                                                               \
+            1.0f - 2.0f * (xx + zz),                                                                        \
+            2.0f * (yz + xw)                                                                                \
+        ),                                                                                                  \
+        prvl::vec3(                                                                                         \
+            2.0f * (xz + yw),                                                                               \
+            2.0f * (yz - xw),                                                                               \
+            1.0f - 2.0f * (xx + yy)                                                                         \
+        )                                                                                                   \
+    };                                                                                                      \
+    if constexpr (ROWS == 3u) {                                                                             \
+        for (uint32_t c = 0u; c < 3u; ++c) {                                                                \
+            for (uint32_t r = 0u; r < 3u; ++r) {                                                            \
+                _cols[c][r] = static_cast<type>(other[c][r]);                                               \
+            }                                                                                               \
+        }                                                                                                   \
+    } else {                                                                                                \
+        constexpr uint32_t copyRows = (ROWS < 3u) ? ROWS : 3u;                                              \
+        for (uint32_t c = 0u; c < 3u; ++c) {                                                                \
+            for (uint32_t r = 0u; r < copyRows; ++r) {                                                      \
+                _cols[c][r] = static_cast<type>(other[c][r]);                                               \
+            }                                                                                               \
+        }                                                                                                   \
+        if constexpr (ROWS > 3u) {                                                                          \
+            for (uint32_t c = 0u; c < 3u; ++c) {                                                            \
+                for (uint32_t r = 3u; r < ROWS; ++r) {                                                      \
+                    _cols[c][r] = type(0);                                                                  \
+                }                                                                                           \
+            }                                                                                               \
+        }                                                                                                   \
+    }                                                                                                       \
+}                                                                                                           \
+constexpr name##3x##h::name##3x##h(const dquat& q) noexcept {                                               \
+    double xx = q.x * q.x;                                                                                  \
+    double xy = q.x * q.y;                                                                                  \
+    double xz = q.x * q.z;                                                                                  \
+    double xw = q.x * q.w;                                                                                  \
+    double yy = q.y * q.y;                                                                                  \
+    double yz = q.y * q.z;                                                                                  \
+    double yw = q.y * q.w;                                                                                  \
+    double zz = q.z * q.z;                                                                                  \
+    double zw = q.z * q.w;                                                                                  \
+    dvec3 other[]{                                                                                          \
+        prvl::dvec3(                                                                                        \
+            1.0 - 2.0 * (yy + zz),                                                                          \
+            2.0 * (xy + zw),                                                                                \
+            2.0 * (xz - yw)                                                                                 \
+        ),                                                                                                  \
+        prvl::dvec3(                                                                                        \
+            2.0 * (xy - zw),                                                                                \
+            1.0 - 2.0 * (xx + zz),                                                                          \
+            2.0 * (yz + xw)                                                                                 \
+        ),                                                                                                  \
+        prvl::dvec3(                                                                                        \
+            2.0 * (xz + yw),                                                                                \
+            2.0 * (yz - xw),                                                                                \
+            1.0 - 2.0 * (xx + yy)                                                                           \
+        )                                                                                                   \
+    };                                                                                                      \
+    if constexpr (ROWS == 3u) {                                                                             \
+        for (uint32_t c = 0u; c < 3u; ++c) {                                                                \
+            for (uint32_t r = 0u; r < 3u; ++r) {                                                            \
+                _cols[c][r] = static_cast<type>(other[c][r]);                                               \
+            }                                                                                               \
+        }                                                                                                   \
+    } else {                                                                                                \
+        constexpr uint32_t copyRows = (ROWS < 3u) ? ROWS : 3u;                                              \
+        for (uint32_t c = 0u; c < 3u; ++c) {                                                                \
+            for (uint32_t r = 0u; r < copyRows; ++r) {                                                      \
+                _cols[c][r] = static_cast<type>(other[c][r]);                                               \
+            }                                                                                               \
+        }                                                                                                   \
+        if constexpr (ROWS > 3u) {                                                                          \
+            for (uint32_t c = 0u; c < 3u; ++c) {                                                            \
+                for (uint32_t r = 3u; r < ROWS; ++r) {                                                      \
+                    _cols[c][r] = type(0);                                                                  \
+                }                                                                                           \
+            }                                                                                               \
+        }                                                                                                   \
+    }                                                                                                       \
+}                                                                                                           \
 template<typename Other, typename>                                                                          \
 constexpr name##3x##h::name##3x##h(const Other& other) noexcept {                                           \
     constexpr uint32_t copyCols = (COLS < Other::COLS) ? COLS : Other::COLS;                                \
@@ -669,7 +955,7 @@ constexpr name##3x##h::name##3x##h(const Other& other) noexcept {               
     }                                                                                                       \
     if constexpr (COLS > copyCols) {                                                                        \
         for (uint32_t c = copyCols; c < COLS; ++c) {                                                        \
-            _cols[c] = vecname##h{};                                                                        \
+            _cols[c] = prvl::vecname##h();                                                                  \
         }                                                                                                   \
     }                                                                                                       \
     if constexpr (ROWS > copyRows) {                                                                        \
@@ -705,7 +991,7 @@ constexpr name##4x##h::name##4x##h(const Other& other) noexcept {               
     }                                                                                                                               \
     if constexpr (COLS > copyCols) {                                                                                                \
         for (uint32_t c = copyCols; c < COLS; ++c) {                                                                                \
-            _cols[c] = vecname##h{};                                                                                                \
+            _cols[c] = prvl::vecname##h();                                                                                          \
         }                                                                                                                           \
     }                                                                                                                               \
     if constexpr (ROWS > copyRows) {                                                                                                \
@@ -948,7 +1234,7 @@ constexpr inline static type determinant(const name##4& m) noexcept {   \
 constexpr inline name##2 inverse(const name##2& m) {            \
     type det = m[0].x * m[1].y - m[0].y * m[1].x;               \
     if(abs(det) < epsilon) {                                    \
-        return diag(vecname##2(1));                             \
+        return diag(prvl::vecname##2(1));                       \
     }                                                           \
     det = unit / det;                                           \
     name##2 r;                                                  \
@@ -969,7 +1255,7 @@ constexpr inline name##3 inverse(const name##3& m) {            \
               - m[0].y * (C - D)                                \
               + m[0].z * (E - F));                              \
     if(abs(det) < epsilon) {                                    \
-        return diag(vecname##3(1));                             \
+        return diag(prvl::vecname##3(1));                       \
     }                                                           \
     det = unit / det;                                           \
     name##3 r;                                                  \
@@ -1002,7 +1288,7 @@ constexpr inline name##4 inverse(const name##4& m) {            \
     type det = d[0] * r[0].x + d[1] * r[1].x                    \
              + d[2] * r[2].x + d[3] * r[3].x;                   \
     if(abs(det) < epsilon) {                                    \
-        return diag(vecname##4(1));                             \
+        return diag(prvl::vecname##4(1));                       \
     }                                                           \
     det = unit / det;                                           \
     r[0].y = d[1]  * (-d[10] * d[15] + d[11] * d[14])           \
@@ -1063,17 +1349,17 @@ constexpr inline name##4 inverse(const name##4& m) {            \
 #define _prvl_MAT_NORMALIZE(type, name)                                                 \
 constexpr inline static name##2 normalize(const name##2& m) noexcept {                  \
     type det = determinant(m);                                                          \
-    type scalar = static_cast<type>(1.0 / sqrt(static_cast<double>(det)));             \
+    type scalar = static_cast<type>(1.0 / sqrt(static_cast<double>(det)));              \
     return m * scalar;                                                                  \
 }                                                                                       \
 constexpr inline static name##3 normalize(const name##3& m) noexcept {                  \
     type det = determinant(m);                                                          \
-    type scalar = static_cast<type>(1.0 / pow(static_cast<double>(det), 1.0 / 3.0)); \
+    type scalar = static_cast<type>(1.0 / pow(static_cast<double>(det), 1.0 / 3.0));    \
     return m * scalar;                                                                  \
 }                                                                                       \
 constexpr inline static name##4 normalize(const name##4& m) noexcept {                  \
     type det = determinant(m);                                                          \
-    type scalar = static_cast<type>(1.0 / pow(static_cast<double>(det), 0.25));       \
+    type scalar = static_cast<type>(1.0 / pow(static_cast<double>(det), 0.25));         \
     return m * scalar;                                                                  \
 }
 
@@ -1250,6 +1536,60 @@ _prvl_MAT_ALL_CREATE(uint32_t, umat, uvec)
 _prvl_MAT_INVERSE(float, mat, vec, 1.0f, 0.0001f);
 _prvl_MAT_INVERSE(double, dmat, dvec, 1.0, 0.00001);
 
+constexpr inline mat3 operator+(const mat3& a, const quat& b) {
+    return a + mat3(b);
+}
+
+constexpr inline mat3& operator+=(mat3& a, const quat& b) {
+    a += mat3(b);
+    return a;
+}
+
+constexpr inline mat3 operator-(const mat3& a, const quat& b) {
+    return a - mat3(b);
+}
+
+constexpr inline mat3& operator-=(mat3& a, const quat& b) {
+    a -= mat3(b);
+    return a;
+}
+
+constexpr inline mat3 operator*(const mat3& a, const quat& b) {
+    return a * mat3(b);
+}
+
+constexpr inline mat3& operator*=(mat3& a, const quat& b) {
+    a *= mat3(b);
+    return a;
+}
+
+constexpr inline dmat3 operator+(const dmat3& a, const dquat& b) {
+    return a + dmat3(b);
+}
+
+constexpr inline dmat3& operator+=(dmat3& a, const dquat& b) {
+    a += dmat3(b);
+    return a;
+}
+
+constexpr inline dmat3 operator-(const dmat3& a, const dquat& b) {
+    return a - dmat3(b);
+}
+
+constexpr inline dmat3& operator-=(dmat3& a, const dquat& b) {
+    a -= dmat3(b);
+    return a;
+}
+
+constexpr inline dmat3 operator*(const dmat3& a, const dquat& b) {
+    return a * dmat3(b);
+}
+
+constexpr inline dmat3& operator*=(dmat3& a, const dquat& b) {
+    a *= dmat3(b);
+    return a;
+}
+
 constexpr inline static mat3 rotateX(float ang) {
     float sin = sinf(ang);
     float cos = cosf(ang);
@@ -1288,8 +1628,8 @@ constexpr inline static mat3 rotateZ(float ang) {
 
 constexpr inline static mat3 lookat(const vec3& from, const vec3& to) {
     vec3 f = normalize(from - to);
-    vec3 r = normalize(vec3(-f.z, 0.0f, f.x));
-    vec3 u = vec3(-r.z * f.y, r.z * f.x - r.x * f.z, r.x * f.y);
+    vec3 r = normalize(prvl::vec3(-f.z, 0.0f, f.x));
+    vec3 u = prvl::vec3(-r.z * f.y, r.z * f.x - r.x * f.z, r.x * f.y);
     return transpose(mat3(r, u, f));
 }
 
