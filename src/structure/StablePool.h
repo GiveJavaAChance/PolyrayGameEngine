@@ -1,6 +1,11 @@
 #ifndef STABLEPOOL_H_INCLUDED
 #define STABLEPOOL_H_INCLUDED
 
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
 template<typename T>
 struct StablePool {
 private:
@@ -27,12 +32,7 @@ public:
     T* allocate(Args... args) {
         uint32_t idx = 0u;
         while(idx < pages.size() && counts[idx] == pageSize) idx++;
-        Page& page;
-        if(idx == pages.size()) {
-            page = allocatePage();
-        } else {
-            page = pages[idx];
-        }
+        Page& page = idx == pages.size() ? allocatePage() : pages[idx];
         uint64_t word = ~page.words[0u];
         uint32_t u = 0u;
         uint32_t index = 0u;
