@@ -19,7 +19,7 @@ struct RenderInstance {
     }
 };
 
-template<typename T>
+template<typename T, typename U, void(*Extract)(const T&, U*)>
 struct InstancedRenderSystem {
 private:
     ECS* ecs;
@@ -51,12 +51,14 @@ private:
             }
         }
         free(instanceCount);
-        T* buffer = alloc<T>(maxCount);
+        U* buffer = alloc<U>(maxCount);
         for(uint32_t i = 0u; i < objects.size(); i++) {
             uint32_t count = 0u;
             for(uint32_t j = 0u; j < instances.size(); j++) {
                 if(objects.reg[instances[j].objectID] == i) {
-                    buffer[count++] = ecs->read(instances[j].ref);
+                    T data = ecs->read(instances[j].ref);
+                    Extract(data, buffer + count);
+                    ++count;
                 }
             }
             objects.arr[i]->uploadInstances(buffer, count);
@@ -67,8 +69,8 @@ private:
 public:
     InstancedRenderSystem(ECS* ecs) : ecs(ecs) {
         ecs->registerComponentType<RenderInstance<T>>();
-        ecs->registerComponentListener<RenderInstance<T>, InstancedRenderSystem<T>, onComponentAdded, onComponentRemoved>(this);
-        ecs->registerUpdateCallback<InstancedRenderSystem<T>, update, UpdateOrder::PRE_RENDER>(this);
+        ecs->registerComponentListener<RenderInstance<T>, InstancedRenderSystem<T, U, Extract>, onComponentAdded, onComponentRemoved>(this);
+        ecs->registerUpdateCallback<InstancedRenderSystem<T, U, Extract>, update, UpdateOrder::PRE_RENDER>(this);
     }
 
     uint32_t addObject(RenderObject* obj) {
