@@ -204,7 +204,7 @@ namespace SOTFStructureVoxelizer {
             log->pos += d;
             log->pos *= scale;
 
-            mat3 basis = mat3(log->rot);
+            mat3 basis = prvl::mat3(log->rot);
 
             float radius = scale * (profileID == 151 ? 0.05f : 0.2f);
             float len = log->lengthScale * scale * 2.0f * lengthMul;
@@ -588,7 +588,7 @@ int main() {
     Instance instances[amt];
     for (uint32_t i = 0u; i < amt; i++) {
         transforms[i] = Transform{
-            mat3x4(diag(prvl::vec3(1.0f / 16.0f))),
+            prvl::mat3x4(diag(prvl::vec3(1.0f / 16.0f))),
             prvl::vec3(0.0f)
         };
         instances[i] = Instance{i, i};
@@ -607,17 +607,14 @@ int main() {
     for(uint32_t frame = 0u; w.isWindowOpen(); frame++) {
         uint64_t startTime = Time::nanoTime();
 
-        double px, py;
-        w.getMousePos(px, py);
-        float cx = w.getWidth() * 0.5f;
-        float cy = w.getHeight() * 0.5f;
-        float dx = (static_cast<float>(px) - cx) / cx;
-        float dy = (static_cast<float>(py) - cy) / cy;
-        cameraAng.x += dy;
-        cameraAng.y -= dx;
-        cam.cameraTransform = mat4(rotateX(cameraAng.x) * rotateY(cameraAng.y));
+        vec2 p = w.getMousePos();
+        vec2 c = prvl::vec2(w.getWidth(), w.getHeight()) * 0.5f;
+        vec2 d = (p - c) / c;
+        cameraAng.x += d.y;
+        cameraAng.y -= d.x;
+        cam.cameraTransform = prvl::mat4(rotateX(cameraAng.x) * rotateY(cameraAng.y));
         cam.inverseCameraTransform = transpose(cam.cameraTransform);
-        w.setMousePos(cx, cy);
+        w.setMousePos(c);
 
         vec3 movement = prvl::vec3();
         vec3 forward = -prvl::vec3(cam.inverseCameraTransform[2]);

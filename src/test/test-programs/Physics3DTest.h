@@ -1,3 +1,6 @@
+#ifndef HEADER_E074B928AC01144
+#define HEADER_E074B928AC01144
+
 #include <cstdint>
 #include <iostream>
 
@@ -14,6 +17,11 @@
 #include <input/Input.h>
 #include <RenderObject.h>
 #include <ecs/ECS.h>
+
+#include <Transform3D.h>
+
+#include <scene/SceneNode.h>
+#include <scene/3d/Scene3D.h>
 
 #include <physics/3d/Physics3D.h>
 #include <InstancedRenderSystem.h>
@@ -37,6 +45,27 @@ struct Environment {
     float __padding__1;
     vec3 ambientColor;
     float __padding__2;
+};
+
+struct Gizmos {
+    DynamicArray<mat3> gizmosData;
+    RenderObject* obj;
+
+    Gizmos(RenderObject* obj) : obj(obj) {
+    }
+
+    void setSize(int count) {
+        gizmosData.ensureCapacity(count);
+    }
+
+    void pushCube(vec3 pos, vec3 size, vec3 color) {
+        gizmosData.emplace(pos, size, color);
+    }
+
+    void update(double dt) {
+        obj->uploadInstances(gizmosData.data(), gizmosData.size());
+        gizmosData.clear();
+    }
 };
 
 Camera3D cam;
@@ -76,14 +105,15 @@ struct DummyScript : Script {
     }
 
     void frameUpdate(double dt) {
-        mat4* t = getComponentPtr<mat4>();
+        Transform3D* t = getComponentPtr<Transform3D>();
         PhysicsObject3D obj;
         if(t && getComponent<PhysicsObject3D>(obj)) {
-            mat4& tx = *t;
-            vec4& tr = tx[3];
+            Transform3D& tx = *t;
+            vec4& tr = tx.local[3];
             tr.x = static_cast<float>(obj.posX);
             tr.y = static_cast<float>(obj.posY);
             tr.z = static_cast<float>(obj.posZ);
+            tx.dirtyLocal = true;
         }
     }
 };
@@ -120,60 +150,43 @@ struct PlayerScript : Script {
     }
 
     void frameUpdate(double dt) {
-        mat4* t = getComponentPtr<mat4>();
+        Transform3D* t = getComponentPtr<Transform3D>();
         PhysicsObject3D obj;
         if(t && getComponent<PhysicsObject3D>(obj)) {
-            mat4& tx = *t;
-            vec4& tr = tx[3];
+            Transform3D& tx = *t;
+            vec4& tr = tx.local[3];
             tr.x = static_cast<float>(obj.posX);
             tr.y = static_cast<float>(obj.posY);
             tr.z = static_cast<float>(obj.posZ);
             cam.cameraPos = prvl::vec3(tr) + prvl::vec3(0.0f, 0.15f, 0.0f);
+            tx.dirtyLocal = true;
         }
     }
 };
 
-InstancedRenderSystem<mat4>* renderSystem;
+void extractGlobal(const Transform3D& tx, mat4* global) {
+    *global = tx.global;
+}
+
+Scene3D* scene;
+InstancedRenderSystem<Transform3D, mat4, extractGlobal>* renderSystem;
 ScriptSystem<DummyScript>* scriptSystem;
 ScriptSystem<PlayerScript>* playerScriptSystem;
 Physics3D* physicsSystem;
-
-struct Gizmos {
-    DynamicArray<vec3> gizmosData;
-    RenderObject* obj;
-
-    Gizmos(RenderObject* obj) : obj(obj) {
-    }
-
-    void setSize(int count) {
-        gizmosData.ensureCapacity(count * 3);
-    }
-
-    void pushCube(vec3 pos, vec3 size, vec3 color) {
-        gizmosData.add(pos);
-        gizmosData.add(size);
-        gizmosData.add(color);
-    }
-
-    void update(double dt) {
-        obj->uploadInstances(gizmosData.data(), gizmosData.size());
-        obj->instanceCount = gizmosData.size() / 3;
-        gizmosData.clear();
-    }
-};
 
 float cameraAngX = 0.0f;
 float cameraAngY = 0.0f;
 
 Gizmos* gizmos;
-bool first = true;
+//bool first = true;
 
 int main() {
-    ecs.registerComponentType<mat4>();
+    ecs.registerComponentType<Transform3D>();
     ResourceManager::addLocalResource("res/shaders");
     ResourceManager::addLocalResource("res/textures");
 
-    renderSystem = new InstancedRenderSystem<mat4>(&ecs);
+    scene = new Scene3D(&ecs);
+    renderSystem = new InstancedRenderSystem<Transform3D, mat4, extractGlobal>(&ecs);
     scriptSystem = new ScriptSystem<DummyScript>(&ecs);
     playerScriptSystem = new ScriptSystem<PlayerScript>(&ecs);
     physicsSystem = new Physics3D(&ecs);
@@ -295,15 +308,22 @@ int main() {
 
     uint32_t planeID = renderSystem->addObject(&plane);
 
-    Entity e2 = ecs.createEntity();
-    e2.addComponent(diag(prvl::vec4(1.0)));
-    e2.addComponent(RenderInstance<mat4>(planeID));
-    e2.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -100.0, -2.0, -100.0, 200.0, 2.0, 200.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, -2.0, -10.0, 20.0, 20.0, 2.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, -2.0,   8.0, 20.0, 20.0, 2.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr,   8.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
-    e2.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, 18.0, -10.0, 20.0, 2.0, 20.0, 0.0, 0.0));
+    Entity floor = ecs.createEntity();
+    floor.addComponent(Transform3D{diag(prvl::vec4(1.0f)), diag(prvl::vec4(1.0f)), false, true});
+    floor.addComponent(RenderInstance<Transform3D>(planeID));
+    floor.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -100.0, -2.0, -100.0, 200.0, 2.0, 200.0, 0.0, 0.0));
+    floor.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, -2.0, -10.0, 20.0, 20.0, 2.0, 0.0, 0.0));
+    floor.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
+    floor.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, -2.0,   8.0, 20.0, 20.0, 2.0, 0.0, 0.0));
+    floor.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr,   8.0, -2.0, -10.0, 2.0, 20.0, 20.0, 0.0, 0.0));
+    floor.addComponent(physicsSystem->createCollider<CollisionShape::AABB>(nullptr, -10.0, 18.0, -10.0, 20.0, 2.0, 20.0, 0.0, 0.0));
+
+    uint32_t rootNode = scene->setRootNode(floor);
+
+    Entity group = ecs.createEntity();
+    group.addComponent(Transform3D{diag(prvl::vec4(1.0f)), diag(prvl::vec4(1.0f)), false, true});
+
+    uint32_t groupNode = scene->addNode(rootNode, group);
 
     GLuint cubeVert = ShaderManager::compileShaderFile("Cube3D.vert", GL_VERTEX_SHADER);
     GLuint cubeFrag = ShaderManager::compileShaderFile("Cube3D.frag", GL_FRAGMENT_SHADER);
@@ -342,18 +362,18 @@ int main() {
         {0.0f, 1.0f, 1.0f}
     };
     cubeObj.uploadVertices(cubeVerts, 24);
-    //gizmos = new Gizmos(&cubeObj);
 
-    /*physicsSystem->addDynamicQueryCallback([](BVH<3>& bvh) {
+    /*gizmos = new Gizmos(&cubeObj);
+    physicsSystem->addDynamicQueryCallback([](BVH<3>& bvh) {
         if(first) {
             first = false;
             int count = bvh.getNodeCount();
             float* b = bvh.getNodeBounds();
             gizmos->setSize(count);
             for(int i = 0; i < count; i++) {
-                vec3 min = vec3(b[i * 6 + 0], b[i * 6 + 1], b[i * 6 + 2]);
-                vec3 max = vec3(b[i * 6 + 3], b[i * 6 + 4], b[i * 6 + 5]);
-                gizmos->pushCube(min, max - min, vec3(1.0f, 0.0f, 0.0f));
+                vec3 min = prvl::vec3(b[i * 6 + 0], b[i * 6 + 1], b[i * 6 + 2]);
+                vec3 max = prvl::vec3(b[i * 6 + 3], b[i * 6 + 4], b[i * 6 + 5]);
+                gizmos->pushCube(min, max - min, prvl::vec3(1.0f, 0.0f, 0.0f));
             }
         }
     });*/
@@ -381,46 +401,48 @@ int main() {
         for(uint32_t y = 0u; y < 10u; y++) {
             for(uint32_t x = 0u; x < 10u; x++) {
                 Entity e = ecs.createEntity();
-                e.addComponent(diag(prvl::vec4(0.1f)));
-                (*e.getComponentPtr<mat4>())[1].y = 0.2;
-                e.addComponent(RenderInstance<mat4>(objectID));
+                e.addComponent(Transform3D{prvl::mat4(diag(prvl::vec3(0.1f))), prvl::mat4(diag(prvl::vec3(0.1f))), false, true});
+                (*e.getComponentPtr<Transform3D>()).local[1].y = 0.2f;
+                e.addComponent(RenderInstance<Transform3D>(objectID));
                 e.addComponent(PhysicsObject3D{0.3 * x, 0.2 + 0.4 * y, 0.3 * z, 0.3 * x, 0.2 + 0.4 * y, 0.3 * z, 0.0, 0.0, 0.0});
-                uint32_t id;
-                ecs.getComponentID<PhysicsObject3D>(e, id);
-                e.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<CollisionShape::Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.05, 0.0), -0.1, -0.2, -0.1});
+                e.addComponent(DynamicCollider3D{physicsSystem->createCollider<CollisionShape::Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.05, 0.0), -0.1, -0.2, -0.1});
                 e.addComponent(DummyScript{});
+
+                scene->addNode((x ^ y ^ z) == 0u ? groupNode : rootNode, e);
             }
         }
     }
 
     Entity player = ecs.createEntity();
-    player.addComponent(diag(prvl::vec4(0.1f)));
-    (*player.getComponentPtr<mat4>())[1].y = 0.2;
+    player.addComponent(Transform3D{prvl::mat4(diag(prvl::vec3(0.1f))), prvl::mat4(diag(prvl::vec3(0.1f))), false, true});
+    (*player.getComponentPtr<Transform3D>()).local[1].y = 0.2f;
     player.addComponent(PhysicsObject3D{-5.0, 0.5, -5.0, -5.0, 0.5, -5.0, 0.0, 0.0, 0.0});
-    uint32_t id;
-    ecs.getComponentID<PhysicsObject3D>(player, id);
-    player.addComponent(DynamicCollider3D{{id}, physicsSystem->createCollider<CollisionShape::Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.05, 0.0), -0.1, -0.2, -0.1});
+    player.addComponent(DynamicCollider3D{physicsSystem->createCollider<CollisionShape::Bean>(beanShape, 0.0, 0.0, 0.0, 0.2, 0.4, 0.2, 0.05, 0.0), -0.1, -0.2, -0.1});
     player.addComponent(PlayerScript{});
 
+    scene->addNode(rootNode, player);
+
+    float time = 0.0f;
     double dt = 1.0 / 165.0;
     for(uint32_t frame = 0u; w.isWindowOpen(); frame++) {
         uint64_t startTime = Time::nanoTime();
 
-        double px, py;
-        w.getMousePos(px, py);
-        float cx = w.getWidth() * 0.5f;
-        float cy = w.getHeight() * 0.5f;
-        float dx = (static_cast<float>(px) - cx) / cx;
-        float dy = (static_cast<float>(py) - cy) / cy;
-        cameraAngX += dy;
-        cameraAngY -= dx;
-        cam.cameraTransform = mat4(rotateX(cameraAngX) * rotateY(cameraAngY));
+        vec2 p = w.getMousePos();
+        vec2 c = prvl::vec2(w.getWidth(), w.getHeight()) * 0.5f;
+        vec2 d = (p - c) / c;
+        cameraAngX += d.y;
+        cameraAngY -= d.x;
+        cam.cameraTransform = prvl::mat4(rotateX(cameraAngX) * rotateY(cameraAngY));
         cam.inverseCameraTransform = transpose(cam.cameraTransform);
-        w.setMousePos(cx, cy);
+        w.setMousePos(c);
 
-        first = true;
+        Transform3D* groupTransform = group.getComponentPtr<Transform3D>();
+        groupTransform->local = prvl::mat4(rotateY(time) * rotateX(time) * rotateZ(time));
+        groupTransform->dirtyLocal = true;
+
         ecs.update(dt);
 
+        //first = true;
         //gizmos->update(dt);
 
         cameraBuffer.uploadPartialData(&cam, 1, 0);
@@ -433,5 +455,8 @@ int main() {
         render(cubeObj);
         w.update();
         dt = static_cast<double>(Time::nanoTime() - startTime) / 1000000000.0;
+        time += static_cast<float>(dt);
     }
 }
+#endif // header guard 
+

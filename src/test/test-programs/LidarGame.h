@@ -271,7 +271,7 @@ int main() {
         focus = clamp(focus, 0.1f, 1.0f);
     };
 
-    dvec2 ang = prvl::dvec2(0.0);
+    vec2 cameraAng = prvl::vec2(0.0f);
 
     uint32_t idx = 0u;
 
@@ -279,15 +279,14 @@ int main() {
     while(w.isWindowOpen()) {
         uint64_t startTime = Time::nanoTime();
 
-        dvec2 size = prvl::dvec2(w.getWidth(), w.getHeight());
-        dvec2 center = 0.5 * size;
-        dvec2 p;
-        w.getMousePos(p.x, p.y);
-        w.setMousePos(center.x, center.y);
-        dvec2 d = (p - center) * 2.0f;
-        ang += prvl::dvec2(d.y, -d.x) / size;
-        cam.cameraTransform = mat4(rotateX(ang.x) * rotateY(ang.y));
+        vec2 p = w.getMousePos();
+        vec2 c = prvl::vec2(w.getWidth(), w.getHeight()) * 0.5f;
+        vec2 d = (p - c) / c;
+        cameraAng.x += d.y;
+        cameraAng.y -= d.x;
+        cam.cameraTransform = prvl::mat4(rotateX(cameraAng.x) * rotateY(cameraAng.y));
         cam.inverseCameraTransform = transpose(cam.cameraTransform);
+        w.setMousePos(c);
 
         vec3 forward = -prvl::vec3(cam.inverseCameraTransform[2]);
         forward.y = 0.0f;
