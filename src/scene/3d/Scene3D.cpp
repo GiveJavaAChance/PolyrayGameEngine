@@ -1,17 +1,22 @@
-#include <scene/3d/SceneNode3D.h>
 #include <scene/3d/Scene3D.h>
+#include <Transform3D.h>
+#include <scene/SceneNode.h>
+#include <ecs/ECS.h>
 
-void Scene3D::updateNode(uint32_t node, Node3D* nodeData, bool dirty) {
+void Scene3D::updateNode(uint32_t node, Transform3D* nodeData, bool dirty) {
+    Entity e{nodes[node].entityID, ecs};
+    const mat4& global = nodeData->global;
     for(uint32_t i = 0u; i < nodes[node].children.size(); i++) {
         uint32_t child = nodes[node].children[i];
-        if(Node3D* childData = ecs->getPtr(nodes[child].ref)) {
+        Entity childEntity{nodes[child].entityID, ecs};
+        if(Transform3D* childData = childEntity.getComponentPtr<Transform3D>()) {
             bool childDirty = dirty;
             if(childData->dirtyGlobal) {
-                childData->local = inverse(nodeData->global) * childData->global;
+                childData->local = inverse(global) * childData->global;
                 childData->dirtyGlobal = false;
                 childDirty = true;
             } else if(childData->dirtyLocal || childDirty) {
-                childData->global = nodeData->global * childData->local;
+                childData->global = global * childData->local;
                 childData->dirtyLocal = false;
                 childDirty = true;
             }
@@ -41,23 +46,22 @@ void Scene3D::removeNodes(uint32_t node) {
 }
 
 Scene3D::Scene3D(ECS* ecs) : ecs(ecs) {
-    ecs->registerComponentType<Node3D>();
+    ecs->registerComponentType<Transform3D>();
     ecs->registerUpdateCallback<Scene3D, frameUpdate, UpdateOrder::FRAME>(this);
 }
 
-inline uint32_t Scene3D::getRootNode() {
+inline uint32_t Scene3D::getRootNode() const {
     return root;
 }
 
-void Scene3D::setRootNode(ComponentRef<Node3D> node) {
-    uint32_t id = nodes.emplace(0u, node, 0u);
-    nodes[id].id = id;
+uint32_t Scene3D::setRootNode(Entity e) {
+    uint32_t id = nodes.emplace(e.entityID, 0u);
     root = id;
+    return id;
 }
 
-uint32_t Scene3D::addNode(uint32_t parent, ComponentRef<Node3D> node) {
-    uint32_t id = nodes.emplace(0u, node, parent);
-    nodes[id].id = id;
+uint32_t Scene3D::addNode(uint32_t parent, Entity e) {
+    uint32_t id = nodes.emplace(e.entityID, parent);
     nodes[parent].children.add(id);
     return id;
 }
@@ -67,8 +71,8 @@ void Scene3D::removeNode(uint32_t node) {
     removeNodes(node);
 }
 
-ComponentRef<Node3D> Scene3D::getChild(uint32_t node, uint32_t index) {
-    return nodes[nodes[node].children[index]].ref;
+Entity Scene3D::getChild(uint32_t node, uint32_t index) {
+    return Entity{nodes[nodes[node].children[index]].entityID, ecs};
 }
 
 void Scene3D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
@@ -76,8 +80,10 @@ void Scene3D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
     nodes[node].parent = newParent;
     nodes[newParent].children.add(node);
     if(rebase) {
-        Node3D* nodeData = ecs->getPtr(nodes[node].ref);
-        Node3D* parentData = ecs->getPtr(nodes[newParent].ref);
+        Entity e{nodes[node].entityID, ecs};
+        Entity parent{nodes[newParent].entityID, ecs};
+        Transform3D* nodeData = e.getComponentPtr<Transform3D>();
+        Transform3D* parentData = parent.getComponentPtr<Transform3D>();
         if(nodeData && parentData) {
             nodeData->local = inverse(parentData->global) * nodeData->global;
             nodeData->dirtyLocal = true;
@@ -85,11 +91,16 @@ void Scene3D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
     }
 }
 
+inline Entity Scene3D::getNode(uint32_t node) {
+    return Entity{nodes[node].entityID, ecs};
+}
+
 void Scene3D::frameUpdate(double dt) {
     if(nodes.size() == 0u) {
         return;
     }
-    if(Node3D* rootData = ecs->getPtr(nodes[root].ref)) {
+    Entity r{nodes[root].entityID, ecs};
+    if(Transform3D* rootData = r.getComponentPtr<Transform3D>()) {
         if(rootData->dirtyGlobal) {
             rootData->local = rootData->global;
         } else if(rootData->dirtyLocal) {

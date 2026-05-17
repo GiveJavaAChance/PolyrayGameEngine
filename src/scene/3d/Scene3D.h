@@ -8,20 +8,19 @@
 #include <structure/UnorderedRegistry.h>
 
 struct ECS;
+struct Entity;
 
-template<Component T>
-struct ComponentRef;
-struct Node3D;
-struct SceneNode3D;
+struct SceneNode;
+struct Transform3D;
 
 struct Scene3D {
 private:
-    UnorderedRegistry<SceneNode3D> nodes;
+    UnorderedRegistry<SceneNode> nodes;
     uint32_t root;
 
     ECS* ecs;
 
-    void updateNode(uint32_t node, Node3D* nodeData, bool dirty);
+    void updateNode(uint32_t node, Transform3D* nodeData, bool dirty);
 
     void disconnectFromParent(uint32_t node);
 
@@ -30,17 +29,19 @@ private:
 public:
     Scene3D(ECS* ecs);
 
-    inline uint32_t getRootNode();
+    inline uint32_t getRootNode() const;
 
-    void setRootNode(ComponentRef<Node3D> node);
+    uint32_t setRootNode(Entity e);
 
-    uint32_t addNode(uint32_t parent, ComponentRef<Node3D> node);
+    uint32_t addNode(uint32_t parent, Entity e);
 
     void removeNode(uint32_t node);
 
-    ComponentRef<Node3D> getChild(uint32_t node, uint32_t index);
+    Entity getChild(uint32_t node, uint32_t index);
 
     void setParent(uint32_t node, uint32_t newParent, bool rebase = true);
+
+    inline Entity getNode(uint32_t node);
 
     void frameUpdate(double dt);
 };
