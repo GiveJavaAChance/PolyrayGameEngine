@@ -2,13 +2,16 @@
 #define GLFWINDOW_H_INCLUDED
 
 #pragma once
+
 #include <base/glad/glad.h>
 #include <GLFW/glfw3.h>
+
 #include <string>
 #include <stdexcept>
 #include <cstdint>
 #include <iostream>
 #include <input/Input.h>
+#include <prvl.h>
 
 struct GLFWindow {
 private:
@@ -110,12 +113,14 @@ public:
         glfwSetInputMode(window, GLFW_CURSOR, hide ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
     }
 
-    inline void getMousePos(double& x, double& y) {
+    inline vec2 getMousePos() {
+        double x, y;
         glfwGetCursorPos(window, &x, &y);
+        return prvl::vec2(static_cast<float>(x), static_cast<float>(y));
     }
 
-    inline void setMousePos(double x, double y) {
-        glfwSetCursorPos(window, x, y);
+    inline void setMousePos(const vec2& p) {
+        glfwSetCursorPos(window, p.x, p.y);
     }
 
     inline void setExitShortcut(int32_t key) {
