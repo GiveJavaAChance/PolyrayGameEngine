@@ -100,6 +100,17 @@ private:
         dirtyStatic = true;
     }
 
+    void onDynamicColliderAdded(Entity e, uint32_t id) {
+        uint32_t objID;
+        if(ecs->getComponentID<PhysicsObject3D>(e, objID)) {
+            ecs->getPtr<DynamicCollider3D>({id})->object.ID = objID;
+        }
+    }
+
+    void onDynamicColliderRemoved(Entity e, uint32_t id) {
+        dirtyStatic = true;
+    }
+
     uint32_t prevCount = 0u;
 
 public:
@@ -109,6 +120,7 @@ public:
         ecs->registerComponentType<DynamicCollider3D>();
         ecs->registerUpdateCallback<Physics3D, physicsUpdate, UpdateOrder::PHYSICS>(this);
         ecs->registerComponentListener<Collider3D, Physics3D, onStaticColliderAdded, onStaticColliderRemoved>(this);
+        ecs->registerComponentListener<DynamicCollider3D, Physics3D, onDynamicColliderAdded, onDynamicColliderRemoved>(this);
     }
 
     template<typename A, typename B, bool(*func)(Collider3D&, A*, Collider3D&, B*, CollisionInfo3D&)>

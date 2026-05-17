@@ -98,6 +98,17 @@ private:
         dirtyStatic = true;
     }
 
+    void onDynamicColliderAdded(Entity e, uint32_t id) {
+        uint32_t objID;
+        if(ecs->getComponentID<PhysicsObject2D>(e, objID)) {
+            ecs->getPtr<DynamicCollider2D>({id})->object.ID = objID;
+        }
+    }
+
+    void onDynamicColliderRemoved(Entity e, uint32_t id) {
+        dirtyStatic = true;
+    }
+
 public:
     Physics2D(ECS* ecs) : ecs(ecs) {
         ecs->registerComponentType<PhysicsObject2D>();
@@ -105,6 +116,7 @@ public:
         ecs->registerComponentType<DynamicCollider2D>();
         ecs->registerUpdateCallback<Physics2D, physicsUpdate, UpdateOrder::PHYSICS>(this);
         ecs->registerComponentListener<Collider2D, Physics2D, onStaticColliderAdded, onStaticColliderRemoved>(this);
+        ecs->registerComponentListener<DynamicCollider2D, Physics2D, onDynamicColliderAdded, onDynamicColliderRemoved>(this);
     }
 
     template<typename A, typename B, bool(*func)(Collider2D&, A*, Collider2D&, B*, CollisionInfo2D&)>

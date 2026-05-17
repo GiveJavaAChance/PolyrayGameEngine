@@ -7,9 +7,9 @@
 #include <physics/2d/PhysicsObject2D.h>
 
 struct DynamicCollider2D {
-    ComponentRef<PhysicsObject2D> object;
     Collider2D impl;
     double offsetX, offsetY;
+    ComponentRef<PhysicsObject2D> object;
 };
 
 #endif
