@@ -79,7 +79,11 @@ public:
     inline void emplace(Args&&... args) {
         ensureCapacity(pos + 1u);
         T* place = ptr + pos;
-        new (place) T(std::forward<Args>(args)...);
+        if constexpr (std::is_aggregate_v<T>) {
+            new (place) T{std::forward<Args>(args)...};
+        } else {
+            new (place) T(std::forward<Args>(args)...);
+        }
         pos++;
     }
 
