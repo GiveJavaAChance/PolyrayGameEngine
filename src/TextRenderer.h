@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <array>
 
-#include <base/glad/glad.h>
+#include <glad/glad.h>
 
 #include <prvl.h>
 #include <structure/DynamicArray.h>

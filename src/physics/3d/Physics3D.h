@@ -28,6 +28,8 @@
 
 #include <ecs/ECS.h>
 
+#include <Profiler.h>
+
 using CollisionFunc3D = bool(*)(Collider3D&, void*, Collider3D&, void*, CollisionInfo3D&);
 
 struct Physics3D {
@@ -174,7 +176,8 @@ public:
         return Collider3D{ColliderTypes::getTypeId<T>(), userData, posX, posY, posZ, sizeX, sizeY, sizeZ, 1.0 - friction, restitution};
     }
 
-    void physicsUpdate(const double dt) {
+    void physicsUpdate(double dt) {
+        PROFILE_SCOPE(Physics3DUpdate)
         Storage<PhysicsObject3D, StorageDataLayout::CUSTOM>& storage = ecs->view<PhysicsObject3D>();
         MultiDynamicArray<double, double, double, double, double, double, double, double, double>& objects = storage.objects;
 

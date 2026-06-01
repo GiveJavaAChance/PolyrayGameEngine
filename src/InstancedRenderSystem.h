@@ -19,7 +19,12 @@ struct RenderInstance {
     }
 };
 
-template<typename T, typename U, void(*Extract)(const T&, U*)>
+template<typename T>
+void defaultExtract(const T& in, T* out) {
+    *out = in;
+}
+
+template<typename T, typename U = T, void(*Extract)(const T&, U*) = defaultExtract>
 struct InstancedRenderSystem {
 private:
     ECS* ecs;
@@ -66,11 +71,27 @@ private:
         free(buffer);
     }
 
+    void render() {
+        for(uint32_t i = 0u; i < objects.size(); i++) {
+            const RenderObject& obj = *objects.data()[i];
+            if(obj.vertexCount == 0u || obj.instanceCount == 0u) {
+                continue;
+            }
+            obj.shader.use();
+            if(obj.texture) {
+                glBindTextureUnit(0, obj.texture->ID);
+            }
+            glBindVertexArray(obj.vao);
+            glDrawArraysInstanced(obj.mode, 0, obj.vertexCount, obj.instanceCount);
+        }
+    }
+
 public:
     InstancedRenderSystem(ECS* ecs) : ecs(ecs) {
         ecs->registerComponentType<RenderInstance<T>>();
         ecs->registerComponentListener<RenderInstance<T>, InstancedRenderSystem<T, U, Extract>, onComponentAdded, onComponentRemoved>(this);
         ecs->registerUpdateCallback<InstancedRenderSystem<T, U, Extract>, update, UpdateOrder::PRE_RENDER>(this);
+        ecs->registerUpdateCallback<InstancedRenderSystem<T, U, Extract>, render, UpdateOrder::RENDERING>(this);
     }
 
     uint32_t addObject(RenderObject* obj) {

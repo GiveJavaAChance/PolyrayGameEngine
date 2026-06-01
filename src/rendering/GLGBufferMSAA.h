@@ -8,7 +8,7 @@
 #include <initializer_list>
 
 #include <Allocator.h>
-#include <base/glad/glad.h>
+#include <glad/glad.h>
 #include <rendering/GLTexture.h>
 
 struct GLGBufferMSAA {

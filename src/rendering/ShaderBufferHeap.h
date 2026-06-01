@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 #include <Allocator.h>
-#include <base/glad/glad.h>
+#include <glad/glad.h>
 #include <rendering/ShaderBuffer.h>
 #include <structure/UnorderedRegistry.h>
 

@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include <base/glad/glad.h>
+#include <glad/glad.h>
 #include <rendering/GLTextureMSAA.h>
 
 struct GLFramebufferMSAA {

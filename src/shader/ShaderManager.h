@@ -242,45 +242,33 @@ namespace ShaderManager {
     }
 
     GLuint createVAO(const ShaderProgram& shader, const std::vector<GLuint>& vbos) {
-        if(shader.shaderHandle == 0xFFFFFFFFu) {
+        if (shader.shaderHandle == 0xFFFFFFFFu) {
             std::cerr << "No vertex layout info for shader " << shader.ID << "\n";
             return 0;
         }
         const VertexLayoutInfo& layout = vertexLayoutInfos[shader.shaderHandle];
-
         GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
+        glCreateVertexArrays(1, &vao);
         std::vector<uint32_t> vboStrides(vbos.size(), 0);
         for (const VertexAttribInfo& attr : layout.attributes) {
             vboStrides[attr.vboIdx] += attr.columns * attr.byteSize;
         }
-
         std::vector<uint32_t> vboOffsets(vbos.size(), 0);
-
         for (const VertexAttribInfo& attr : layout.attributes) {
-            glBindBuffer(GL_ARRAY_BUFFER, vbos[attr.vboIdx]);
+            GLuint bindingIndex = attr.vboIdx;
             uint32_t offset = vboOffsets[attr.vboIdx];
             for (GLint col = 0; col < attr.columns; col++) {
-                glVertexAttribPointer(
-                    attr.location + col,
-                    attr.components,
-                    GL_FLOAT,
-                    GL_FALSE,
-                    vboStrides[attr.vboIdx],
-                    (void*) (uintptr_t) (offset + col * attr.byteSize)
-                );
-                glEnableVertexAttribArray(attr.location + col);
-
+                GLuint attribLocation = attr.location + col;
+                glVertexArrayAttribFormat(vao, attribLocation, attr.components, GL_FLOAT, GL_FALSE, offset + col * attr.byteSize);
+                glVertexArrayAttribBinding(vao, attribLocation, bindingIndex);
+                glEnableVertexArrayAttrib(vao, attribLocation);
                 if (attr.instanced) {
-                    glVertexAttribDivisor(attr.location + col, 1);
+                    glVertexArrayBindingDivisor(vao, bindingIndex, 1);
                 }
             }
+            glVertexArrayVertexBuffer(vao, bindingIndex, vbos[attr.vboIdx], 0, vboStrides[attr.vboIdx]);
             vboOffsets[attr.vboIdx] += attr.columns * attr.byteSize;
         }
-
-        glBindVertexArray(0);
         return vao;
     }
 

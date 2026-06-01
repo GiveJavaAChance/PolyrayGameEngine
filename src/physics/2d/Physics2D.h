@@ -27,6 +27,8 @@
 
 #include <ecs/ECS.h>
 
+#include <Profiler.h>
+
 using CollisionFunc2D = bool(*)(Collider2D&, void*, Collider2D&, void*, CollisionInfo2D&);
 
 struct Physics2D {
@@ -164,11 +166,12 @@ public:
     }
 
     template<typename T>
-    inline Collider2D createCollider(void* const userData, const double posX, const double posY, const double sizeX, const double sizeY, const double friction, const double restitution) {
+    inline Collider2D createCollider(void* userData, double posX, double posY, double sizeX, double sizeY, double friction, double restitution) {
         return Collider2D{ColliderTypes::getTypeId<T>(), userData, posX, posY, sizeX, sizeY, 1.0 - friction, restitution};
     }
 
-    void physicsUpdate(const double dt) {
+    void physicsUpdate(double dt) {
+        PROFILE_SCOPE(Physics2DUpdate)
         Storage<PhysicsObject2D, StorageDataLayout::CUSTOM>& storage = ecs->view<PhysicsObject2D>();
         MultiDynamicArray<double, double, double, double, double, double>& objects = storage.objects;
 

@@ -5,7 +5,7 @@
 
 #include <cstdint>
 
-#include <base/glad/glad.h>
+#include <glad/glad.h>
 #include <rendering/GLTexture.h>
 #include <rendering/ShaderBuffer.h>
 #include <shader/ShaderManager.h>

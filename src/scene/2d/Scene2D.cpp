@@ -3,6 +3,8 @@
 #include <scene/SceneNode.h>
 #include <ecs/ECS.h>
 
+#include <Profiler.h>
+
 void Scene2D::updateNode(uint32_t node, Transform2D* nodeData, bool dirty) {
     Entity e{nodes[node].entityID, ecs};
     const mat3& global = nodeData->global;
@@ -96,6 +98,7 @@ inline Entity Scene2D::getNode(uint32_t node) {
 }
 
 void Scene2D::frameUpdate(double dt) {
+    PROFILE_SCOPE(Scene2DUpdate)
     if(nodes.size() == 0u) {
         return;
     }

@@ -4,7 +4,7 @@
 #pragma once
 
 #include <cstdint>
-#include <base/glad/glad.h>
+#include <glad/glad.h>
 
 template<typename>
 inline constexpr bool always_false = false;
