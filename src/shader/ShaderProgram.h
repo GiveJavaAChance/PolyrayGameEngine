@@ -11,7 +11,7 @@ inline constexpr bool always_false = false;
 
 struct ShaderProgram {
     GLuint ID = 0u;
-    uint32_t shaderHandle = 0xFFFFFFFFu;
+    uint32_t shaderHandle = UINT32_MAX;
 
     ShaderProgram() noexcept {
     }

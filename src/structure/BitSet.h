@@ -142,7 +142,7 @@ public:
     uint32_t nextSetBit(uint32_t fromIndex) {
         uint32_t u = fromIndex >> 6u;
         if (u >= size) {
-            return 0xFFFFFFFFu;
+            return UINT32_MAX;
         }
         uint64_t word = words[u] & (0xFFFFFFFFFFFFFFFFull << fromIndex);
         while (true) {
@@ -150,7 +150,7 @@ public:
                 return (u << 6u) + numberOfTrailingZeros64(word);
             }
             if (++u == size) {
-                return 0xFFFFFFFFu;
+                return UINT32_MAX;
             }
             word = words[u];
         }

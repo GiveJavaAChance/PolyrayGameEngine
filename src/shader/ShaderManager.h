@@ -44,13 +44,15 @@ namespace ShaderManager {
 
         inline UnorderedRegistry<CompiledShader> shaders;
 
+        inline std::unordered_map<std::string, uint32_t> shaderCache;
+
         inline std::unordered_set<GLuint> programs;
 
         inline UnorderedRegistry<VertexLayoutInfo> vertexLayoutInfos;
 
         inline ShaderPreprocessor proc;
 
-        void reflectVertexLayout(GLuint program, uint32_t& handle, const CompiledShader& vertexShader) {
+        inline void reflectVertexLayout(GLuint program, uint32_t& handle, const CompiledShader& vertexShader) {
             VertexLayoutInfo layout;
             layout.hasInstanceFrom = vertexShader.hasInstanceFrom;
             layout.instanceFrom = vertexShader.instanceFrom;
@@ -176,6 +178,9 @@ namespace ShaderManager {
     }
 
     inline uint32_t compileShaderFile(const char* name, GLenum type, bool preprocess = true) {
+        if(shaderCache.count(name)) {
+            return shaderCache[name];
+        }
         std::string src = ResourceManager::getResourceAsString(name);
         return compileShaderSource(src.c_str(), type, preprocess);
     }
@@ -189,7 +194,7 @@ namespace ShaderManager {
     inline ShaderProgram createProgram(std::initializer_list<uint32_t> shaders) {
         bool incomplete = false;
         GLuint program = glCreateProgram();
-        uint32_t handle = 0xFFFFFFFFu;
+        uint32_t handle = UINT32_MAX;
         for (const uint32_t shader : shaders) {
             glAttachShader(program, Internal::shaders[shader - 1u].ID);
         }
@@ -241,8 +246,8 @@ namespace ShaderManager {
         vertexLayoutInfos.remove(shader.shaderHandle);
     }
 
-    GLuint createVAO(const ShaderProgram& shader, const std::vector<GLuint>& vbos) {
-        if (shader.shaderHandle == 0xFFFFFFFFu) {
+    inline GLuint createVAO(const ShaderProgram& shader, const std::vector<GLuint>& vbos) {
+        if (shader.shaderHandle == UINT32_MAX) {
             std::cerr << "No vertex layout info for shader " << shader.ID << "\n";
             return 0;
         }

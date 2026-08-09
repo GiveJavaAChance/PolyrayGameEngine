@@ -13,6 +13,64 @@
 #include <immintrin.h>
 #include <stb_image.h>
 #include <rendering/GLTexture.h>
+#include <scene/SceneData.h>
+#include <ostream>
+
+struct ResourcePath {
+private:
+    std::string str;
+
+    void normalize() {
+        for (char& c : str) {
+            if (c == '\\') {
+                c = '/';
+            }
+        }
+    }
+
+public:
+    ResourcePath() {
+    }
+
+    ResourcePath(const char* path) : str(path) {
+        normalize();
+    }
+
+    ResourcePath(const std::string& path) : str(path) {
+        normalize();
+    }
+
+    const std::string& string() const {
+        return str;
+    }
+
+    std::string getName() const {
+        size_t pos = str.find_last_of('/');
+        if (pos == std::string::npos) {
+            return str;
+        }
+        return str.substr(pos + 1u);
+    }
+
+    std::string getExtension() const {
+        size_t pos = str.find_last_of('.');
+        if (pos == std::string::npos) {
+            return "";
+        }
+        return str.substr(pos + 1u);
+    }
+
+    inline std::filesystem::path getAbsolutePath() const;
+
+    bool isDirectory() const {
+        return std::filesystem::is_directory(getAbsolutePath());
+    }
+
+    friend std::ostream& operator<<(std::ostream& out, const ResourcePath& path) {
+        out.write(path.str.data(), path.str.size());
+        return out;
+    }
+};
 
 enum ImageFormat : uint8_t {
     RGBA8,
@@ -30,52 +88,61 @@ template<> struct ImageFormatType<ImageFormat::BYTE_GRAY> { using type = uint8_t
 template<> struct ImageFormatType<ImageFormat::FLOAT32_RGB> { using type = float; constexpr static int format = STBI_rgb; constexpr static GLenum glFormat = GL_R11F_G11F_B10F; constexpr static GLenum glPixFormat = GL_RGB; constexpr static GLenum glType = GL_FLOAT; };
 
 namespace ResourceManager {
-    namespace Internal {
-        inline std::vector<std::filesystem::path> resources;
+    inline std::filesystem::path getRootDir() {
+        char buffer[MAX_PATH];
+        GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+        return std::filesystem::path(buffer).parent_path();
+    }
 
-        inline std::filesystem::path getRootDir() {
-            char buffer[MAX_PATH];
-            GetModuleFileNameA(nullptr, buffer, MAX_PATH);
-            return std::filesystem::path(buffer).parent_path();
+    inline DynamicArray<ResourcePath> listFiles(const ResourcePath& res) {
+        std::filesystem::path path = res.getAbsolutePath();
+        DynamicArray<ResourcePath> files;
+        if (!std::filesystem::is_directory(path)) {
+            return files;
         }
-    }
-
-    using namespace Internal;
-
-    inline void addResource(const char* path) {
-        resources.emplace_back(path);
-    }
-
-    inline void addLocalResource(const char* relativePath) {
-        resources.push_back(getRootDir() / relativePath);
-    }
-
-    inline std::filesystem::path getResourcePath(const char* name) {
-        for (std::filesystem::path& dir : resources) {
-            std::filesystem::path fullPath = dir / name;
-            if (std::filesystem::exists(fullPath)) {
-                return fullPath;
-            }
+        size_t off = getRootDir().string().size() + 1ull;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(path)) {
+            std::filesystem::path file = entry.path();
+            files.emplace(file.string().substr(off));
         }
-        return {};
+        return files;
     }
 
-    inline std::ifstream getResource(const char* name) {
-        for (std::filesystem::path& dir : resources) {
-            std::filesystem::path fullPath = dir / name;
-            if (std::filesystem::exists(fullPath)) {
-                std::ifstream file(fullPath, std::ios::binary);
-                if (file) {
-                    return file;
+    inline DynamicArray<ResourcePath> find(const ResourcePath& res, const char* extension) {
+        std::vector<std::filesystem::path> pathStack;
+        pathStack.push_back(res.getAbsolutePath());
+        std::string end = ".";
+        end += extension;
+        DynamicArray<ResourcePath> files;
+        size_t off = getRootDir().string().size() + 1ull;
+        while (pathStack.size() > 0u) {
+            std::filesystem::path file = pathStack.back();
+            pathStack.pop_back();
+            if (std::filesystem::is_directory(file)) {
+                for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(file)) {
+                    pathStack.push_back(entry.path());
                 }
+            } else if (file.extension() == end) {
+                files.emplace(file.string().substr(off));
             }
         }
-        std::cerr << "Resource not found: " << name << std::endl;
+        return files;
+    }
+
+    inline std::ifstream getResource(const ResourcePath& res) {
+        std::filesystem::path fullPath = res.getAbsolutePath();
+        if (std::filesystem::exists(fullPath)) {
+            std::ifstream file(fullPath, std::ios::binary);
+            if (file) {
+                return file;
+            }
+        }
+        std::cerr << "Resource not found: " << res << std::endl;
         return std::ifstream{};
     }
 
-    inline std::string getResourceAsString(const char* name) {
-        std::ifstream in = getResource(name);
+    inline std::string getResourceAsString(const ResourcePath& res) {
+        std::ifstream in = getResource(res);
         if (!in) {
             return {};
         }
@@ -88,8 +155,8 @@ namespace ResourceManager {
     }
 
     template<ImageFormat format = RGBA8>
-    inline typename ImageFormatType<format>::type* getResourceAsImage(const char* name, uint32_t& width, uint32_t& height) {
-        std::filesystem::path path = getResourcePath(name);
+    inline typename ImageFormatType<format>::type* getResourceAsImage(const ResourcePath& res, uint32_t& width, uint32_t& height) {
+        std::filesystem::path path = res.getAbsolutePath();
         int channels;
         if constexpr (format == FLOAT32_RGB) {
             return stbi_loadf(
@@ -125,10 +192,10 @@ namespace ResourceManager {
     }
 
     template<ImageFormat fmt = RGBA8>
-    inline GLTexture getResourceAsTexture(const char* name, const uint32_t mipLevels = 1u, const GLenum format = ImageFormatType<fmt>::glFormat) {
+    inline GLTexture getResourceAsTexture(const ResourcePath& res, const uint32_t mipLevels = 1u, const GLenum format = ImageFormatType<fmt>::glFormat) {
         uint32_t width, height;
         using PixelType = ImageFormatType<fmt>::type;
-        PixelType* pixels = getResourceAsImage<fmt>(name, width, height);
+        PixelType* pixels = getResourceAsImage<fmt>(res, width, height);
         if(!pixels) {
             return {};
         }
@@ -137,6 +204,23 @@ namespace ResourceManager {
         _mm_free(pixels);
         return tex;
     }
+
+    inline SceneData getResourceAsScene(const ResourcePath& res) {
+        std::ifstream in = getResource(res);
+        if (!in) {
+            return {nullptr, 0u};
+        }
+        in.seekg(0, std::ios::end);
+        size_t size = in.tellg();
+        in.seekg(0, std::ios::beg);
+        uint8_t* data = alloc<uint8_t>(size);
+        in.read(reinterpret_cast<char*>(data), size);
+        return {data, static_cast<uint32_t>(size)};
+    }
+}
+
+inline std::filesystem::path ResourcePath::getAbsolutePath() const {
+    return ResourceManager::getRootDir() / str;
 }
 
 #endif

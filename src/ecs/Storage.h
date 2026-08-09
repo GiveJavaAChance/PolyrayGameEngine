@@ -4,24 +4,13 @@
 #pragma once
 
 #include <cstdint>
-#include <ecs/Component.h>
+
 #include <structure/Registry.h>
 
-enum StorageDataLayout : uint8_t {
-    DEFAULT,
-    CUSTOM
-};
+template <typename T>
+struct Storage {
+    constexpr static bool __DEFAULT__ = true;
 
-template<Component T>
-struct StorageInfo {
-    static constexpr StorageDataLayout layout = StorageDataLayout::DEFAULT;
-};
-
-template<Component T, StorageDataLayout L = StorageDataLayout::DEFAULT>
-struct Storage;
-
-template<Component T>
-struct Storage<T, StorageDataLayout::DEFAULT> {
     DynamicArray<T> data;
     Registry reg;
 
@@ -35,8 +24,15 @@ struct Storage<T, StorageDataLayout::DEFAULT> {
     }
 
     inline void remove(uint32_t componentID) noexcept {
-        reg.remove(componentID, data);
+        uint32_t loc;
+        if (reg.remove(componentID, loc)) {
+            data[loc] = data[data.size() - 1u];
+        }
         data.removeEnd(1u);
+    }
+
+    inline bool valid(uint32_t componentID) {
+        return reg.valid(componentID);
     }
 
     inline T& get(uint32_t id) const noexcept {

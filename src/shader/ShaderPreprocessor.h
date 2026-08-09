@@ -36,10 +36,10 @@ private:
 
             }
         }*/
-        size_t pos = 0;
+        size_t pos = 0ull;
         while ((pos = str.find("#append", pos)) != std::string::npos) {
             size_t directiveStart = pos;
-            pos += 7;
+            pos += 7ull;
             while (pos < str.size() && std::isspace((unsigned char) str[pos])) {
                 pos++;
             }
@@ -52,21 +52,20 @@ private:
             if (nameEnd == std::string::npos) {
                 break;
             }
-            std::string filename = str.substr(nameStart, nameEnd - nameStart);
-            auto path = ResourceManager::getResourcePath(filename.c_str());
-            if (path.empty()) {
-                std::cerr << "Shader append file not found: " << filename << "\n";
+            std::string fileName = "res/" + str.substr(nameStart, nameEnd - nameStart);
+            if (active.contains(fileName)) {
+                std::cerr << "Circular shader append detected: " << fileName << "\n";
                 pos = nameEnd;
                 continue;
             }
-            if (active.contains(filename)) {
-                std::cerr << "Circular shader append detected: " << filename << "\n";
-                pos = nameEnd;
-                continue;
-            }
-            active.insert(filename);
+            active.insert(fileName);
             pos = nameEnd + 1;
-            std::string appendSource = ResourceManager::getResourceAsString(filename.c_str());
+            std::string appendSource = ResourceManager::getResourceAsString(fileName);
+            if (appendSource.empty()) {
+                std::cerr << "Shader append file not found: " << fileName << "\n";
+                pos = nameEnd;
+                continue;
+            }
             clean(appendSource);
             while (pos < str.size() && str[pos] != '\n') {
                 if (str[pos] != '[') {
@@ -101,7 +100,7 @@ private:
                 pos = end + 1;
             }
             appendAll(appendSource, active);
-            active.erase(filename);
+            active.erase(fileName);
             size_t directiveEnd = str.find('\n', directiveStart);
             if (directiveEnd == std::string::npos) {
                 directiveEnd = str.size();

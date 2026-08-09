@@ -6,8 +6,8 @@
 #include <cstdint>
 
 #include <glad/glad.h>
-#include <rendering/ShaderBuffer.h>
 #include <rendering/GLTexture.h>
+#include <rendering/ShaderBuffer.h>
 #include <shader/ShaderManager.h>
 #include <shader/ShaderProgram.h>
 
@@ -25,9 +25,9 @@ struct RenderObject {
     RenderObject(ShaderProgram shader, GLTexture* tex = nullptr) : shader(shader), vbo(GL_STATIC_DRAW), instanceVbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(shader, {vbo.ID, instanceVbo.ID})), texture(tex) {
     }
 
-    template<typename T>
+    template <typename T>
     void uploadVertices(const T* vertices, const uint32_t count) {
-        if(count == vertexCount) {
+        if (count == vertexCount) {
             vbo.uploadPartialData(vertices, vertexCount, 0);
         } else {
             vbo.uploadData<T>(vertices, count);
@@ -35,14 +35,26 @@ struct RenderObject {
         }
     }
 
-    template<typename T>
+    template <typename T>
     void uploadInstances(const T* instances, const uint32_t count) {
-        if(count == instanceCount) {
+        if (count == instanceCount) {
             instanceVbo.uploadPartialData<T>(instances, instanceCount, 0);
         } else {
             instanceVbo.uploadData<T>(instances, count);
             instanceCount = count;
         }
+    }
+
+    void render() {
+        if (vertexCount == 0u || instanceCount == 0u) {
+            return;
+        }
+        shader.use();
+        if (texture) {
+            glBindTextureUnit(0, texture->ID);
+        }
+        glBindVertexArray(vao);
+        glDrawArraysInstanced(mode, 0, vertexCount, instanceCount);
     }
 };
 

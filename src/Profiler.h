@@ -25,13 +25,23 @@ namespace Profiler {
     struct ProfileScope {
         uint32_t id;
         uint64_t start;
+        bool closed;
 
-        ProfileScope(uint32_t id) : id(id), start(Time::rdtsc()) {}
+        ProfileScope(uint32_t id) : id(id), start(Time::rdtsc()), closed(false) {}
 
-        ~ProfileScope() {
+        inline void end() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+
             uint64_t dt = Time::rdtsc() - start;
             stats[id].cycles += dt;
             stats[id].calls++;
+        }
+
+        ~ProfileScope() {
+            end();
         }
     };
 
@@ -69,5 +79,7 @@ Profiler::scopeNames[PROFILE_ID] = #name;
 #else
 #define PROFILE_SCOPE(name)
 #endif
+
+#define PROFILE_SCOPE_END SCOPE.end();
 
 #endif

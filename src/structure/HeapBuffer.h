@@ -36,7 +36,7 @@ struct HeapBuffer {
             }
             startIdx = ((startIdx + fixedIncrement - 1u) / fixedIncrement) * fixedIncrement;
             uint32_t endIdx = memoryMask.nextSetBit(startIdx);
-            if (endIdx == 0xFFFFFFFFu || endIdx > length) {
+            if (endIdx == UINT32_MAX || endIdx > length) {
                 endIdx = length;
             }
             if ((endIdx - startIdx) >= size) {
@@ -45,7 +45,7 @@ struct HeapBuffer {
             }
             currentIdx = endIdx + 1u;
         }
-        return 0xFFFFFFFFu;
+        return UINT32_MAX;
     }
 
     uint32_t reserve(const uint32_t units, const uint32_t fixedIncrement = 1u) {
@@ -71,7 +71,7 @@ struct HeapBuffer {
             return ptr;
         }
         uint32_t endIdx = memoryMask.nextSetBit(ptr + currentSize);
-        if (endIdx == 0xFFFFFFFFu || endIdx > length) {
+        if (endIdx == UINT32_MAX || endIdx > length) {
             endIdx = length;
         }
         if (endIdx - ptr >= units) {

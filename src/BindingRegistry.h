@@ -49,7 +49,7 @@ namespace BindingRegistry {
         int binding = getNewBinding(texBindings, max);
         if (binding == -1) {
             std::cerr << "No available image binding points!" << std::endl;
-            return 0xFFFFFFFFu;
+            return UINT32_MAX;
         }
         glBindImageTexture(binding, texture.ID, level, layered, layer, access, format);
         texBindings[texture.ID] = binding;
@@ -70,7 +70,7 @@ namespace BindingRegistry {
         int binding = getNewBinding(bufBindings, max);
         if (binding == -1) {
             std::cerr << "No available image binding points!" << std::endl;
-            return 0xFFFFFFFFu;
+            return UINT32_MAX;
         }
         glBindBufferBase(target, binding, buffer.ID);
         bufBindings[buffer.ID] = binding;

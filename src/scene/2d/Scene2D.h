@@ -4,18 +4,21 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 
 #include <structure/UnorderedRegistry.h>
+
+#include <scene/SceneNode.h>
 
 struct ECS;
 struct Entity;
 
-struct SceneNode;
 struct Transform2D;
 
 struct Scene2D {
 private:
     UnorderedRegistry<SceneNode> nodes;
+    std::unordered_map<uint32_t, uint32_t> entityMap;
     uint32_t root;
 
     ECS* ecs;
@@ -29,19 +32,25 @@ private:
 public:
     Scene2D(ECS* ecs);
 
-    inline uint32_t getRootNode() const;
+    uint32_t getRootNode() const;
 
-    uint32_t setRootNode(Entity e);
+    uint32_t setRootNode(const Entity& e);
 
-    uint32_t addNode(uint32_t parent, Entity e);
+    uint32_t addNode(uint32_t parent, const Entity& e);
 
     void removeNode(uint32_t node);
 
-    Entity getChild(uint32_t node, uint32_t index);
+    uint32_t getChild(uint32_t node, uint32_t index);
+
+    uint32_t getChildCount(uint32_t node);
+
+    uint32_t getParent(uint32_t node);
 
     void setParent(uint32_t node, uint32_t newParent, bool rebase = true);
 
-    inline Entity getNode(uint32_t node);
+    Entity getEntity(uint32_t node);
+
+    uint32_t getNode(const Entity& e);
 
     void frameUpdate(double dt);
 };

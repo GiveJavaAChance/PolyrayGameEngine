@@ -5,7 +5,9 @@
 
 #include <type_traits>
 
-template<typename T>
-concept Component = std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
+#include <ecs/StorageType.h>
+
+template <typename T>
+concept Component = (!is_default_storage_v<T>) || (std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>);
 
 #endif

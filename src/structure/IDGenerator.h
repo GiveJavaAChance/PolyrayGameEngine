@@ -61,6 +61,22 @@ public:
         this->words.add(0ull);
     }
 
+    IDGenerator(const IDGenerator&) = delete;
+    IDGenerator& operator=(const IDGenerator&) = delete;
+
+    IDGenerator(IDGenerator&& other) noexcept : words(std::move(other.words)), count(other.count) {
+        other.count = 0u;
+    }
+
+    IDGenerator& operator=(IDGenerator&& other) noexcept {
+        if(this != &other) {
+            words = std::move(other.words);
+            count = other.count;
+            other.count = 0u;
+        }
+        return *this;
+    }
+
     uint32_t getNewID() {
         count++;
         uint64_t word = ~words[0u];
@@ -91,6 +107,16 @@ public:
             word ^= mask;
             count--;
         }
+    }
+
+    bool valid(uint32_t ID) {
+        uint32_t u = ID >> 6u;
+        if(u >= words.size()) {
+            return false;
+        }
+        const uint64_t mask = 1ull << (ID & 63u);
+        uint64_t& word = words[u];
+        return mask & word;
     }
 
     inline void clear() {

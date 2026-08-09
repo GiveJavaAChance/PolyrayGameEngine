@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 #define TYPE_REGISTRY(name)             \
 struct name {                           \
@@ -16,5 +17,16 @@ public:                                 \
         return ID;                      \
     }                                   \
 };
+
+template<typename T>
+constexpr std::string_view type_name_of() {
+    constexpr std::string_view func = __PRETTY_FUNCTION__;
+    constexpr std::string_view prefix = "T = ";
+    constexpr std::string_view suffix = ";";
+
+    const size_t start = func.find(prefix) + prefix.size();
+    const size_t end = func.rfind(suffix);
+    return func.substr(start, end - start);
+}
 
 #endif

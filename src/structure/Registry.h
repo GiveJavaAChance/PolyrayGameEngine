@@ -16,7 +16,25 @@ public:
     DynamicArray<uint32_t> IDs;
     DynamicArray<uint32_t> locations;
 
-    Registry() noexcept : count(0u) {
+    Registry() : count(0u) {
+    }
+
+    Registry(const Registry&) = delete;
+    Registry& operator=(const Registry&) = delete;
+
+    Registry(Registry&& other) noexcept : gen(std::move(other.gen)), count(other.count), IDs(std::move(other.IDs)), locations(std::move(other.locations)) {
+        other.count = 0u;
+    }
+
+    Registry& operator=(Registry&& other) noexcept {
+        if(this != &other) {
+            gen = std::move(other.gen);
+            count = other.count;
+            IDs = std::move(other.IDs);
+            locations = std::move(other.locations);
+            other.count = 0u;
+        }
+        return *this;
     }
 
     inline uint32_t create() {
@@ -41,6 +59,10 @@ public:
         }
         IDs.removeEnd(1u);
         return out;
+    }
+
+    inline bool valid(uint32_t ID) {
+        return gen.valid(ID);
     }
 
     inline uint32_t size() const {

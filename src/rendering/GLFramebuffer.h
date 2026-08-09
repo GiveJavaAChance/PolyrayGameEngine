@@ -46,6 +46,15 @@ struct GLFramebuffer {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+    void destroy() {
+        if (ID) {
+            glDeleteFramebuffers(1, &ID);
+            glDeleteTextures(1, &color.ID);
+            glDeleteTextures(1, &depth.ID);
+            ID = 0;
+        }
+    }
+
     explicit inline operator bool() const noexcept {
         return ID != 0;
     }

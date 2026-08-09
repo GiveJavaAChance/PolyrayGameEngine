@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <ecs/Component.h>
 #include <ecs/Storage.h>
 #include <structure/MultiDynamicArray.h>
 #include <structure/Registry.h>
@@ -13,13 +14,17 @@ struct PhysicsObject3D {
     double accX, accY, accZ;
 };
 
-template<>
-struct StorageInfo<PhysicsObject3D> {
-    static constexpr StorageDataLayout layout = StorageDataLayout::CUSTOM;
+template <>
+struct ExportInfo<PhysicsObject3D> {
+    constexpr static Export __export__[] = {
+        {offsetof(PhysicsObject3D, posX), EXPORT_DVEC3, "Position"},
+        {offsetof(PhysicsObject3D, prevPosX), EXPORT_DVEC3, "Previous Position"},
+        {offsetof(PhysicsObject3D, accX), EXPORT_DVEC3, "Acceleration"},
+    };
 };
 
-template<>
-struct Storage<PhysicsObject3D, StorageDataLayout::CUSTOM> {
+template <>
+struct Storage<PhysicsObject3D> {
     MultiDynamicArray<double, double, double, double, double, double, double, double, double> objects;
     Registry reg;
 
@@ -42,10 +47,14 @@ struct Storage<PhysicsObject3D, StorageDataLayout::CUSTOM> {
 
     inline void remove(uint32_t componentID) noexcept {
         uint32_t loc;
-        if(reg.remove(componentID, loc)) {
+        if (reg.remove(componentID, loc)) {
             objects.set(loc, objects, objects.size() - 1u);
         }
         objects.removeEnd();
+    }
+
+    inline bool valid(uint32_t componentID) {
+        return reg.valid(componentID);
     }
 
     inline PhysicsObject3D get(uint32_t id) const noexcept {
