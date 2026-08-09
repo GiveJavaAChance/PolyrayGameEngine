@@ -19,62 +19,59 @@ public class IcoSphere {
     }
 
     private void generateIcoSphere() {
-        float t = (float) ((1.0 + Math.sqrt(5.0)) / 2.0);
-        addVertex(-1, t, 0);
-        addVertex(1, t, 0);
-        addVertex(-1, -t, 0);
-        addVertex(1, -t, 0);
-        addVertex(0, -1, t);
-        addVertex(0, 1, t);
-        addVertex(0, -1, -t);
-        addVertex(0, 1, -t);
-        addVertex(t, 0, -1);
-        addVertex(t, 0, 1);
-        addVertex(-t, 0, -1);
-        addVertex(-t, 0, 1);
+        float t = (float) ((1.0f + Math.sqrt(5.0f)) / 2.0f);
+        addVertex(-1.0f, t, 0.0f);
+        addVertex(1.0f, t, 0.0f);
+        addVertex(-1.0f, -t, 0.0f);
+        addVertex(1.0f, -t, 0.0f);
+        addVertex(0.0f, -1.0f, t);
+        addVertex(0.0f, 1.0f, t);
+        addVertex(0.0f, -1.0f, -t);
+        addVertex(0.0f, 1.0f, -t);
+        addVertex(t, 0.0f, -1.0f);
+        addVertex(t, 0.0f, 1.0f);
+        addVertex(-t, 0.0f, -1.0f);
+        addVertex(-t, 0.0f, 1.0f);
 
-        // Define the initial faces of the icosahedron
-        ArrayList<Triangle> initialFaces = new ArrayList<>();
-        initialFaces.add(new Triangle(vertices.get(0), vertices.get(11), vertices.get(5)));
-        initialFaces.add(new Triangle(vertices.get(0), vertices.get(5), vertices.get(1)));
-        initialFaces.add(new Triangle(vertices.get(0), vertices.get(1), vertices.get(7)));
-        initialFaces.add(new Triangle(vertices.get(0), vertices.get(7), vertices.get(10)));
-        initialFaces.add(new Triangle(vertices.get(0), vertices.get(10), vertices.get(11)));
+        ArrayList<Triangle> tris = new ArrayList<>();
+        tris.add(new Triangle(vertices.get(0), vertices.get(11), vertices.get(5)));
+        tris.add(new Triangle(vertices.get(0), vertices.get(5), vertices.get(1)));
+        tris.add(new Triangle(vertices.get(0), vertices.get(1), vertices.get(7)));
+        tris.add(new Triangle(vertices.get(0), vertices.get(7), vertices.get(10)));
+        tris.add(new Triangle(vertices.get(0), vertices.get(10), vertices.get(11)));
 
-        initialFaces.add(new Triangle(vertices.get(1), vertices.get(5), vertices.get(9)));
-        initialFaces.add(new Triangle(vertices.get(5), vertices.get(11), vertices.get(4)));
-        initialFaces.add(new Triangle(vertices.get(11), vertices.get(10), vertices.get(2)));
-        initialFaces.add(new Triangle(vertices.get(10), vertices.get(7), vertices.get(6)));
-        initialFaces.add(new Triangle(vertices.get(7), vertices.get(1), vertices.get(8)));
+        tris.add(new Triangle(vertices.get(1), vertices.get(5), vertices.get(9)));
+        tris.add(new Triangle(vertices.get(5), vertices.get(11), vertices.get(4)));
+        tris.add(new Triangle(vertices.get(11), vertices.get(10), vertices.get(2)));
+        tris.add(new Triangle(vertices.get(10), vertices.get(7), vertices.get(6)));
+        tris.add(new Triangle(vertices.get(7), vertices.get(1), vertices.get(8)));
 
-        initialFaces.add(new Triangle(vertices.get(3), vertices.get(9), vertices.get(4)));
-        initialFaces.add(new Triangle(vertices.get(3), vertices.get(4), vertices.get(2)));
-        initialFaces.add(new Triangle(vertices.get(3), vertices.get(2), vertices.get(6)));
-        initialFaces.add(new Triangle(vertices.get(3), vertices.get(6), vertices.get(8)));
-        initialFaces.add(new Triangle(vertices.get(3), vertices.get(8), vertices.get(9)));
+        tris.add(new Triangle(vertices.get(3), vertices.get(9), vertices.get(4)));
+        tris.add(new Triangle(vertices.get(3), vertices.get(4), vertices.get(2)));
+        tris.add(new Triangle(vertices.get(3), vertices.get(2), vertices.get(6)));
+        tris.add(new Triangle(vertices.get(3), vertices.get(6), vertices.get(8)));
+        tris.add(new Triangle(vertices.get(3), vertices.get(8), vertices.get(9)));
 
-        initialFaces.add(new Triangle(vertices.get(4), vertices.get(9), vertices.get(5)));
-        initialFaces.add(new Triangle(vertices.get(2), vertices.get(4), vertices.get(11)));
-        initialFaces.add(new Triangle(vertices.get(6), vertices.get(2), vertices.get(10)));
-        initialFaces.add(new Triangle(vertices.get(8), vertices.get(6), vertices.get(7)));
-        initialFaces.add(new Triangle(vertices.get(9), vertices.get(8), vertices.get(1)));
+        tris.add(new Triangle(vertices.get(4), vertices.get(9), vertices.get(5)));
+        tris.add(new Triangle(vertices.get(2), vertices.get(4), vertices.get(11)));
+        tris.add(new Triangle(vertices.get(6), vertices.get(2), vertices.get(10)));
+        tris.add(new Triangle(vertices.get(8), vertices.get(6), vertices.get(7)));
+        tris.add(new Triangle(vertices.get(9), vertices.get(8), vertices.get(1)));
 
         for (int i = 0; i < detail; i++) {
             ArrayList<Triangle> newFaces = new ArrayList<>();
-            for (Triangle triangle : initialFaces) {
-                Vector3f a = getMiddlePoint(triangle.a, triangle.b);
-                Vector3f b = getMiddlePoint(triangle.b, triangle.c);
-                Vector3f c = getMiddlePoint(triangle.c, triangle.a);
-
-                newFaces.add(new Triangle(triangle.a, a, c));
-                newFaces.add(new Triangle(triangle.b, b, a));
-                newFaces.add(new Triangle(triangle.c, c, b));
+            for (Triangle tri : tris) {
+                Vector3f a = getMiddlePoint(tri.a, tri.b);
+                Vector3f b = getMiddlePoint(tri.b, tri.c);
+                Vector3f c = getMiddlePoint(tri.c, tri.a);
+                newFaces.add(new Triangle(tri.a, a, c));
+                newFaces.add(new Triangle(tri.b, b, a));
+                newFaces.add(new Triangle(tri.c, c, b));
                 newFaces.add(new Triangle(a, b, c));
             }
-            initialFaces = newFaces;
+            tris = newFaces;
         }
-
-        this.triangles.addAll(initialFaces);
+        this.triangles.addAll(tris);
     }
 
     private void addVertex(float x, float y, float z) {
@@ -82,8 +79,7 @@ public class IcoSphere {
     }
 
     private Vector3f getMiddlePoint(Vector3f p1, Vector3f p2) {
-        Vector3f r = Vector3f.mul(Vector3f.normalize(Vector3f.add(p1, p2)), radius);
-        return r;
+        return Vector3f.mul(Vector3f.normalize(Vector3f.add(p1, p2)), radius);
     }
 
     public ArrayList<Vertex3D> getVertices() {
