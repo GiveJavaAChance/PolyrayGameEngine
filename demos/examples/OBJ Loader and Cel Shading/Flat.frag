@@ -8,6 +8,10 @@
 #append "GammaCorrect.glsl";
 #append "Dither.glsl";
 
+// Tweakable params
+const float lightThreshold = 0.1;
+const float specularThreshold = 0.5;
+
 vec3 PBRLighting2(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 lightColor, vec3 albedo) {
     vec3 H = normalize(viewDir + lightDir);
     vec3 F = fresnelSchlick(max(dot(H, viewDir), 0.0), F0);
@@ -26,21 +30,13 @@ vec3 PBRLighting2(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 lightColor, vec
 
     float NdotL = max(dot(normal, lightDir), 0.0);
 
-    // **Threshold the diffuse lighting**
-    float lightThreshold = 0.1;
     NdotL = NdotL > lightThreshold ? 1.0 : 0.0;
-
-    // **Threshold the specular reflection**
-    float specularThreshold = 0.5;
     specular = length(specular) > specularThreshold ? specular : vec3(0.0);
+    vec3 outline = ambientColor * smoothstep(0.3, 0.4, (1.0 - NdotL) * pow(1.0 - max(dot(normal, viewDir), 0.0), 5.0));
 
     vec3 diffuse = kD * albedo / PI;
 
-    // **Grazing-angle glow effect (reflection boost)**
-    float grazingEffect = smoothstep(0.3, 0.4, (1.0 - NdotL) * pow(1.0 - max(dot(normal, viewDir), 0.0), 5.0));
-    vec3 grazingGlow = ambientColor * grazingEffect; // Glow stronger at shallow angles
-
-    return (diffuse * NdotL + specular) * lightColor + grazingGlow;
+    return (diffuse * NdotL + specular) * lightColor + outline;
 }
 
 vec3 PBRLighting1(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 lightColor, vec3 albedo) {
@@ -61,10 +57,8 @@ vec3 PBRLighting1(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 lightColor, vec
 
     float NdotL = max(dot(normal, lightDir), 0.0);
 
-    float lightThreshold = 0.1;
     NdotL = NdotL > lightThreshold ? 1.0 : 0.0;
 
-    float specularThreshold = 0.5;
     specular = length(specular) > specularThreshold ? specular : vec3(0.0);
 
     vec3 diffuse = kD * albedo / PI;
