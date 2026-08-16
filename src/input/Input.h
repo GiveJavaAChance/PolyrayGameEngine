@@ -14,14 +14,28 @@
 enum MouseInputMode : uint32_t {
     NORMAL = GLFW_CURSOR_NORMAL,
     HIDDEN = GLFW_CURSOR_HIDDEN,
-    CAPTURED = GLFW_CURSOR_CAPTURED,
-    DISABLED = GLFW_CURSOR_DISABLED
+    DISABLED = GLFW_CURSOR_DISABLED,
+    CAPTURED = GLFW_CURSOR_CAPTURED
+};
+
+enum JoystickAxis : uint8_t {
+    LEFT_X = 0u,
+    LEFT_Y = 1u,
+    RIGHT_X = 2u,
+    RIGHT_Y = 3u
+};
+
+enum Joystick : uint8_t {
+    LEFT = 0u,
+    RIGHT = 2u
 };
 
 namespace Input {
     namespace Internal {
         constexpr static uint32_t KEY_COUNT = GLFW_KEY_LAST + 1u;
         constexpr static uint32_t KEY_WORDS = (KEY_COUNT + 63u) >> 6u;
+
+        constexpr static uint32_t CONTROLLER_COUNT = GLFW_JOYSTICK_LAST + 1u;
 
         inline uint64_t keyStates[KEY_WORDS];
 
@@ -32,6 +46,10 @@ namespace Input {
 
         inline vec2 mouseDragOrigin;
         inline vec2 mouseDragDelta;
+
+        inline uint64_t controllerPresent = 0ull;
+        inline uint64_t controllerButtonStates[CONTROLLER_COUNT];
+        inline vec4 controllerAxesStates[CONTROLLER_COUNT];
 
         inline DynamicArray<InputEvent> eventQueue;
     }
@@ -90,7 +108,7 @@ namespace Input {
     }
 
     inline void clearStates() {
-        for(uint32_t i = 0u; i < KEY_WORDS; i++) {
+        for (uint32_t i = 0u; i < KEY_WORDS; i++) {
             keyStates[i] = 0ull;
         }
         mouseButtonStates = 0u;
@@ -98,7 +116,7 @@ namespace Input {
     }
 
     inline void moveMouse(vec2 newPos) {
-        if(mousePos.x == newPos.x && mousePos.y == newPos.y) {
+        if (mousePos.x == newPos.x && mousePos.y == newPos.y) {
             return;
         }
         vec2 prevPos = mousePos;
@@ -112,20 +130,66 @@ namespace Input {
         }
     }
 
-    inline void resetMousePos(vec2 newPos) {
-        mousePos = newPos;
+    inline void scroll(float amt) {
+        eventQueue.add(InputEvent{MOUSE_SCROLL_EVENT, {.scrollEvent = {amt}}});
     }
 
     inline vec2 getMousePosition() {
         return mousePos;
     }
 
-    inline void scroll(float amt) {
-        eventQueue.add(InputEvent{MOUSE_SCROLL_EVENT, {.scrollEvent = {amt}}});
+    inline uint32_t getControllers(uint32_t controllers[CONTROLLER_COUNT]) {
+        uint32_t idx = 0u;
+        for(uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
+            if(controllerPresent & (1ull << i)) {
+                controllers[idx++] = i;
+            }
+        }
+        return idx;
+    }
+
+    inline bool getControllerButton(uint32_t controller, uint32_t button) {
+        return controllerButtonStates[controller] & (1ull << button);
+    }
+
+    inline float getControllerAxis(uint32_t controller, JoystickAxis axis) {
+        return controllerAxesStates[controller][axis];
+    }
+
+    inline vec2 getControllerJoystickPosition(uint32_t controller, Joystick joystick) {
+        vec4 axes = controllerAxesStates[controller];
+        return prvl::vec2(axes[joystick], axes[joystick + 1u]);
     }
 
     inline void pollEvents(EventBus* eventBus = nullptr) {
         glfwPollEvents();
+        for (uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
+            if((controllerPresent & (1ull << i)) == 0ull) {
+                continue;
+            }
+            uint64_t buttonStates = controllerButtonStates[i];
+            int count = 0;
+            const unsigned char* buttons = glfwGetJoystickButtons(i, &count);
+            if (count != 0 && buttons) {
+                for (int j = 0; j < count; j++) {
+                    uint64_t mask = 1ull << j;
+                    if (buttons[j] == GLFW_PRESS) {
+                        buttonStates |= mask;
+                    } else {
+                        buttonStates &= ~mask;
+                    }
+                }
+            }
+            controllerButtonStates[i] = buttonStates;
+            const float* axes = glfwGetJoystickAxes(i, &count);
+            vec4 axesStates = prvl::vec4();
+            if(count != 0 && axes) {
+                for (int j = 0; j < count; j++) {
+                    axesStates[j] = axes[j];
+                }
+            }
+            controllerAxesStates[i] = axesStates;
+        }
         if (eventBus) {
             for (uint32_t i = 0u; i < eventQueue.size(); i++) {
                 eventBus->fire(eventQueue[i]);
@@ -156,6 +220,19 @@ namespace Input {
         glfwSetScrollCallback(handle, [](GLFWwindow* win, double xOffset, double yOffset) {
             scroll(static_cast<float>(yOffset));
         });
+        glfwSetJoystickCallback([](int jid, int event) {
+            uint64_t mask = 1ull << jid;
+            if (event == GLFW_CONNECTED) {
+                controllerPresent |= mask;
+            } else if (event == GLFW_DISCONNECTED) {
+                controllerPresent &= ~mask;
+            }
+        });
+        for(uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
+            if (glfwJoystickPresent(i)) {
+                controllerPresent |= 1ull << i;
+            }
+        }
     }
 
     inline void exit(const Window& window) {
