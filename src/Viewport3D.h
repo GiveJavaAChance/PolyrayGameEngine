@@ -16,11 +16,13 @@
 
 struct Viewport3D {
     uvec2 size;
+    GLenum colorFormat;
+    GLenum depthFormat;
     GLFramebuffer fbo;
     ComponentRef<Camera3D> cam;
     bool dirty;
 
-    Viewport3D(uvec2 s, GLenum colorFormat = GL_RGBA8, GLenum depthFormat = GL_DEPTH_COMPONENT32) : size(s), fbo(size.x, size.y, colorFormat, depthFormat), cam(UINT32_MAX), dirty(true) {
+    Viewport3D(uvec2 s, GLenum colorFormat = GL_RGBA8, GLenum depthFormat = GL_DEPTH_COMPONENT32) : size(s), colorFormat(colorFormat), depthFormat(depthFormat), fbo(size.x, size.y, colorFormat, depthFormat), cam(UINT32_MAX), dirty(true) {
     }
 
     Viewport3D() : Viewport3D(prvl::uvec2(512u)) {
@@ -41,7 +43,7 @@ struct Viewport3D {
         if (dirty) {
             dirty = false;
             fbo.destroy();
-            fbo = GLFramebuffer(size.x, size.y);
+            fbo = GLFramebuffer(size.x, size.y, colorFormat, depthFormat);
             c->dirty = true;
         }
         c->update(size.x, size.y);
