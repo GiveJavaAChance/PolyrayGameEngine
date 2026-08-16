@@ -79,6 +79,9 @@ public:
     void render() {
         Storage<RenderInstance>& instanceStorage = ecs->view<RenderInstance>();
         DynamicArray<RenderInstance>& instances = instanceStorage.data;
+        if(objects.size() == 0u || instances.size() == 0u) {
+            return;
+        }
         uint32_t* instanceCount = alloc<uint32_t>(objects.size());
         std::memset(instanceCount, 0, objects.size() * sizeof(uint32_t));
         for (uint32_t i = 0u; i < instances.size(); i++) {
