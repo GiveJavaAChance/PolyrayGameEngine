@@ -645,15 +645,6 @@ namespace prvl {
     }
 }
 
-constexpr float dot(const quat& a, const quat& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-
-constexpr quat normalize(const quat& q) {
-    float inv = 1.0f / sqrtf(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
-    return quat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
-}
-
 constexpr quat operator+(const quat& a, const quat& b) {
     return quat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
@@ -666,8 +657,20 @@ constexpr quat& operator+=(quat& a, const quat& b) {
     return a;
 }
 
+constexpr quat operator-(const quat& q) {
+    return quat(-q.x, -q.y, -q.z, -q.w);
+}
+
 constexpr quat operator*(const quat& q, float s) {
     return quat(q.x * s, q.y * s, q.z * s, q.w * s);
+}
+
+constexpr quat& operator*=(quat& q, float s) {
+    q.x *= s;
+    q.y *= s;
+    q.z *= s;
+    q.w *= s;
+    return q;
 }
 
 constexpr quat operator*(const quat& a, const quat& b) {
@@ -691,13 +694,49 @@ constexpr quat& operator*=(quat& a, const quat& b) {
     return a;
 }
 
-constexpr double dot(const dquat& a, const dquat& b) {
+constexpr quat operator/(const quat& q, float s) {
+    return quat(q.x / s, q.y / s, q.z / s, q.w / s);
+}
+
+constexpr quat& operator/=(quat& q, float s) {
+    q.x /= s;
+    q.y /= s;
+    q.z /= s;
+    q.w /= s;
+    return q;
+}
+
+constexpr float dot(const quat& a, const quat& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
-constexpr dquat normalize(const dquat& q) {
-    double inv = 1.0 / sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
-    return dquat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+constexpr quat normalize(const quat& q) {
+    float inv = 1.0f / sqrtf(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return quat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+}
+
+constexpr quat conjugate(const quat& q) {
+    return quat(-q.x, -q.y, -q.z, q.w);
+}
+
+constexpr quat inverse(const quat& q) {
+    return conjugate(q) / dot(q, q);
+}
+
+constexpr quat slerp(const quat& a, quat b, float t) {
+    float d = dot(a, b);
+    if(d < 0.0f) {
+        b = -b;
+        d = -d;
+    }
+    if(d > 0.999f) {
+        return a * (1.0f - t) + b * t;
+    }
+    float ang = acosf(d);
+    float s = sinf(ang);
+    float wa = sinf((1.0f - t) * ang) / s;
+    float wb = sinf(t * ang) / s;
+    return a * wa + b * wb;
 }
 
 constexpr dquat operator+(const dquat& a, const dquat& b) {
@@ -712,8 +751,20 @@ constexpr dquat& operator+=(dquat& a, const dquat& b) {
     return a;
 }
 
+constexpr dquat operator-(const dquat& q) {
+    return dquat(-q.x, -q.y, -q.z, -q.w);
+}
+
 constexpr dquat operator*(const dquat& q, double s) {
     return dquat(q.x * s, q.y * s, q.z * s, q.w * s);
+}
+
+constexpr dquat& operator*=(dquat& q, double s) {
+    q.x *= s;
+    q.y *= s;
+    q.z *= s;
+    q.w *= s;
+    return q;
 }
 
 constexpr dquat operator*(const dquat& a, const dquat& b) {
@@ -735,6 +786,51 @@ constexpr dquat& operator*=(dquat& a, const dquat& b) {
     a.z = z;
     a.w = w;
     return a;
+}
+
+constexpr dquat operator/(const dquat& q, double s) {
+    return dquat(q.x / s, q.y / s, q.z / s, q.w / s);
+}
+
+constexpr dquat& operator/=(dquat& q, double s) {
+    q.x /= s;
+    q.y /= s;
+    q.z /= s;
+    q.w /= s;
+    return q;
+}
+
+constexpr double dot(const dquat& a, const dquat& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
+constexpr dquat normalize(const dquat& q) {
+    double inv = 1.0 / sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+    return dquat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+}
+
+constexpr dquat conjugate(const dquat& q) {
+    return dquat(-q.x, -q.y, -q.z, q.w);
+}
+
+constexpr dquat inverse(const dquat& q) {
+    return conjugate(q) / dot(q, q);
+}
+
+constexpr dquat slerp(const dquat& a, dquat b, double t) {
+    double d = dot(a, b);
+    if(d < 0.0) {
+        b = -b;
+        d = -d;
+    }
+    if(d > 0.9999) {
+        return a * (1.0 - t) + b * t;
+    }
+    double ang = acos(d);
+    double s = sin(ang);
+    double wa = sin((1.0 - t) * ang) / s;
+    double wb = sin(t * ang) / s;
+    return a * wa + b * wb;
 }
 
 template<typename T>
