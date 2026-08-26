@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+
 #include <structure/DynamicArray.h>
 
 struct SceneNode {

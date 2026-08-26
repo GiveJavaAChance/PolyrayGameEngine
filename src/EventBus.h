@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include <InvokeUtils.h>
 #include <cstdint>
 #include <memory>
 #include <structure/DynamicArray.h>
 #include <typereg.h>
+#include <utils/Invoke.h>
 
 struct EventBus {
 private:
