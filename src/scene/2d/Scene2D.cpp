@@ -1,16 +1,21 @@
 #include "Scene2D.h"
 
 #include <Transform2D.h>
-#include <ecs/ECS.h>
+#include <World.h>
+#include <scene/2d/Scene2DNodeUpdatedEvent.h>
 
 #include <Profiler.h>
 
 void Scene2D::updateNode(uint32_t node, Transform2D* nodeData, bool dirty) {
     const mat3& global = nodeData->global;
-    for (uint32_t i = 0u; i < nodes[node].children.size(); i++) {
-        uint32_t child = nodes[node].children[i];
-        Entity childEntity{nodes[child].entityID, ecs};
-        if (Transform2D* childData = childEntity.getComponentPtr<Transform2D>()) {
+    ECS& ecs = world->ecs;
+    SceneNode& sceneNode = nodes[node];
+    if (dirty) {
+        world->eventBus.fireDirect<Scene2DNodeUpdatedEvent>(node, sceneNode.entityID, nodeData);
+    }
+    for (uint32_t i = 0u; i < sceneNode.children.size(); i++) {
+        uint32_t child = sceneNode.children[i];
+        if (Transform2D* childData = ecs.getComponentPtr<Transform2D>(nodes[child].entityID)) {
             bool childDirty = dirty;
             if (childData->dirtyGlobal) {
                 childData->local = inverse(global) * childData->global;
@@ -48,8 +53,8 @@ void Scene2D::removeNodes(uint32_t node) {
     nodes.remove(node);
 }
 
-Scene2D::Scene2D(ECS* ecs) : ecs(ecs) {
-    ecs->registerUpdateCallback<Scene2D, frameUpdate, UpdateOrder::FRAME>(this);
+Scene2D::Scene2D(World* world) : world(world) {
+    world->ecs.registerUpdateCallback<Scene2D, frameUpdate, UpdateOrder::POST_FRAME>(this);
 }
 
 uint32_t Scene2D::getRootNode() const {
@@ -92,10 +97,9 @@ void Scene2D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
     nodes[node].parent = newParent;
     nodes[newParent].children.add(node);
     if (rebase) {
-        Entity e{nodes[node].entityID, ecs};
-        Entity parent{nodes[newParent].entityID, ecs};
-        Transform2D* nodeData = e.getComponentPtr<Transform2D>();
-        Transform2D* parentData = parent.getComponentPtr<Transform2D>();
+        ECS& ecs = world->ecs;
+        Transform2D* nodeData = ecs.getComponentPtr<Transform2D>(nodes[node].entityID);
+        Transform2D* parentData = ecs.getComponentPtr<Transform2D>(nodes[newParent].entityID);
         if (nodeData && parentData) {
             nodeData->local = inverse(parentData->global) * nodeData->global;
             nodeData->dirtyLocal = true;
@@ -104,7 +108,7 @@ void Scene2D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
 }
 
 Entity Scene2D::getEntity(uint32_t node) {
-    return Entity{nodes[node].entityID, ecs};
+    return Entity{nodes[node].entityID, &world->ecs};
 }
 
 uint32_t Scene2D::getNode(const Entity& e) {
@@ -116,8 +120,7 @@ void Scene2D::frameUpdate(double dt) {
     if (nodes.size() == 0u) {
         return;
     }
-    Entity r{nodes[root].entityID, ecs};
-    if (Transform2D* rootData = r.getComponentPtr<Transform2D>()) {
+    if (Transform2D* rootData = world->ecs.getComponentPtr<Transform2D>(nodes[root].entityID)) {
         if (rootData->dirtyGlobal) {
             rootData->local = rootData->global;
         } else if (rootData->dirtyLocal) {

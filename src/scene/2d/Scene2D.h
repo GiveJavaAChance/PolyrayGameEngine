@@ -10,7 +10,7 @@
 
 #include <scene/SceneNode.h>
 
-struct ECS;
+struct World;
 struct Entity;
 
 struct Transform2D;
@@ -21,7 +21,7 @@ private:
     std::unordered_map<uint32_t, uint32_t> entityMap;
     uint32_t root;
 
-    ECS* ecs;
+    World* world;
 
     void updateNode(uint32_t node, Transform2D* nodeData, bool dirty);
 
@@ -30,7 +30,7 @@ private:
     void removeNodes(uint32_t node);
 
 public:
-    Scene2D(ECS* ecs);
+    Scene2D(World* world);
 
     uint32_t getRootNode() const;
 

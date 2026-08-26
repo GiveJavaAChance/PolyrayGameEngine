@@ -1,16 +1,21 @@
 #include "Scene3D.h"
 
 #include <Transform3D.h>
-#include <ecs/ECS.h>
+#include <World.h>
+#include <scene/3d/Scene3DNodeUpdatedEvent.h>
 
 #include <Profiler.h>
 
 void Scene3D::updateNode(uint32_t node, Transform3D* nodeData, bool dirty) {
     const mat4& global = nodeData->global;
-    for (uint32_t i = 0u; i < nodes[node].children.size(); i++) {
-        uint32_t child = nodes[node].children[i];
-        Entity childEntity{nodes[child].entityID, ecs};
-        if (Transform3D* childData = childEntity.getComponentPtr<Transform3D>()) {
+    ECS& ecs = world->ecs;
+    SceneNode& sceneNode = nodes[node];
+    if (dirty) {
+        world->eventBus.fireDirect<Scene3DNodeUpdatedEvent>(node, sceneNode.entityID, nodeData);
+    }
+    for (uint32_t i = 0u; i < sceneNode.children.size(); i++) {
+        uint32_t child = sceneNode.children[i];
+        if (Transform3D* childData = ecs.getComponentPtr<Transform3D>(nodes[child].entityID)) {
             bool childDirty = dirty;
             if (childData->dirtyGlobal) {
                 childData->local = inverse(global) * childData->global;
@@ -48,8 +53,8 @@ void Scene3D::removeNodes(uint32_t node) {
     nodes.remove(node);
 }
 
-Scene3D::Scene3D(ECS* ecs) : ecs(ecs) {
-    ecs->registerUpdateCallback<Scene3D, frameUpdate, UpdateOrder::FRAME>(this);
+Scene3D::Scene3D(World* world) : world(world) {
+    world->ecs.registerUpdateCallback<Scene3D, frameUpdate, UpdateOrder::POST_FRAME>(this);
 }
 
 uint32_t Scene3D::getRootNode() const {
@@ -92,10 +97,9 @@ void Scene3D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
     nodes[node].parent = newParent;
     nodes[newParent].children.add(node);
     if (rebase) {
-        Entity e{nodes[node].entityID, ecs};
-        Entity parent{nodes[newParent].entityID, ecs};
-        Transform3D* nodeData = e.getComponentPtr<Transform3D>();
-        Transform3D* parentData = parent.getComponentPtr<Transform3D>();
+        ECS& ecs = world->ecs;
+        Transform3D* nodeData = ecs.getComponentPtr<Transform3D>(nodes[node].entityID);
+        Transform3D* parentData = ecs.getComponentPtr<Transform3D>(nodes[newParent].entityID);
         if (nodeData && parentData) {
             nodeData->local = inverse(parentData->global) * nodeData->global;
             nodeData->dirtyLocal = true;
@@ -104,7 +108,7 @@ void Scene3D::setParent(uint32_t node, uint32_t newParent, bool rebase) {
 }
 
 Entity Scene3D::getEntity(uint32_t node) {
-    return Entity{nodes[node].entityID, ecs};
+    return Entity{nodes[node].entityID, &world->ecs};
 }
 
 uint32_t Scene3D::getNode(const Entity& e) {
@@ -116,8 +120,7 @@ void Scene3D::frameUpdate(double dt) {
     if (nodes.size() == 0u) {
         return;
     }
-    Entity r{nodes[root].entityID, ecs};
-    if (Transform3D* rootData = r.getComponentPtr<Transform3D>()) {
+    if (Transform3D* rootData = world->ecs.getComponentPtr<Transform3D>(nodes[root].entityID)) {
         if (rootData->dirtyGlobal) {
             rootData->local = rootData->global;
         } else if (rootData->dirtyLocal) {
