@@ -4,7 +4,6 @@
 #pragma once
 
 #include <cstdint>
-#include <iostream>
 #include <initializer_list>
 
 #include <Allocator.h>
@@ -23,12 +22,11 @@ struct GLGBuffer {
 
     GLGBuffer(std::initializer_list<GLTexture*> tex, GLTexture* depthTex = nullptr) : textureCount(tex.size()), depth(depthTex) {
         glCreateFramebuffers(1, &ID);
-
-        if(textureCount > 0) {
+        if (textureCount > 0) {
             textures = alloc<GLTexture*>(textureCount);
             GLenum* drawBuffers = alloc<GLenum>(textureCount);
             uint32_t i = 0u;
-            for(GLTexture* t : tex) {
+            for (GLTexture* t : tex) {
                 GLenum attachment = GL_COLOR_ATTACHMENT0 + i;
                 glNamedFramebufferTexture(ID, attachment, t->ID, 0);
                 drawBuffers[i] = attachment;
@@ -38,7 +36,7 @@ struct GLGBuffer {
             glNamedFramebufferDrawBuffers(ID, textureCount, drawBuffers);
             free(drawBuffers);
         }
-        if(depthTex) {
+        if (depthTex) {
             glNamedFramebufferTexture(ID, GL_DEPTH_ATTACHMENT, depthTex->ID, 0);
         }
         if (glCheckNamedFramebufferStatus(ID, GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -54,8 +52,9 @@ struct GLGBuffer {
     }
 
     GLGBuffer& operator=(GLGBuffer&& other) noexcept {
-        if(this != &other) {
+        if (this != &other) {
             free(textures);
+            destroy();
 
             ID = other.ID;
             textures = other.textures;
@@ -84,6 +83,13 @@ struct GLGBuffer {
 
     static void unbind() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void destroy() {
+        if (ID) {
+            glDeleteFramebuffers(1, &ID);
+            ID = 0;
+        }
     }
 
     explicit inline operator bool() const noexcept {

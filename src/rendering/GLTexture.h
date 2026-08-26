@@ -68,6 +68,13 @@ struct GLTexture {
         glGenerateTextureMipmap(ID);
     }
 
+    void destroy() {
+        if(ID != 0) {
+            glDeleteTextures(1, &ID);
+            ID = 0;
+        }
+    }
+
     explicit inline operator bool() const noexcept {
         return ID != 0;
     }

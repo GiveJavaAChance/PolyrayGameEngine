@@ -43,6 +43,15 @@ struct GLFramebufferMSAA {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+    void destroy() {
+        if (ID) {
+            glDeleteFramebuffers(1, &ID);
+            color.destroy();
+            depth.destroy();
+            ID = 0;
+        }
+    }
+
     explicit inline operator bool() const noexcept {
         return ID != 0;
     }

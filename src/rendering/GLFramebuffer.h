@@ -49,8 +49,8 @@ struct GLFramebuffer {
     void destroy() {
         if (ID) {
             glDeleteFramebuffers(1, &ID);
-            glDeleteTextures(1, &color.ID);
-            glDeleteTextures(1, &depth.ID);
+            color.destroy();
+            depth.destroy();
             ID = 0;
         }
     }

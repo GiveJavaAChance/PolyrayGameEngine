@@ -4,12 +4,12 @@
 #pragma once
 
 #include <cstdint>
-#include <iostream>
 #include <initializer_list>
+#include <iostream>
 
 #include <Allocator.h>
 #include <glad/glad.h>
-#include <rendering/GLTexture.h>
+#include <rendering/GLTextureMSAA.h>
 
 struct GLGBufferMSAA {
     GLuint ID;
@@ -23,12 +23,11 @@ struct GLGBufferMSAA {
 
     GLGBufferMSAA(std::initializer_list<GLTextureMSAA*> tex, GLTextureMSAA* depthTex = nullptr) : textureCount(tex.size()), depth(depthTex) {
         glCreateFramebuffers(1, &ID);
-
-        if(textureCount > 0) {
+        if (textureCount > 0) {
             textures = alloc<GLTextureMSAA*>(textureCount);
             GLenum* drawBuffers = alloc<GLenum>(textureCount);
             uint32_t i = 0u;
-            for(GLTextureMSAA* t : tex) {
+            for (GLTextureMSAA* t : tex) {
                 GLenum attachment = GL_COLOR_ATTACHMENT0 + i;
                 glNamedFramebufferTexture(ID, attachment, t->ID, 0);
                 drawBuffers[i] = attachment;
@@ -38,7 +37,7 @@ struct GLGBufferMSAA {
             glNamedFramebufferDrawBuffers(ID, textureCount, drawBuffers);
             free(drawBuffers);
         }
-        if(depthTex) {
+        if (depthTex) {
             glNamedFramebufferTexture(ID, GL_DEPTH_ATTACHMENT, depthTex->ID, 0);
         }
         if (glCheckNamedFramebufferStatus(ID, GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -54,8 +53,9 @@ struct GLGBufferMSAA {
     }
 
     GLGBufferMSAA& operator=(GLGBufferMSAA&& other) noexcept {
-        if(this != &other) {
+        if (this != &other) {
             free(textures);
+            destroy();
 
             ID = other.ID;
             textures = other.textures;
@@ -84,6 +84,13 @@ struct GLGBufferMSAA {
 
     static void unbind() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void destroy() {
+        if (ID) {
+            glDeleteFramebuffers(1, &ID);
+            ID = 0;
+        }
     }
 
     explicit inline operator bool() const noexcept {
