@@ -14,24 +14,24 @@
 #include <shader/ShaderProgram.h>
 #include <structure/UnorderedRegistry.h>
 
+struct VertexAttribInfo {
+    GLuint location;
+    GLenum type;
+    GLint columns;
+    GLint components;
+    GLsizei byteSize;
+    bool instanced;
+    uint32_t vboIdx;
+};
+
+struct VertexLayoutInfo {
+    std::vector<VertexAttribInfo> attributes;
+    bool hasInstanceFrom;
+    uint32_t instanceFrom;
+};
+
 namespace ShaderManager {
     namespace Internal {
-        struct VertexAttribInfo {
-            GLuint location;
-            GLenum type;
-            GLint columns;
-            GLint components;
-            GLsizei byteSize;
-            bool instanced;
-            uint32_t vboIdx;
-        };
-
-        struct VertexLayoutInfo {
-            std::vector<VertexAttribInfo> attributes;
-            bool hasInstanceFrom;
-            uint32_t instanceFrom;
-        };
-
         struct CompiledShader {
             GLuint ID;
             GLenum type;
@@ -48,68 +48,7 @@ namespace ShaderManager {
 
         inline std::unordered_set<GLuint> programs;
 
-        inline UnorderedRegistry<VertexLayoutInfo> vertexLayoutInfos;
-
         inline ShaderPreprocessor proc;
-
-        inline void reflectVertexLayout(GLuint program, uint32_t& handle, const CompiledShader& vertexShader) {
-            VertexLayoutInfo layout;
-            layout.hasInstanceFrom = vertexShader.hasInstanceFrom;
-            layout.instanceFrom = vertexShader.instanceFrom;
-
-            GLint attribCount = 0;
-            glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &attribCount);
-
-            constexpr GLsizei bufSize = 256;
-            char nameBuf[bufSize];
-
-            for (GLint i = 0; i < attribCount; i++) {
-                GLsizei length;
-                GLint size;
-                GLenum type;
-                glGetActiveAttrib(program, i, bufSize, &length, &size, &type, nameBuf);
-
-                if (strncmp(nameBuf, "gl_", 3) == 0) {
-                    continue;
-                }
-
-                GLuint location = glGetAttribLocation(program, nameBuf);
-
-                VertexAttribInfo attr;
-                attr.location = location;
-                attr.type = type;
-                switch(type) {
-                    case GL_FLOAT:      case GL_INT:      attr.columns = 1; attr.components = 1; break;
-                    case GL_FLOAT_VEC2: case GL_INT_VEC2: attr.columns = 1; attr.components = 2; break;
-                    case GL_FLOAT_VEC3: case GL_INT_VEC3: attr.columns = 1; attr.components = 3; break;
-                    case GL_FLOAT_VEC4: case GL_INT_VEC4: attr.columns = 1; attr.components = 4; break;
-
-                    case GL_FLOAT_MAT2: attr.columns = 2; attr.components = 2; break;
-                    case GL_FLOAT_MAT3: attr.columns = 3; attr.components = 3; break;
-                    case GL_FLOAT_MAT4: attr.columns = 4; attr.components = 4; break;
-
-                    default:
-                        std::cerr << "Unsupported vertex attrib type: " << type << " at location " << location << "\n";
-                        continue;
-                }
-                attr.byteSize = attr.components * 4;
-                attr.instanced = (layout.hasInstanceFrom && location >= layout.instanceFrom);
-
-                auto it = vertexShader.attributeMapping.find(nameBuf);
-                if (it != vertexShader.attributeMapping.end()) {
-                    attr.vboIdx = it->second;
-                } else {
-                    attr.vboIdx = attr.instanced ? 1u : 0u;
-                }
-                layout.attributes.push_back(attr);
-            }
-            std::vector<VertexAttribInfo>& attrs = layout.attributes;
-            std::sort(attrs.begin(), attrs.end(), [](const VertexAttribInfo& a, const VertexAttribInfo& b) {
-                return a.location < b.location;
-            });
-
-            handle = vertexLayoutInfos.add(layout);
-        }
     }
 
     using namespace Internal;
@@ -185,7 +124,7 @@ namespace ShaderManager {
         return compileShaderSource(src.c_str(), type, preprocess);
     }
 
-    inline void deleteShader(const uint32_t shader) {
+    inline void deleteShader(uint32_t shader) {
         const CompiledShader& s = shaders[shader - 1u];
         glDeleteShader(s.ID);
         shaders.remove(shader - 1u);
@@ -194,7 +133,6 @@ namespace ShaderManager {
     inline ShaderProgram createProgram(std::initializer_list<uint32_t> shaders) {
         bool incomplete = false;
         GLuint program = glCreateProgram();
-        uint32_t handle = UINT32_MAX;
         for (const uint32_t shader : shaders) {
             glAttachShader(program, Internal::shaders[shader - 1u].ID);
         }
@@ -228,30 +166,84 @@ namespace ShaderManager {
             glDeleteProgram(program);
             return ShaderProgram();
         }
-
+        uint32_t vertexShaderHandle = 0u;
         for (uint32_t shader : shaders) {
             const CompiledShader& s = Internal::shaders[shader - 1u];
             if (s.type == GL_VERTEX_SHADER) {
-                reflectVertexLayout(program, handle, s);
+                vertexShaderHandle = shader;
                 break;
             }
         }
         programs.insert(program);
-        return ShaderProgram(program, handle);
+        return ShaderProgram(program, vertexShaderHandle);
     }
 
-    inline void deleteProgram(const ShaderProgram& shader) {
-        programs.erase(shader.ID);
-        glDeleteProgram(shader.ID);
-        vertexLayoutInfos.remove(shader.shaderHandle);
-    }
+    inline VertexLayoutInfo getVertexLayout(const ShaderProgram& program) {
+        VertexLayoutInfo layout;
 
-    inline GLuint createVAO(const ShaderProgram& shader, const std::vector<GLuint>& vbos) {
-        if (shader.shaderHandle == UINT32_MAX) {
-            std::cerr << "No vertex layout info for shader " << shader.ID << "\n";
-            return 0;
+        const CompiledShader& vertexShader = shaders[program.vertexShaderHandle - 1u];
+        layout.hasInstanceFrom = vertexShader.hasInstanceFrom;
+        layout.instanceFrom = vertexShader.instanceFrom;
+
+        GLint attribCount = 0;
+        glGetProgramiv(program.ID, GL_ACTIVE_ATTRIBUTES, &attribCount);
+
+        constexpr GLsizei bufSize = 256;
+        char nameBuf[bufSize];
+
+        for (GLint i = 0; i < attribCount; i++) {
+            GLsizei length;
+            GLint size;
+            GLenum type;
+            glGetActiveAttrib(program.ID, i, bufSize, &length, &size, &type, nameBuf);
+
+            if (strncmp(nameBuf, "gl_", 3) == 0) {
+                continue;
+            }
+
+            GLuint location = glGetAttribLocation(program.ID, nameBuf);
+
+            VertexAttribInfo attr;
+            attr.location = location;
+            attr.type = type;
+            switch(type) {
+                case GL_FLOAT:      case GL_INT:      attr.columns = 1; attr.components = 1; break;
+                case GL_FLOAT_VEC2: case GL_INT_VEC2: attr.columns = 1; attr.components = 2; break;
+                case GL_FLOAT_VEC3: case GL_INT_VEC3: attr.columns = 1; attr.components = 3; break;
+                case GL_FLOAT_VEC4: case GL_INT_VEC4: attr.columns = 1; attr.components = 4; break;
+
+                case GL_FLOAT_MAT2: attr.columns = 2; attr.components = 2; break;
+                case GL_FLOAT_MAT3: attr.columns = 3; attr.components = 3; break;
+                case GL_FLOAT_MAT4: attr.columns = 4; attr.components = 4; break;
+
+                default:
+                    std::cerr << "Unsupported vertex attrib type: " << type << " at location " << location << "\n";
+                    continue;
+            }
+            attr.byteSize = attr.components * 4;
+            attr.instanced = (layout.hasInstanceFrom && location >= layout.instanceFrom);
+
+            auto it = vertexShader.attributeMapping.find(nameBuf);
+            if (it != vertexShader.attributeMapping.end()) {
+                attr.vboIdx = it->second;
+            } else {
+                attr.vboIdx = attr.instanced ? 1u : 0u;
+            }
+            layout.attributes.push_back(attr);
         }
-        const VertexLayoutInfo& layout = vertexLayoutInfos[shader.shaderHandle];
+        std::vector<VertexAttribInfo>& attrs = layout.attributes;
+        std::sort(attrs.begin(), attrs.end(), [](const VertexAttribInfo& a, const VertexAttribInfo& b) {
+            return a.location < b.location;
+        });
+        return layout;
+    }
+
+    inline void deleteProgram(const ShaderProgram& program) {
+        programs.erase(program.ID);
+        glDeleteProgram(program.ID);
+    }
+
+    inline GLuint createVAO(const VertexLayoutInfo& layout, const std::vector<GLuint>& vbos) {
         GLuint vao;
         glCreateVertexArrays(1, &vao);
         std::vector<uint32_t> vboStrides(vbos.size(), 0);
