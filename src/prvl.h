@@ -1803,7 +1803,7 @@ constexpr mat3 lookat(const vec3& from, const vec3& to) {
 }
 
 
-constexpr mat4 perspectiveProjection(const float fov, const float aspect, const float nearZ, const float farZ) {
+constexpr mat4 perspectiveProjection(float fov, float aspect, float nearZ, float farZ) {
     mat4 r = prvl::mat4();
     const float yScale = 1.0f / tanf(fov * 0.5f);
     const float xScale = yScale / aspect;
@@ -1816,10 +1816,10 @@ constexpr mat4 perspectiveProjection(const float fov, const float aspect, const 
     return r;
 }
 
-constexpr mat4 reverseZPerspectiveProjection(const float fov, const float aspect, const float nearZ) {
+constexpr mat4 reverseZPerspectiveProjection(float fov, float aspect, float nearZ) {
     mat4 r = prvl::mat4();
-    const float yScale = 1.0f / tanf(fov * 0.5f);
-    const float xScale = yScale / aspect;
+    float yScale = 1.0f / tanf(fov * 0.5f);
+    float xScale = yScale / aspect;
     r[0][0] = xScale;
     r[1][1] = yScale;
     r[2][3] = -1.0f;
@@ -1827,7 +1827,17 @@ constexpr mat4 reverseZPerspectiveProjection(const float fov, const float aspect
     return r;
 }
 
-constexpr void setPlane(const float a, const float b, const float c, const float d, const uint32_t idx, float* planes, bool* planeDirs) {
+constexpr mat4 orthographicProjection(float width, float aspect, float nearZ, float farZ) {
+    mat4 r = prvl::mat4();
+    vec3 size = prvl::vec3(width, width / aspect, farZ - nearZ);
+    r[0][0] = 2.0f / size.x;
+    r[1][1] = 2.0f / size.y;
+    r[2][2] = 2.0f / size.z;
+    r[3] = prvl::vec4(0.0f, 0.0f, farZ / size.z, 1.0f);
+    return r;
+}
+
+constexpr void setPlane(float a, float b, float c, float d, uint32_t idx, float* planes, bool* planeDirs) {
     float mul = 1.0f / sqrtf(a * a + b * b + c * c);
     planes[idx] = a * mul;
     planeDirs[idx] = a >= 0.0f;
@@ -1871,20 +1881,20 @@ constexpr bool isAABBVisible(const float* planes, const bool* planeDirs, const v
     return true;
 }
 
-constexpr void isMultiAABBVisible(const float* planes, const bool* planeDirs, const float* minX, const float* minY, const float* minZ, const float* maxX, const float* maxY, const float* maxZ, bool* out, const int count) {
-    for (int i = 0; i < count; i++) {
+constexpr void isMultiAABBVisible(const float* planes, const bool* planeDirs, const float* minX, const float* minY, const float* minZ, const float* maxX, const float* maxY, const float* maxZ, bool* out, uint32_t count) {
+    for (uint32_t i = 0u; i < count; i++) {
         out[i] = true;
     }
-    for (int i = 0; i < 5; i++) {
-        int idx = i << 2;
+    for (uint32_t i = 0u; i < 5u; i++) {
+        int idx = i << 2u;
         float a = planes[idx];
-        float b = planes[idx + 1];
-        float c = planes[idx + 2];
-        float d = planes[idx + 3];
+        float b = planes[idx + 1u];
+        float c = planes[idx + 2u];
+        float d = planes[idx + 3u];
         const float* x = planeDirs[idx] ? maxX : minX;
-        const float* y = planeDirs[idx + 1] ? maxY : minY;
-        const float* z = planeDirs[idx + 2] ? maxZ : minZ;
-        for (int j = 0; j < count; j++) {
+        const float* y = planeDirs[idx + 1u] ? maxY : minY;
+        const float* z = planeDirs[idx + 2u] ? maxZ : minZ;
+        for (uint32_t j = 0u; j < count; j++) {
             out[j] &= a * x[j] + b * y[j] + c * z[j] + d >= 0.0f;
         }
     }
