@@ -115,15 +115,40 @@ namespace ColliderShape3D {
         double by = b.posY + halfBy;
         double bz = b.posZ + halfBz;
 
+        double dx = ax - bx;
+        double dy = ay - by;
+        double dz = az - bz;
+        double overlapX = halfBx - abs(dx);
+        double overlapY = halfBy - abs(dy);
+        double overlapZ = halfBz - abs(dz);
+        double overlap = min(min(overlapX, overlapY), overlapZ);
+        if(overlap > 0.0) {
+            if (overlapX < overlapY && overlapX < overlapZ) {
+                out.collisionNormalX = sign(dx) * overlapX;
+                out.collisionNormalY = 0.0;
+                out.collisionNormalZ = 0.0;
+            } else if (overlapY < overlapZ) {
+                out.collisionNormalX = 0.0;
+                out.collisionNormalY = sign(dy) * overlapY;
+                out.collisionNormalZ = 0.0;
+            } else {
+                out.collisionNormalX = 0.0;
+                out.collisionNormalY = 0.0;
+                out.collisionNormalZ = sign(dz) * overlapZ;
+            }
+            out.penetrationDepth = overlap;
+            return true;
+        }
+
         double r = halfAx;
 
         double cx = max(bx - halfBx, min(ax, bx + halfBx));
         double cy = max(by - halfBy, min(ay, by + halfBy));
         double cz = max(bz - halfBz, min(az, bz + halfBz));
 
-        double dx = ax - cx;
-        double dy = ay - cy;
-        double dz = az - cz;
+        dx = ax - cx;
+        dy = ay - cy;
+        dz = az - cz;
 
         double dist2 = dx * dx + dy * dy + dz * dz;
 
@@ -198,6 +223,7 @@ namespace ColliderShape3D {
                 nearest = d;
             }
         }
+        out.penetrationDepth = 0.0;
         if (minDistSq < aData->radius * aData->radius) {
             double minDist = sqrt(minDistSq);
             double invDist = (minDist > 1e-12) ? 1.0 / minDist : 0.0;
@@ -205,22 +231,23 @@ namespace ColliderShape3D {
             out.collisionNormalY = nearest.y * invDist;
             out.collisionNormalZ = nearest.z * invDist;
             out.penetrationDepth = aData->radius - minDist;
-            return true;
         }
         dvec3 facePoint = clamp(lineA, min, max);
 
         dvec3 projOnLine = project(facePoint, lineA, lineD);
         dvec3 delta = projOnLine - facePoint;
         double distSideSq = dot(delta, delta);
-        if (distSideSq > aData->radius * aData->radius) {
+        if (distSideSq > aData->radius * aData->radius && out.penetrationDepth == 0.0) {
             return false;
         }
         double distSide = sqrt(distSideSq);
-        double invDist = (distSide > 1e-12) ? 1.0 / distSide : 0.0;
-        out.collisionNormalX = delta.x * invDist;
-        out.collisionNormalY = delta.y * invDist;
-        out.collisionNormalZ = delta.z * invDist;
-        out.penetrationDepth = aData->radius - distSide;
+        if (out.penetrationDepth < aData->radius - distSide) {
+            double invDist = (distSide > 1e-12) ? 1.0 / distSide : 0.0;
+            out.collisionNormalX = delta.x * invDist;
+            out.collisionNormalY = delta.y * invDist;
+            out.collisionNormalZ = delta.z * invDist;
+            out.penetrationDepth = aData->radius - distSide;
+        }
         return true;
     }
 
@@ -229,7 +256,7 @@ namespace ColliderShape3D {
         dvec3 lineD = aData->deltaB - aData->deltaA;
         double rb = b.sizeX * 0.5;
         dvec3 pos = prvl::dvec3(b.posX, b.posY, b.posZ) + rb;
-        dvec3 d = pos - project(pos, lineA, lineD);
+        dvec3 d = project(pos, lineA, lineD) - pos;
 
         double dist2 = dot(d, d);
         double r = aData->radius + rb;
