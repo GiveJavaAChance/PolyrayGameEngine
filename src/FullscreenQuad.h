@@ -19,7 +19,7 @@ struct FullscreenQuad {
 
     GLTexture* texture = nullptr;
 
-    FullscreenQuad(const ShaderProgram& shader) : quadProgram(shader), vbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(shader, {vbo.ID})) {
+    FullscreenQuad(const ShaderProgram& shader) : quadProgram(shader), vbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(ShaderManager::getVertexLayout(shader), {vbo.ID})) {
         float quadVertices[]{
             -1.0f, 1.0f,
             -1.0f, -1.0f,
