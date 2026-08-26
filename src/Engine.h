@@ -7,12 +7,15 @@
 
 #include <GLFW/glfw3.h>
 
+#include <ecs/ECS.h>
+
 namespace Engine {
     inline void init() {
         if (!glfwInit()) {
             std::cerr << "Unable to initialize GLFW" << std::endl;
             std::exit(1);
         }
+        ComponentRegistry::registerBuiltInComponents();
     }
 
     inline void exit() {

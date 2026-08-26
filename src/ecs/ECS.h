@@ -8,7 +8,6 @@
 #include <cstring>
 #include <type_traits>
 
-#include <InvokeUtils.h>
 #include <structure/DynamicArray.h>
 #include <structure/MultiDynamicArray.h>
 #include <structure/Registry.h>
@@ -19,6 +18,7 @@
 #include <ecs/ComponentRef.h>
 #include <ecs/Storage.h>
 
+#include <utils/Invoke.h>
 #include <utils/perf.h>
 
 struct ECS;
@@ -104,6 +104,8 @@ public:
         reflection[typeId].allocateStorage = allocateStorage;
         reflection[typeId].freeStorage = freeStorage;
     }
+
+    static void registerBuiltInComponents();
 };
 
 enum UpdateOrder : uint8_t {
