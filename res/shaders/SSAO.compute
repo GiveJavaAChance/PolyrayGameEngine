@@ -1,0 +1,106 @@
+#version 430
+layout(local_size_x = 8, local_size_y = 8) in;
+
+#append "shaders/Camera3D.glsl";
+
+uniform vec3 samples[64u];
+
+layout(binding = 0) uniform sampler2D depthTexture;
+
+layout(binding = SSAO_IDX, r16f) uniform image2D ssaoTexture;
+
+vec3 hash32(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yxz + 33.33);
+    return fract((p3.xxy + p3.yzz) * p3.zyx);
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(ssaoTexture);
+    if(pos.x >= size.x || pos.y >= size.y) {
+        imageStore(ssaoTexture, pos, vec4(1.0, 0.0, 0.0, 1.0));
+        return;
+    }
+    vec2 uv = (vec2(pos) + 0.5) / vec2(size);
+    float depth = texelFetch(depthTexture, pos, 0).r;
+    if(depth == 0.0) {
+        imageStore(ssaoTexture, pos, vec4(1.0, 0.0, 0.0, 1.0));
+        return;
+    }
+    vec4 clipSpace = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 viewSpace = inverseProjection * clipSpace;
+    vec3 viewPos = viewSpace.xyz / viewSpace.w;
+
+    vec3 uvStep = vec3(1.0 / vec2(size), 0.0);
+    //vec2 uvDX = uv + uvStep.xz;
+    //vec2 uvDY = uv + uvStep.zy;
+    //vec4 clipSpaceDX = vec4(uvDX * 2.0 - 1.0, texelFetch(depthTexture, pos + ivec2(1, 0), 0).r, 1.0);
+    //vec4 clipSpaceDY = vec4(uvDY * 2.0 - 1.0, texelFetch(depthTexture, pos + ivec2(0, 1), 0).r, 1.0);
+    //vec4 viewSpaceDX = inverseProjection * clipSpaceDX;
+    //vec4 viewSpaceDY = inverseProjection * clipSpaceDY;
+    //vec3 posDX = viewSpaceDX.xyz / viewSpaceDX.w;
+    //vec3 posDY = viewSpaceDY.xyz / viewSpaceDY.w;
+
+    //vec3 normal = normalize(cross(posDX - viewPos, posDY - viewPos));
+    //if(dot(normal, normalize(viewPos)) > -0.01) {
+    //    imageStore(ssaoTexture, pos, vec4(1.0, 0.0, 0.0, 1.0));
+    //    return;
+    //}
+
+    vec2 uvPX = uv + uvStep.xz;
+    vec2 uvPY = uv + uvStep.zy;
+    vec2 uvNX = uv - uvStep.xz;
+    vec2 uvNY = uv - uvStep.zy;
+    vec4 clipSpacePX = vec4(uvPX * 2.0 - 1.0, texelFetch(depthTexture, pos + ivec2(1, 0), 0).r, 1.0);
+    vec4 clipSpacePY = vec4(uvPY * 2.0 - 1.0, texelFetch(depthTexture, pos + ivec2(0, 1), 0).r, 1.0);
+    vec4 clipSpaceNX = vec4(uvNX * 2.0 - 1.0, texelFetch(depthTexture, pos - ivec2(1, 0), 0).r, 1.0);
+    vec4 clipSpaceNY = vec4(uvNY * 2.0 - 1.0, texelFetch(depthTexture, pos - ivec2(0, 1), 0).r, 1.0);
+    vec4 viewSpacePX = inverseProjection * clipSpacePX;
+    vec4 viewSpacePY = inverseProjection * clipSpacePY;
+    vec4 viewSpaceNX = inverseProjection * clipSpaceNX;
+    vec4 viewSpaceNY = inverseProjection * clipSpaceNY;
+    vec3 posPX = viewSpacePX.xyz / viewSpacePX.w;
+    vec3 posPY = viewSpacePY.xyz / viewSpacePY.w;
+    vec3 posNX = viewSpaceNX.xyz / viewSpaceNX.w;
+    vec3 posNY = viewSpaceNY.xyz / viewSpaceNY.w;
+    vec3 dPos[] = vec3[](posPY - viewPos, posPX - viewPos, posNY - viewPos, posNX - viewPos);
+
+    vec3 vd = normalize(viewPos);
+    float maxDot = 1.0;
+    vec3 normal = vec3(0.0);
+    for(uint i = 0u; i < 4u; i++) {
+        vec3 n = normalize(cross(dPos[(i + 1u) & 3u], dPos[i]));
+        float d = dot(n, vd);
+        if(d < maxDot) {
+            maxDot = d;
+            normal = n;
+        }
+    }
+
+    vec3 randomVec = vec3(hash32(vec2(pos)).xy * 2.0 - 1.0, 0.0);
+
+    vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
+    vec3 bitangent = cross(normal, tangent);
+    mat3 TBN = mat3(tangent, bitangent, normal);
+
+    const float bias = 0.025;
+    const float radius = 0.5;
+
+    float occlusion = 0.0;
+    for(uint i = 0u; i < 64u; i++) {
+        vec3 samplePos = TBN * samples[i];
+        samplePos = viewPos + samplePos * radius;
+
+        vec4 offset = vec4(samplePos, 1.0);
+        offset = projection * offset;
+        offset.xyz /= offset.w;
+        offset.xy = offset.xy * 0.5 + 0.5;
+        vec4 viewSpaceDepth = inverseProjection * vec4(offset.xy * 2.0 - 1.0, texture(depthTexture, offset.xy).r, 1.0);
+        float sampleDepth = viewSpaceDepth.z / viewSpaceDepth.w;
+        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(viewPos.z - sampleDepth));
+        occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+    }
+    occlusion = 1.0 - (occlusion / 64.0);
+    imageStore(ssaoTexture, pos, vec4(occlusion, 0.0, 0.0, 1.0));
+}

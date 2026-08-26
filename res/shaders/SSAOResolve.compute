@@ -1,0 +1,34 @@
+#version 430
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = SSAO_IDX, r16f) uniform image2D ssaoTexture;
+layout(binding = AO_TEXTURE_IDX, r16f) uniform image2D ambientOcclusionTexture;
+
+uniform uint mode = 0u;
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(ssaoTexture);
+    if(pos.x >= size.x || pos.y >= size.y) {
+        imageStore(ssaoTexture, pos, vec4(1.0, 0.0, 0.0, 1.0));
+        return;
+    }
+    float sum = 0.0;
+
+    switch(mode) {
+        case 0u: {
+            sum = imageLoad(ssaoTexture, pos).r;
+            break;
+        }
+        case 1u: {
+            for(int dy = -1; dy <= 1; dy++) {
+                for(int dx = -1; dx <= 1; dx++) {
+                    sum += imageLoad(ssaoTexture, pos + ivec2(dx, dy)).r;
+                }
+            }
+            sum *= 1.0 / 9.0;
+            break;
+        }
+    }
+    imageStore(ambientOcclusionTexture, pos, vec4(sum, 0.0, 0.0, 1.0));
+}
