@@ -27,11 +27,14 @@ private:
     }
 
     template <typename Scene>
-    void instantiateImpl(ByteReader& reader, World* world, uint32_t fromNode) {
+    uint32_t instantiateImpl(ByteReader& reader, World* world, uint32_t fromNode) {
         ECS& ecs = world->ecs;
         Scene* scene = world->getSystem<Scene>();
 
         std::vector<uint32_t> stack;
+
+        uint32_t newNode = UINT32_MAX;
+        bool first = true;
 
         if (fromNode != UINT32_MAX) {
             stack.push_back(fromNode);
@@ -40,15 +43,22 @@ private:
             uint8_t instruction = reader.read<uint8_t>();
             if (instruction == 0u) {
                 Entity e = readEntity(reader, ecs, world);
+                uint32_t n;
                 if (stack.size() == 0u) {
-                    stack.push_back(scene->setRootNode(e));
+                    n = scene->setRootNode(e);
                 } else {
-                    stack.push_back(scene->addNode(stack.back(), e));
+                    n = scene->addNode(stack.back(), e);
+                }
+                stack.push_back(n);
+                if (first) {
+                    first = false;
+                    newNode = n;
                 }
             } else {
                 stack.pop_back();
             }
         }
+        return newNode;
     }
 
 public:
@@ -78,16 +88,15 @@ public:
         return *this;
     }
 
-    void instantiate(World* world, uint32_t fromNode) {
+    uint32_t instantiate(World* world, uint32_t fromNode) {
         ByteReader reader{data, size};
 
         uint8_t dimension = reader.read<uint8_t>();
 
         if (dimension == 2u) {
-            instantiateImpl<Scene2D>(reader, world, fromNode);
-        } else {
-            instantiateImpl<Scene3D>(reader, world, fromNode);
+            return instantiateImpl<Scene2D>(reader, world, fromNode);
         }
+        return instantiateImpl<Scene3D>(reader, world, fromNode);
     }
 
     inline uint8_t getDimension() {
