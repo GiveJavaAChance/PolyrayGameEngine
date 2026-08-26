@@ -12,6 +12,11 @@
 #include <rendering/ShaderBuffer.h>
 #include <serial/Serial.h>
 
+enum ProjectionMode : uint8_t {
+    PERSPECTIVE,
+    ORTHOGRAPHIC
+};
+
 struct Camera3D {
     constexpr static uint32_t DATA_SIZE = 68u;
 
@@ -21,15 +26,26 @@ struct Camera3D {
     mat4 inverseProjection;
     vec3 cameraPos;
 
-    float nearZ;
-    float fov;
+    ProjectionMode projectionMode;
+    struct {
+        float nearZ;
+        float fov;
+    } perspective;
+    struct {
+        float width;
+        float nearZ;
+        float farZ;
+    } orthographic;
 
     bool current;
     bool dirty;
 
     ComponentRef<Transform3D> transformRef;
 
-    Camera3D(float nearZ = 0.1f, float fov = 90.0f) : nearZ(nearZ), fov(fov), current(false), dirty(true), transformRef(UINT32_MAX) {
+    Camera3D(float nearZ = 0.1f, float fov = 90.0f) : projectionMode(ProjectionMode::PERSPECTIVE), perspective(nearZ, fov), current(false), dirty(true), transformRef(UINT32_MAX) {
+    }
+
+    Camera3D(float width, float nearZ = 0.1f, float farZ = 10.0f) : projectionMode(ProjectionMode::ORTHOGRAPHIC), orthographic(width, nearZ, farZ), current(false), dirty(true), transformRef(UINT32_MAX) {
     }
 
     void update(float width, float height) {
@@ -37,7 +53,11 @@ struct Camera3D {
             return;
         }
         dirty = false;
-        projection = reverseZPerspectiveProjection(fov * 0.0174532925199f, width / height, nearZ);
+        if (projectionMode == ProjectionMode::PERSPECTIVE) {
+            projection = reverseZPerspectiveProjection(perspective.fov * 0.0174532925199f, width / height, perspective.nearZ);
+        } else {
+            projection = orthographicProjection(orthographic.width, width / height, orthographic.nearZ, orthographic.farZ);
+        }
         inverseProjection = inverse(projection);
     }
 
@@ -50,14 +70,14 @@ template <>
 struct Serial<Camera3D> {
     static void serialize(World* world, uint32_t componentID, ByteWriter& output) {
         Camera3D* cam = world->ecs.getPtr<Camera3D>(componentID);
-        output.write(&cam->nearZ, 2u * sizeof(float));
+        output.write(&cam->projectionMode, 24u);
         uint8_t c = cam->current;
         output.write(c);
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
         Camera3D cam{};
-        input.read(&cam.nearZ, 2u * sizeof(float));
+        input.read(&cam.projectionMode, 24u);
         cam.current = input.read<uint8_t>();
         e.addComponent(cam);
     }
@@ -66,8 +86,12 @@ struct Serial<Camera3D> {
 template <>
 struct ExportInfo<Camera3D> {
     constexpr static Export __export__[] = {
-        {offsetof(Camera3D, nearZ), EXPORT_FLOAT, "Near Z"},
-        {offsetof(Camera3D, fov), EXPORT_FLOAT, "Fov"},
+        {offsetof(Camera3D, projectionMode), EXPORT_BOOL, "Orthographic"},
+        {offsetof(Camera3D, perspective.nearZ), EXPORT_FLOAT, "Perspective Near Z"},
+        {offsetof(Camera3D, perspective.fov), EXPORT_FLOAT, "Perspective Fov"},
+        {offsetof(Camera3D, orthographic.width), EXPORT_FLOAT, "Orthographic Width"},
+        {offsetof(Camera3D, orthographic.nearZ), EXPORT_FLOAT, "Orthographic Near Z"},
+        {offsetof(Camera3D, orthographic.farZ), EXPORT_FLOAT, "Orthographic Far Z"},
         {offsetof(Camera3D, current), EXPORT_BOOL, "Current"},
         {offsetof(Camera3D, dirty), EXPORT_DIRTY_FLAG, ""},
     };
