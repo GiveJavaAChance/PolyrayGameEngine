@@ -23,7 +23,9 @@
 #include <physics/2d/DynamicCollider2D.h>
 #include <physics/2d/PhysicsObject2D.h>
 
+#include <Transform2D.h>
 #include <World.h>
+#include <scene/2d/Scene2DNodeUpdatedEvent.h>
 
 #include <Profiler.h>
 
@@ -99,6 +101,24 @@ private:
         dirtyStatic = true;
     }
 
+    void onPhysicsObjectAdded(Entity e, uint32_t id) {
+        Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
+        uint32_t transformID;
+        if (ecs->getComponentID<Transform2D>(e.entityID, transformID)) {
+            uint32_t loc = storage.reg[id];
+            /*Transform2D* tx = ecs->getPtr<Transform2D>(transformID);
+            dvec2 pos = prvl::dvec2(prvl::vec2(tx->local[2u]));
+            storage.objects.column<0>()[loc] = pos.x;
+            storage.objects.column<1>()[loc] = pos.y;
+            storage.objects.column<2>()[loc] = pos.x;
+            storage.objects.column<3>()[loc] = pos.y;*/
+            storage.objects.column<6>()[loc] = transformID;
+        }
+    }
+
+    void onPhysicsObjectRemoved(Entity e, uint32_t id) {
+    }
+
     void onDynamicColliderAdded(Entity e, uint32_t id) {
         uint32_t objID;
         if (ecs->getComponentID<PhysicsObject2D>(e.entityID, objID)) {
@@ -107,7 +127,21 @@ private:
     }
 
     void onDynamicColliderRemoved(Entity e, uint32_t id) {
-        dirtyStatic = true;
+    }
+
+    bool onSceneNodeUpdated(Scene2DNodeUpdatedEvent* evt) {
+        uint32_t entityID = evt->entityID;
+        if (Collider2D* col = ecs->getComponentPtr<Collider2D>(entityID)) {
+            Transform2D* tx = evt->tx;
+            mat3& m = tx->global;
+            vec2 pos = prvl::vec2(m[2u]);
+            col->posX = pos.x;
+            col->posY = pos.y;
+            col->sizeX = m[0u][0u];
+            col->sizeY = m[1u][1u];
+            dirtyStatic = true;
+        }
+        return false;
     }
 
     void refreshStaticColliders() {
@@ -144,9 +178,11 @@ private:
     }
 
 public:
-    Physics2D(ECS* ecs, bool disabled) : ecs(ecs) {
+    Physics2D(World* world, bool disabled) : ecs(&world->ecs) {
         ecs->registerComponentListener<Collider2D, Physics2D, onStaticColliderAdded, onStaticColliderRemoved>(this);
+        ecs->registerComponentListener<PhysicsObject2D, Physics2D, onPhysicsObjectAdded, onPhysicsObjectRemoved>(this);
         ecs->registerComponentListener<DynamicCollider2D, Physics2D, onDynamicColliderAdded, onDynamicColliderRemoved>(this);
+        world->eventBus.registerEventListener<Scene2DNodeUpdatedEvent, Physics2D, onSceneNodeUpdated>(this);
         if (disabled) {
             ecs->registerUpdateCallback<Physics2D, disabledPhysicsUpdate, UpdateOrder::PHYSICS>(this);
         } else {
@@ -188,7 +224,7 @@ public:
     void physicsUpdate(double dt) {
         PROFILE_SCOPE(Physics2DUpdate)
         Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
-        MultiDynamicArray<double, double, double, double, double, double>& objects = storage.objects;
+        MultiDynamicArray<double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
         DynamicArray<Collider2D>& staticColliders = ecs->view<Collider2D>().data;
         DynamicArray<DynamicCollider2D>& dynamicColliders = ecs->view<DynamicCollider2D>().data;
@@ -416,9 +452,15 @@ public:
         // time[7] = rdtsc();
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider2D& col = dynamicColliders[i];
-            const uint32_t loc = storage.reg[col.object.ID];
-            col.impl.posX = objects.column<0>()[loc] + col.offsetX;
-            col.impl.posY = objects.column<1>()[loc] + col.offsetY;
+            uint32_t loc = storage.reg[col.object.ID];
+            double posX = objects.column<0>()[loc];
+            double posY = objects.column<1>()[loc];
+            col.impl.posX = posX + col.offsetX;
+            col.impl.posY = posY + col.offsetY;
+            if (Transform2D* tx = ecs->getPtr<Transform2D>(objects.column<6>()[loc])) {
+                tx->local[2] = prvl::vec3(posX, posY, 1.0f);
+                tx->dirtyLocal = true;
+            }
         }
         /*time[8] = rdtsc();
         uint32_t maxIdx = 0;
@@ -435,7 +477,7 @@ public:
 
     void disabledPhysicsUpdate(double dt) {
         Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
-        MultiDynamicArray<double, double, double, double, double, double>& objects = storage.objects;
+        MultiDynamicArray<double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
         DynamicArray<DynamicCollider2D>& dynamicColliders = ecs->view<DynamicCollider2D>().data;
 
@@ -463,9 +505,15 @@ public:
         }
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider2D& col = dynamicColliders[i];
-            const uint32_t loc = storage.reg[col.object.ID];
-            col.impl.posX = objects.column<0>()[loc] + col.offsetX;
-            col.impl.posY = objects.column<1>()[loc] + col.offsetY;
+            uint32_t loc = storage.reg[col.object.ID];
+            double posX = objects.column<0>()[loc];
+            double posY = objects.column<1>()[loc];
+            col.impl.posX = posX + col.offsetX;
+            col.impl.posY = posY + col.offsetY;
+            if (Transform2D* tx = ecs->getPtr<Transform2D>(objects.column<6>()[loc])) {
+                tx->local[2] = prvl::vec3(posX, posY, 1.0f);
+                tx->dirtyLocal = true;
+            }
         }
     }
 };

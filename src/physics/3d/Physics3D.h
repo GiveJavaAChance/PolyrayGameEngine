@@ -23,7 +23,9 @@
 #include <physics/3d/DynamicCollider3D.h>
 #include <physics/3d/PhysicsObject3D.h>
 
+#include <Transform3D.h>
 #include <World.h>
+#include <scene/3d/Scene3DNodeUpdatedEvent.h>
 
 #include <Profiler.h>
 
@@ -100,6 +102,26 @@ private:
         dirtyStatic = true;
     }
 
+    void onPhysicsObjectAdded(Entity e, uint32_t id) {
+        Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
+        uint32_t transformID;
+        if (ecs->getComponentID<Transform3D>(e.entityID, transformID)) {
+            uint32_t loc = storage.reg[id];
+            /*Transform3D* tx = ecs->getPtr<Transform3D>(transformID);
+            dvec3 pos = prvl::dvec3(prvl::vec3(tx->local[3u]));
+            storage.objects.column<0>()[loc] = pos.x;
+            storage.objects.column<1>()[loc] = pos.y;
+            storage.objects.column<2>()[loc] = pos.z;
+            storage.objects.column<3>()[loc] = pos.x;
+            storage.objects.column<4>()[loc] = pos.y;
+            storage.objects.column<5>()[loc] = pos.z;*/
+            storage.objects.column<9>()[loc] = transformID;
+        }
+    }
+
+    void onPhysicsObjectRemoved(Entity e, uint32_t id) {
+    }
+
     void onDynamicColliderAdded(Entity e, uint32_t id) {
         uint32_t objID;
         if (ecs->getComponentID<PhysicsObject3D>(e.entityID, objID)) {
@@ -108,6 +130,23 @@ private:
     }
 
     void onDynamicColliderRemoved(Entity e, uint32_t id) {
+    }
+
+    bool onSceneNodeUpdated(Scene3DNodeUpdatedEvent* evt) {
+        uint32_t entityID = evt->entityID;
+        if (Collider3D* col = ecs->getComponentPtr<Collider3D>(entityID)) {
+            Transform3D* tx = evt->tx;
+            mat4& m = tx->global;
+            vec3 pos = prvl::vec3(m[3u]);
+            col->posX = pos.x;
+            col->posY = pos.y;
+            col->posZ = pos.z;
+            col->sizeX = m[0u][0u];
+            col->sizeY = m[1u][1u];
+            col->sizeZ = m[2u][2u];
+            dirtyStatic = true;
+        }
+        return false;
     }
 
     void refreshStaticColliders() {
@@ -145,9 +184,11 @@ private:
     }
 
 public:
-    Physics3D(ECS* ecs, bool disabled) : ecs(ecs) {
+    Physics3D(World* world, bool disabled) : ecs(&world->ecs) {
         ecs->registerComponentListener<Collider3D, Physics3D, onStaticColliderAdded, onStaticColliderRemoved>(this);
+        ecs->registerComponentListener<PhysicsObject3D, Physics3D, onPhysicsObjectAdded, onPhysicsObjectRemoved>(this);
         ecs->registerComponentListener<DynamicCollider3D, Physics3D, onDynamicColliderAdded, onDynamicColliderRemoved>(this);
+        world->eventBus.registerEventListener<Scene3DNodeUpdatedEvent, Physics3D, onSceneNodeUpdated>(this);
         if (disabled) {
             ecs->registerUpdateCallback<Physics3D, disabledPhysicsUpdate, UpdateOrder::PHYSICS>(this);
         } else {
@@ -189,7 +230,7 @@ public:
     void physicsUpdate(double dt) {
         PROFILE_SCOPE(Physics3DUpdate)
         Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
-        MultiDynamicArray<double, double, double, double, double, double, double, double, double>& objects = storage.objects;
+        MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
         DynamicArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
         DynamicArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
@@ -442,10 +483,17 @@ public:
         // time[7] = rdtsc();
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider3D& col = dynamicColliders[i];
-            const uint32_t loc = storage.reg[col.object.ID];
-            col.impl.posX = objects.column<0>()[loc] + col.offsetX;
-            col.impl.posY = objects.column<1>()[loc] + col.offsetY;
-            col.impl.posZ = objects.column<2>()[loc] + col.offsetZ;
+            uint32_t loc = storage.reg[col.object.ID];
+            double posX = objects.column<0>()[loc];
+            double posY = objects.column<1>()[loc];
+            double posZ = objects.column<2>()[loc];
+            col.impl.posX = posX + col.offsetX;
+            col.impl.posY = posY + col.offsetY;
+            col.impl.posZ = posZ + col.offsetZ;
+            if (Transform3D* tx = ecs->getPtr<Transform3D>(objects.column<9>()[loc])) {
+                tx->local[3] = prvl::vec4(posX, posY, posZ, 1.0f);
+                tx->dirtyLocal = true;
+            }
         }
         /*time[8] = rdtsc();
         uint32_t maxIdx = 0;
@@ -462,7 +510,7 @@ public:
 
     void disabledPhysicsUpdate(double dt) {
         Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
-        MultiDynamicArray<double, double, double, double, double, double, double, double, double>& objects = storage.objects;
+        MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
         DynamicArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
 
@@ -499,10 +547,17 @@ public:
         }
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider3D& col = dynamicColliders[i];
-            const uint32_t loc = storage.reg[col.object.ID];
-            col.impl.posX = objects.column<0>()[loc] + col.offsetX;
-            col.impl.posY = objects.column<1>()[loc] + col.offsetY;
-            col.impl.posZ = objects.column<2>()[loc] + col.offsetZ;
+            uint32_t loc = storage.reg[col.object.ID];
+            double posX = objects.column<0>()[loc];
+            double posY = objects.column<1>()[loc];
+            double posZ = objects.column<2>()[loc];
+            col.impl.posX = posX + col.offsetX;
+            col.impl.posY = posY + col.offsetY;
+            col.impl.posZ = posZ + col.offsetZ;
+            if (Transform3D* tx = ecs->getPtr<Transform3D>(objects.column<9>()[loc])) {
+                tx->local[3] = prvl::vec4(posX, posY, posZ, 1.0f);
+                tx->dirtyLocal = true;
+            }
         }
     }
 };

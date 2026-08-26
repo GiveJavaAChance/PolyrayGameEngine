@@ -4,6 +4,7 @@
 #pragma once
 
 #include <ecs/Component.h>
+#include <ecs/Export.h>
 #include <ecs/Storage.h>
 #include <structure/MultiDynamicArray.h>
 #include <structure/Registry.h>
@@ -12,6 +13,7 @@ struct PhysicsObject2D {
     double posX, posY;
     double prevPosX, prevPosY;
     double accX, accY;
+    uint32_t transformID;
 };
 
 template <>
@@ -25,24 +27,24 @@ struct ExportInfo<PhysicsObject2D> {
 
 template <>
 struct Storage<PhysicsObject2D> {
-    MultiDynamicArray<double, double, double, double, double, double> objects;
+    MultiDynamicArray<double, double, double, double, double, double, uint32_t> objects;
     Registry reg;
 
     inline uint32_t add(const PhysicsObject2D& component) noexcept {
         objects.add(
             component.posX, component.posY,
             component.prevPosX, component.prevPosY,
-            component.accX, component.accY
-        );
+            component.accX, component.accY,
+            component.transformID);
         return reg.create();
     }
 
     inline void set(uint32_t componentID, const PhysicsObject2D& component) noexcept {
         objects.setIndex(reg[componentID],
-            component.posX, component.posY,
-            component.prevPosX, component.prevPosY,
-            component.accX, component.accY
-        );
+                         component.posX, component.posY,
+                         component.prevPosX, component.prevPosY,
+                         component.accX, component.accY,
+                         component.transformID);
     }
 
     inline void remove(uint32_t componentID) noexcept {
@@ -65,8 +67,8 @@ struct Storage<PhysicsObject2D> {
             objects.column<2>()[loc],
             objects.column<3>()[loc],
             objects.column<4>()[loc],
-            objects.column<5>()[loc]
-        };
+            objects.column<5>()[loc],
+            objects.column<6>()[loc]};
     }
 };
 

@@ -5,8 +5,7 @@
 
 #include <cstdint>
 
-#include <utils/ByteIO.h>
-#include <World.h>
+#include <ecs/Export.h>
 
 struct Collider2D {
     uint32_t typeId;
