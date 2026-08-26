@@ -14,7 +14,8 @@ enum InputEventType : uint8_t {
     MOUSE_BUTTON_EVENT,
     MOUSE_MOVE_EVENT,
     MOUSE_DRAG_EVENT,
-    MOUSE_SCROLL_EVENT
+    MOUSE_SCROLL_EVENT,
+    CONTROLLER_BUTTON_EVENT
 };
 
 struct InputEvent {
@@ -42,6 +43,11 @@ struct InputEvent {
         struct {
             float amt;
         } scrollEvent;
+        struct {
+            uint32_t controller;
+            uint32_t button;
+            bool pressed;
+        } controllerButtonEvent;
     };
 };
 

@@ -171,12 +171,19 @@ namespace Input {
             int count = 0;
             const unsigned char* buttons = glfwGetJoystickButtons(i, &count);
             if (count != 0 && buttons) {
-                for (int j = 0; j < count; j++) {
+                for (uint32_t j = 0u; j < static_cast<uint32_t>(count); j++) {
                     uint64_t mask = 1ull << j;
+                    bool on = buttonStates & mask;
                     if (buttons[j] == GLFW_PRESS) {
                         buttonStates |= mask;
+                        if(!on) {
+                            eventQueue.add(InputEvent{CONTROLLER_BUTTON_EVENT, {.controllerButtonEvent = {i, j, true}}});
+                        }
                     } else {
                         buttonStates &= ~mask;
+                        if(on) {
+                            eventQueue.add(InputEvent{CONTROLLER_BUTTON_EVENT, {.controllerButtonEvent = {i, j, false}}});
+                        }
                     }
                 }
             }
