@@ -50,8 +50,6 @@ struct Viewport3D {
         c->upload(cameraBuffer);
         fbo.bind();
         glViewport(0, 0, size.x, size.y);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
         return true;
     }
 };
@@ -61,10 +59,12 @@ struct Serial<Viewport3D> {
     static void serialize(World* world, uint32_t componentID, ByteWriter& output) {
         Viewport3D* viewport = world->ecs.getPtr<Viewport3D>(componentID);
         output.write(viewport->size);
+        output.write(viewport->colorFormat);
+        output.write(viewport->depthFormat);
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
-        e.addComponent(Viewport3D{input.read<uvec2>()});
+        e.addComponent(Viewport3D{input.read<uvec2>(), input.read<GLenum>(), input.read<GLenum>()});
     }
 };
 

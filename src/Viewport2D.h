@@ -50,8 +50,6 @@ struct Viewport2D {
         c->upload(cameraBuffer);
         fbo.bind();
         glViewport(0, 0, size.x, size.y);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
         return true;
     }
 };
@@ -61,10 +59,12 @@ struct Serial<Viewport2D> {
     static void serialize(World* world, uint32_t componentID, ByteWriter& output) {
         Viewport2D* viewport = world->ecs.getPtr<Viewport2D>(componentID);
         output.write(viewport->size);
+        output.write(viewport->colorFormat);
+        output.write(viewport->depthFormat);
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
-        e.addComponent(Viewport2D{input.read<uvec2>()});
+        e.addComponent(Viewport2D{input.read<uvec2>(), input.read<GLenum>(), input.read<GLenum>()});
     }
 };
 
