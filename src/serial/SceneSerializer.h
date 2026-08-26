@@ -56,13 +56,16 @@ private:
     }
 
     template <typename Scene, uint8_t Dim>
-    static SceneData serialize(World* world) {
+    static SceneData serialize(World* world, uint32_t fromNode) {
         DynamicArray<uint8_t> buffer;
 
         write(buffer, Dim);
 
         Scene* scene = world->getSystem<Scene>();
-        writeNode<Scene>(buffer, world, scene->getRootNode());
+        if (fromNode == UINT32_MAX) {
+            fromNode = scene->getRootNode();
+        }
+        writeNode<Scene>(buffer, world, fromNode);
 
         uint8_t* out = alloc<uint8_t>(buffer.size());
         std::memcpy(out, buffer.data(), buffer.size());
@@ -70,12 +73,12 @@ private:
     }
 
 public:
-    inline static SceneData serialize2D(World* world) {
-        return serialize<Scene2D, 2u>(world);
+    inline static SceneData serialize2D(World* world, uint32_t fromNode = UINT32_MAX) {
+        return serialize<Scene2D, 2u>(world, fromNode);
     }
 
-    inline static SceneData serialize3D(World* world) {
-        return serialize<Scene3D, 3u>(world);
+    inline static SceneData serialize3D(World* world, uint32_t fromNode = UINT32_MAX) {
+        return serialize<Scene3D, 3u>(world, fromNode);
     }
 };
 
