@@ -6,13 +6,10 @@
 #include <cstdint>
 
 #include <glad/glad.h>
-#include <rendering/GLTexture.h>
 #include <rendering/ShaderBuffer.h>
 #include <shader/ShaderManager.h>
-#include <shader/ShaderProgram.h>
 
 struct RenderObject {
-    ShaderProgram shader;
     ShaderBuffer vbo;
     ShaderBuffer instanceVbo;
     GLuint vao;
@@ -20,13 +17,11 @@ struct RenderObject {
     uint32_t instanceCount = 0u;
     GLenum mode = GL_TRIANGLES;
 
-    GLTexture* texture;
-
-    RenderObject(ShaderProgram shader, GLTexture* tex = nullptr) : shader(shader), vbo(GL_STATIC_DRAW), instanceVbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(shader, {vbo.ID, instanceVbo.ID})), texture(tex) {
+    RenderObject(const VertexLayoutInfo& layout) : vbo(GL_STATIC_DRAW), instanceVbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(layout, {vbo.ID, instanceVbo.ID})) {
     }
 
     template <typename T>
-    void uploadVertices(const T* vertices, const uint32_t count) {
+    void uploadVertices(const T* vertices, uint32_t count) {
         if (count == vertexCount) {
             vbo.uploadPartialData(vertices, vertexCount, 0);
         } else {
@@ -36,7 +31,7 @@ struct RenderObject {
     }
 
     template <typename T>
-    void uploadInstances(const T* instances, const uint32_t count) {
+    void uploadInstances(const T* instances, uint32_t count) {
         if (count == instanceCount) {
             instanceVbo.uploadPartialData<T>(instances, instanceCount, 0);
         } else {
@@ -48,10 +43,6 @@ struct RenderObject {
     void render() {
         if (vertexCount == 0u || instanceCount == 0u) {
             return;
-        }
-        shader.use();
-        if (texture) {
-            glBindTextureUnit(0, texture->ID);
         }
         glBindVertexArray(vao);
         glDrawArraysInstanced(mode, 0, vertexCount, instanceCount);
