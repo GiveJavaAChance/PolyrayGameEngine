@@ -6,160 +6,123 @@
 #include <cstdint>
 #include <glad/glad.h>
 
-template<typename>
+template <typename>
 inline constexpr bool always_false = false;
 
 struct ShaderProgram {
     GLuint ID = 0u;
-    uint32_t shaderHandle = UINT32_MAX;
+    uint32_t vertexShaderHandle = 0u;
 
     ShaderProgram() noexcept {
     }
 
-    ShaderProgram(const GLuint program, const uint32_t handle) noexcept : ID(program), shaderHandle(handle) {
+    ShaderProgram(GLuint program, uint32_t vertexHandle) noexcept : ID(program), vertexShaderHandle(vertexHandle) {
     }
 
     inline void use() const {
         glUseProgram(ID);
     }
 
-    template<typename T>
-    void setUniform(const char* name, const T& v0) const {
+    template <typename T>
+    void setUniform(const char* name, const T& v) const {
         GLint loc = glGetUniformLocation(ID, name);
         if (loc == -1) {
             return;
         }
-        if constexpr (std::is_same_v<T, int>) {
-            glProgramUniform1i(ID, loc, v0);
-        } else if constexpr (std::is_same_v<T, unsigned int>) {
-            glProgramUniform1ui(ID, loc, v0);
-        } else if constexpr (std::is_same_v<T, float>) {
-            glProgramUniform1f(ID, loc, v0);
-        } else if constexpr (std::is_same_v<T, double>) {
-            glProgramUniform1d(ID, loc, v0);
+
+        if constexpr (std::is_same_v<T, int32_t>) {
+            glProgramUniform1i(ID, loc, v);
+        } else if constexpr (std::is_same_v<T, ivec2>) {
+            glProgramUniform2i(ID, loc, v.x, v.y);
+        } else if constexpr (std::is_same_v<T, ivec3>) {
+            glProgramUniform3i(ID, loc, v.x, v.y, v.z);
+        } else if constexpr (std::is_same_v<T, ivec4>) {
+            glProgramUniform4i(ID, loc, v.x, v.y, v.z, v.w);
+        }
+
+        else if constexpr (std::is_same_v<T, uint32_t>) {
+            glProgramUniform1ui(ID, loc, v);
+        } else if constexpr (std::is_same_v<T, uvec2>) {
+            glProgramUniform2ui(ID, loc, v.x, v.y);
+        } else if constexpr (std::is_same_v<T, uvec3>) {
+            glProgramUniform3ui(ID, loc, v.x, v.y, v.z);
+        } else if constexpr (std::is_same_v<T, uvec4>) {
+            glProgramUniform4ui(ID, loc, v.x, v.y, v.z, v.w);
+        }
+
+        else if constexpr (std::is_same_v<T, float>) {
+            glProgramUniform1f(ID, loc, v);
+        } else if constexpr (std::is_same_v<T, vec2>) {
+            glProgramUniform2f(ID, loc, v.x, v.y);
+        } else if constexpr (std::is_same_v<T, vec3>) {
+            glProgramUniform3f(ID, loc, v.x, v.y, v.z);
+        } else if constexpr (std::is_same_v<T, vec4>) {
+            glProgramUniform4f(ID, loc, v.x, v.y, v.z, v.w);
+        }
+
+        else if constexpr (std::is_same_v<T, double>) {
+            glProgramUniform1d(ID, loc, v);
+        } else if constexpr (std::is_same_v<T, dvec2>) {
+            glProgramUniform2d(ID, loc, v.x, v.y);
+        } else if constexpr (std::is_same_v<T, dvec3>) {
+            glProgramUniform3d(ID, loc, v.x, v.y, v.z);
+        } else if constexpr (std::is_same_v<T, dvec4>) {
+            glProgramUniform4d(ID, loc, v.x, v.y, v.z, v.w);
         } else {
             static_assert(always_false<T>, "Unsupported uniform type");
         }
     }
 
-    template<typename T>
-    void setUniform(const char* name, const T& v0, const T& v1) const {
+    template <typename T>
+    void setUniform(const char* name, const T* v, uint32_t count) const {
         GLint loc = glGetUniformLocation(ID, name);
         if (loc == -1) {
             return;
         }
-        if constexpr (std::is_same_v<T, int>) {
-            glProgramUniform2i(ID, loc, v0, v1);
-        } else if constexpr (std::is_same_v<T, unsigned int>) {
-            glProgramUniform2ui(ID, loc, v0, v1);
-        } else if constexpr (std::is_same_v<T, float>) {
-            glProgramUniform2f(ID, loc, v0, v1);
-        } else if constexpr (std::is_same_v<T, double>) {
-            glProgramUniform2d(ID, loc, v0, v1);
+        if constexpr (std::is_same_v<T, int32_t>) {
+            glProgramUniform1iv(ID, loc, count, v);
+        } else if constexpr (std::is_same_v<T, ivec2>) {
+            glProgramUniform2iv(ID, loc, count, reinterpret_cast<const int32_t*>(v));
+        } else if constexpr (std::is_same_v<T, ivec3>) {
+            glProgramUniform3iv(ID, loc, count, reinterpret_cast<const int32_t*>(v));
+        } else if constexpr (std::is_same_v<T, ivec4>) {
+            glProgramUniform4iv(ID, loc, count, reinterpret_cast<const int32_t*>(v));
+        }
+
+        else if constexpr (std::is_same_v<T, uint32_t>) {
+            glProgramUniform1uiv(ID, loc, count, v);
+        } else if constexpr (std::is_same_v<T, uvec2>) {
+            glProgramUniform2uiv(ID, loc, count, reinterpret_cast<const uint32_t*>(v));
+        } else if constexpr (std::is_same_v<T, uvec3>) {
+            glProgramUniform3uiv(ID, loc, count, reinterpret_cast<const uint32_t*>(v));
+        } else if constexpr (std::is_same_v<T, uvec4>) {
+            glProgramUniform4uiv(ID, loc, count, reinterpret_cast<const uint32_t*>(v));
+        }
+
+        else if constexpr (std::is_same_v<T, float>) {
+            glProgramUniform1fv(ID, loc, count, v);
+        } else if constexpr (std::is_same_v<T, vec2>) {
+            glProgramUniform2fv(ID, loc, count, reinterpret_cast<const float*>(v));
+        } else if constexpr (std::is_same_v<T, vec3>) {
+            glProgramUniform3fv(ID, loc, count, reinterpret_cast<const float*>(v));
+        } else if constexpr (std::is_same_v<T, vec4>) {
+            glProgramUniform4fv(ID, loc, count, reinterpret_cast<const float*>(v));
+        }
+
+        else if constexpr (std::is_same_v<T, double>) {
+            glProgramUniform1dv(ID, loc, count, v);
+        } else if constexpr (std::is_same_v<T, dvec2>) {
+            glProgramUniform2dv(ID, loc, count, reinterpret_cast<const double*>(v));
+        } else if constexpr (std::is_same_v<T, dvec3>) {
+            glProgramUniform3dv(ID, loc, count, reinterpret_cast<const double*>(v));
+        } else if constexpr (std::is_same_v<T, dvec4>) {
+            glProgramUniform4dv(ID, loc, count, reinterpret_cast<const double*>(v));
         } else {
             static_assert(always_false<T>, "Unsupported uniform type");
         }
     }
 
-    template<typename T>
-    void setUniform(const char* name, const T& v0, const T& v1, const T& v2) const {
-        GLint loc = glGetUniformLocation(ID, name);
-        if (loc == -1) {
-            return;
-        }
-        if constexpr (std::is_same_v<T, int>) {
-            glProgramUniform3i(ID, loc, v0, v1, v2);
-        } else if constexpr (std::is_same_v<T, unsigned int>) {
-            glProgramUniform3ui(ID, loc, v0, v1, v2);
-        } else if constexpr (std::is_same_v<T, float>) {
-            glProgramUniform3f(ID, loc, v0, v1, v2);
-        } else if constexpr (std::is_same_v<T, double>) {
-            glProgramUniform3d(ID, loc, v0, v1, v2);
-        } else {
-            static_assert(always_false<T>, "Unsupported uniform type");
-        }
-    }
-
-    template<typename T>
-    void setUniform(const char* name, const T& v0, const T& v1, const T& v2, const T& v3) const {
-        GLint loc = glGetUniformLocation(ID, name);
-        if (loc == -1) {
-            return;
-        }
-        if constexpr (std::is_same_v<T, int>) {
-            glProgramUniform4i(ID, loc, v0, v1, v2, v3);
-        } else if constexpr (std::is_same_v<T, unsigned int>) {
-            glProgramUniform4ui(ID, loc, v0, v1, v2, v3);
-        } else if constexpr (std::is_same_v<T, float>) {
-            glProgramUniform4f(ID, loc, v0, v1, v2, v3);
-        } else if constexpr (std::is_same_v<T, double>) {
-            glProgramUniform4d(ID, loc, v0, v1, v2, v3);
-        } else {
-            static_assert(always_false<T>, "Unsupported uniform type");
-        }
-    }
-
-    template<uint32_t dim, typename T>
-    void setUniform(const char* name, const T* v, const uint32_t count) const {
-        GLint loc = glGetUniformLocation(ID, name);
-        if (loc == -1) {
-            return;
-        }
-        if constexpr (std::is_same_v<T, int>) {
-            if constexpr (dim == 1u) {
-                glProgramUniform1iv(ID, loc, count, v);
-            } else if constexpr (dim == 2u) {
-                glProgramUniform2iv(ID, loc, count, v);
-            } else if constexpr (dim == 3u) {
-                glProgramUniform3iv(ID, loc, count, v);
-            } else if constexpr (dim == 4u) {
-                glProgramUniform4iv(ID, loc, count, v);
-            } else {
-                static_assert(always_false<T>, "Unsupported vector dimension");
-            }
-        } else if constexpr (std::is_same_v<T, unsigned int>) {
-            if constexpr (dim == 1u) {
-                glProgramUniform1uiv(ID, loc, count, v);
-            } else if constexpr (dim == 2u) {
-                glProgramUniform2uiv(ID, loc, count, v);
-            } else if constexpr (dim == 3u) {
-                glProgramUniform3uiv(ID, loc, count, v);
-            } else if constexpr (dim == 4u) {
-                glProgramUniform4uiv(ID, loc, count, v);
-            } else {
-                static_assert(always_false<T>, "Unsupported vector dimension");
-            }
-        } else if constexpr (std::is_same_v<T, float>) {
-            if constexpr (dim == 1u) {
-                glProgramUniform1fv(ID, loc, count, v);
-            } else if constexpr (dim == 2u) {
-                glProgramUniform2fv(ID, loc, count, v);
-            } else if constexpr (dim == 3u) {
-                glProgramUniform3fv(ID, loc, count, v);
-            } else if constexpr (dim == 4u) {
-                glProgramUniform4fv(ID, loc, count, v);
-            } else {
-                static_assert(always_false<T>, "Unsupported vector dimension");
-            }
-        } else if constexpr (std::is_same_v<T, double>) {
-            if constexpr (dim == 1u) {
-                glProgramUniform1dv(ID, loc, count, v);
-            } else if constexpr (dim == 2u) {
-                glProgramUniform2dv(ID, loc, count, v);
-            } else if constexpr (dim == 3u) {
-                glProgramUniform3dv(ID, loc, count, v);
-            } else if constexpr (dim == 4u) {
-                glProgramUniform4dv(ID, loc, count, v);
-            } else {
-                static_assert(always_false<T>, "Unsupported vector dimension");
-            }
-        } else {
-            static_assert(always_false<T>, "Unsupported uniform type");
-        }
-    }
-
-    void dispatchCompute(const GLuint numGroupsX, const GLuint numGroupsY, const GLuint numGroupsZ, const GLbitfield barriers) const {
-        glUseProgram(ID);
+    void dispatchCompute(GLuint numGroupsX, GLuint numGroupsY, GLuint numGroupsZ, GLbitfield barriers) const {
         glDispatchCompute(numGroupsX, numGroupsY, numGroupsZ);
         glMemoryBarrier(barriers);
     }
