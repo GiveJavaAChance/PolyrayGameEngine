@@ -65,7 +65,11 @@ public:
 
     template <typename Sys>
     Sys* getSystem() {
-        return reinterpret_cast<Sys*>(systems[SystemTypes::getTypeId<Sys>()].instance);
+        uint32_t id = SystemTypes::getTypeId<Sys>();
+        if(id > systems.size()) {
+            return nullptr;
+        }
+        return reinterpret_cast<Sys*>(systems[id].instance);
     }
 
     void update(double dt) {
