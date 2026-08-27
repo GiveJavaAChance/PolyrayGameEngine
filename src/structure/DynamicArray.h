@@ -137,6 +137,10 @@ public:
         return pos;
     }
 
+    inline u32 capacity() const {
+        return length;
+    }
+
     // Get the backing data
     inline T* data() const {
         return ptr;
