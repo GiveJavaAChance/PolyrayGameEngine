@@ -6,38 +6,45 @@
 #include <unordered_map>
 #include <rendering/GLTexture.h>
 #include <rendering/ShaderBuffer.h>
+#include <structure/IDGenerator.h>
 
 namespace BindingRegistry {
     namespace Internal {
+        inline IDGenerator bufferGen;
+        inline IDGenerator textureGen;
         inline std::unordered_map<GLuint, GLuint> texBindings;
         inline std::unordered_map<GLuint, GLuint> bufBindings;
 
-        inline int getNewBinding(std::unordered_map<GLuint, GLuint>& usedBindings, GLuint max) {
-            GLuint maxSearchRange = 0u;
-            for (std::pair<GLuint, GLuint> i : usedBindings) {
-                if (i.second > maxSearchRange) {
-                    maxSearchRange = i.second;
-                }
+        inline uint32_t getNewBinding(IDGenerator& gen, GLuint max) {
+            uint32_t binding = gen.getNewID();
+            if(binding > max) {
+                return UINT32_MAX;
             }
-            maxSearchRange += 2u;
-            if (maxSearchRange > max) {
-                maxSearchRange = max;
-            }
-            for (GLuint i = 0; i < max; i++) {
-                bool used = false;
-                for (std::pair<GLuint, GLuint> kv : usedBindings) {
-                    if (kv.second == i) {
-                        used = true;
-                        break;
-                    }
-                }
-                if (!used) return i;
-            }
-            return -1;
+            return binding;
         }
     }
 
     using namespace Internal;
+
+    inline GLuint allocateTextureBinding() {
+        GLint max;
+        glGetIntegerv(GL_MAX_IMAGE_UNITS, &max);
+        return getNewBinding(textureGen, max);
+    }
+
+    inline GLuint allocateBufferBinding() {
+        GLint max;
+        glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &max);
+        return getNewBinding(bufferGen, max);
+    }
+
+    inline void freeTextureBinding(GLuint binding) {
+        textureGen.free(binding);
+    }
+
+    inline void freeBufferBinding(GLuint binding) {
+        bufferGen.free(binding);
+    }
 
     inline GLuint bindImageTexture(const GLTexture& texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format) {
         auto it = texBindings.find(texture.ID);
@@ -46,8 +53,8 @@ namespace BindingRegistry {
         }
         GLint max;
         glGetIntegerv(GL_MAX_IMAGE_UNITS, &max);
-        int binding = getNewBinding(texBindings, max);
-        if (binding == -1) {
+        uint32_t binding = getNewBinding(textureGen, max);
+        if (binding == UINT32_MAX) {
             std::cerr << "No available image binding points!" << std::endl;
             return UINT32_MAX;
         }
@@ -67,8 +74,8 @@ namespace BindingRegistry {
         }
         GLint max;
         glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &max);
-        int binding = getNewBinding(bufBindings, max);
-        if (binding == -1) {
+        uint32_t binding = getNewBinding(bufferGen, max);
+        if (binding == UINT32_MAX) {
             std::cerr << "No available image binding points!" << std::endl;
             return UINT32_MAX;
         }
@@ -78,10 +85,12 @@ namespace BindingRegistry {
     }
 
     inline void unbindImageTexture(const GLTexture& texture) {
+        freeTextureBinding(texBindings[texture.ID]);
         texBindings.erase(texture.ID);
     }
 
     inline void unbindImageTexture(const ShaderBuffer& buffer) {
+        freeBufferBinding(bufBindings[buffer.ID]);
         bufBindings.erase(buffer.ID);
     }
 }
