@@ -12,18 +12,16 @@
 #include <rendering/ShaderBuffer.h>
 #include <serial/Serial.h>
 
+#include <gpu_types/GpuCamera3D.h>
+
 enum ProjectionMode : uint8_t {
     PERSPECTIVE,
     ORTHOGRAPHIC
 };
 
 struct Camera3D {
-    constexpr static uint32_t DATA_SIZE = 68u;
-
     mat4 cameraTransform;
     mat4 inverseCameraTransform;
-    mat4 projection;
-    mat4 inverseProjection;
     vec3 cameraPos;
 
     ProjectionMode projectionMode;
@@ -38,31 +36,21 @@ struct Camera3D {
     } orthographic;
 
     bool current;
-    bool dirty;
 
     ComponentRef<Transform3D> transformRef;
 
-    Camera3D(float nearZ = 0.1f, float fov = 90.0f) : projectionMode(ProjectionMode::PERSPECTIVE), perspective(nearZ, fov), current(false), dirty(true), transformRef(UINT32_MAX) {
+    Camera3D(float nearZ = 0.1f, float fov = 90.0f) : projectionMode(ProjectionMode::PERSPECTIVE), perspective(nearZ, fov), current(false), transformRef(UINT32_MAX) {
     }
 
-    Camera3D(float width, float nearZ = 0.1f, float farZ = 10.0f) : projectionMode(ProjectionMode::ORTHOGRAPHIC), orthographic(width, nearZ, farZ), current(false), dirty(true), transformRef(UINT32_MAX) {
+    Camera3D(float width, float nearZ = 0.1f, float farZ = 10.0f) : projectionMode(ProjectionMode::ORTHOGRAPHIC), orthographic(width, nearZ, farZ), current(false), transformRef(UINT32_MAX) {
     }
 
-    void update(float width, float height) {
-        if (!dirty) {
-            return;
-        }
-        dirty = false;
+    mat4 getProjection(vec2 size) {
+        float aspectRatio = size.x / size.y;
         if (projectionMode == ProjectionMode::PERSPECTIVE) {
-            projection = reverseZPerspectiveProjection(perspective.fov * 0.0174532925199f, width / height, perspective.nearZ);
-        } else {
-            projection = orthographicProjection(orthographic.width, width / height, orthographic.nearZ, orthographic.farZ);
+            return reverseZPerspectiveProjection(perspective.fov * 0.0174532925199f, aspectRatio, perspective.nearZ);
         }
-        inverseProjection = inverse(projection);
-    }
-
-    void upload(const ShaderBuffer& cameraBuffer) {
-        cameraBuffer.uploadPartialData(cameraTransform.data(), DATA_SIZE, 0u);
+        return orthographicProjection(orthographic.width, aspectRatio, orthographic.nearZ, orthographic.farZ);
     }
 };
 
@@ -93,7 +81,6 @@ struct ExportInfo<Camera3D> {
         {offsetof(Camera3D, orthographic.nearZ), EXPORT_FLOAT, "Orthographic Near Z"},
         {offsetof(Camera3D, orthographic.farZ), EXPORT_FLOAT, "Orthographic Far Z"},
         {offsetof(Camera3D, current), EXPORT_BOOL, "Current"},
-        {offsetof(Camera3D, dirty), EXPORT_DIRTY_FLAG, ""},
     };
 };
 

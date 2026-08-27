@@ -6,8 +6,6 @@
 #include <Renderer.h>
 #include <Transform2D.h>
 #include <Transform3D.h>
-#include <Viewport2D.h>
-#include <Viewport3D.h>
 #include <physics/2d/Collider2D.h>
 #include <physics/2d/DynamicCollider2D.h>
 #include <physics/2d/Physics2D.h>
@@ -20,14 +18,12 @@
 void ComponentRegistry::registerBuiltInComponents() {
     registerComponentType<Transform2D>();
     registerComponentType<Camera2D>();
-    registerComponentType<Viewport2D>();
     registerComponentType<PhysicsObject2D>();
     registerComponentType<Collider2D>();
     registerComponentType<DynamicCollider2D>();
 
     registerComponentType<Transform3D>();
     registerComponentType<Camera3D>();
-    registerComponentType<Viewport3D>();
     registerComponentType<PhysicsObject3D>();
     registerComponentType<Collider3D>();
     registerComponentType<DynamicCollider3D>();

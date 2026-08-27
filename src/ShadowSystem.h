@@ -8,18 +8,9 @@
 #include <rendering/GLGBuffer.h>
 #include <rendering/GLTexture.h>
 
-struct ShadowSystem {
-private:
-    struct ShadowCamera {
-        mat4 cameraTransform;
-        mat4 inverseCameraTransform;
-        mat4 projection;
-        mat4 inverseProjection;
-        vec3 cameraPos;
-        float padding;
-    };
+#include <gpu_types/GpuCamera3D.h>
 
-public:
+struct ShadowSystem {
     uint32_t shadowsX;
     uint32_t shadowsY;
     uint32_t maxShadowCount;
@@ -29,9 +20,12 @@ public:
 
     ShaderBuffer shadowCamBuffer;
 
-    UnorderedRegistry<ShadowCamera> shadowCameras;
+    ShaderBuffer cameraBuffer;
+    uint32_t cameraBufferStride;
 
-    ShadowSystem(uint32_t shadowsX, uint32_t shadowsY) : shadowsX(shadowsX), shadowsY(shadowsY), maxShadowCount(shadowsX * shadowsY), shadowAtlas(GLTexture::createTexture2D(2048u * shadowsX, 2048u * shadowsY, GL_DEPTH_COMPONENT32)), shadowBuffer(std::initializer_list<GLTexture*>{}, &shadowAtlas), shadowCamBuffer(GL_DYNAMIC_DRAW) {
+    UnorderedRegistry<GpuCamera3D> shadowCameras;
+
+    ShadowSystem(uint32_t shadowsX, uint32_t shadowsY) : shadowsX(shadowsX), shadowsY(shadowsY), maxShadowCount(shadowsX * shadowsY), shadowAtlas(GLTexture::createTexture2D(2048u * shadowsX, 2048u * shadowsY, GL_DEPTH_COMPONENT32)), shadowBuffer(std::initializer_list<GLTexture*>{}, &shadowAtlas), shadowCamBuffer(GL_DYNAMIC_DRAW), cameraBuffer(GL_DYNAMIC_DRAW) {
         shadowAtlas.setInterpolation(true);
         glTextureParameteri(shadowAtlas.ID, GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
         glTextureParameteri(shadowAtlas.ID, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
@@ -40,12 +34,18 @@ public:
         glTextureParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
         shadowCamBuffer.setSize(maxShadowCount * (sizeof(mat4) + sizeof(vec4)));
         ShaderManager::setValue("SHADOW3D_IDX", BindingRegistry::bindBufferBase(shadowCamBuffer, GL_SHADER_STORAGE_BUFFER));
+
+        GLint alignment;
+        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &alignment);
+        cameraBufferStride = (sizeof(GpuCamera3D) + alignment - 1u) / alignment * alignment;
+
+        cameraBuffer.setSize(maxShadowCount * cameraBufferStride);
         glBindTextureUnit(32u, shadowAtlas.ID);
     }
 
     uint32_t createOrthographicShadowCaster(float width, float depth) {
         uint32_t id = shadowCameras.emplace();
-        ShadowCamera& cam = shadowCameras[id];
+        GpuCamera3D& cam = shadowCameras[id];
         cam.projection = orthographicProjection(width, 1.0f, -depth * 0.5f, depth * 0.5f);
         cam.inverseProjection = inverse(cam.projection);
         return id;
@@ -53,7 +53,7 @@ public:
 
     uint32_t createPerspectiveShadowCaster(float fov, float nearZ) {
         uint32_t id = shadowCameras.emplace();
-        ShadowCamera& cam = shadowCameras[id];
+        GpuCamera3D& cam = shadowCameras[id];
         cam.projection = reverseZPerspectiveProjection(fov, 1.0f, nearZ);
         cam.inverseProjection = inverse(cam.projection);
         return id;
@@ -64,7 +64,7 @@ public:
     }
 
     void updateShadowCamera(uint32_t shadowId, const mat4& transform) {
-        ShadowCamera& cam = shadowCameras[shadowId];
+        GpuCamera3D& cam = shadowCameras[shadowId];
         cam.cameraPos = prvl::vec3(transform[3]);
         cam.inverseCameraTransform = prvl::mat4(prvl::mat3(transform));
         cam.cameraTransform = transpose(cam.inverseCameraTransform);
@@ -82,13 +82,13 @@ public:
         uint32_t shadowY = (i / shadowsX) * 2048u;
         Shadow shadow{cam.projection * cam.cameraTransform * tr, {shadowX, shadowY}, {2048u, 2048u}};
         shadowCamBuffer.uploadPartialData(&shadow, 1u, i);
+        cameraBuffer.uploadPartialData((void*) &cam, sizeof(GpuCamera3D), i * cameraBufferStride);
     }
 
-    void renderShadows(ShaderBuffer* cameraBuffer, Renderer* renderer) {
+    void renderShadows(GLuint cameraBinding, Renderer* renderer) {
         shadowBuffer.bind();
         glEnable(GL_DEPTH_TEST);
         for (uint32_t i = 0u; i < shadowCameras.size(); i++) {
-            ShadowCamera& cam = shadowCameras.arr[i];
             uint32_t shadowX = (i % shadowsX) * 2048u;
             uint32_t shadowY = (i / shadowsX) * 2048u;
 
@@ -98,7 +98,7 @@ public:
             glClear(GL_DEPTH_BUFFER_BIT);
             glDisable(GL_SCISSOR_TEST);
 
-            cameraBuffer->uploadPartialData(cam.cameraTransform.data(), 68u, 0u);
+            glBindBufferRange(GL_UNIFORM_BUFFER, cameraBinding, cameraBuffer.ID, i * cameraBufferStride, sizeof(GpuCamera3D));
             renderer->render(RenderMode::DEPTH);
         }
     }
