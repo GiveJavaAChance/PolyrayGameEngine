@@ -28,7 +28,7 @@ struct Entity {
     ECS* ecs;
 
     template <Component T>
-    inline void addComponent(const T& component);
+    inline uint32_t addComponent(const T& component);
 
     template <Component T>
     inline bool setComponent(const T& component);
@@ -76,7 +76,7 @@ public:
 struct ComponentReflection {
     void* (*allocateStorage)();
     void (*freeStorage)(void*);
-    void (*createAndAddComponent)(void*, uint32_t);
+    uint32_t (*createAndAddComponent)(void*, uint32_t);
     void (*removeComponent)(void*, uint32_t);
     void (*removeComponentByID)(void*, uint32_t, uint32_t);
     void* (*getComponentPtr)(void*, uint32_t);
@@ -400,7 +400,7 @@ public:
     }
 
     template <Component T>
-    void addComponent(uint32_t entityID, const T& component) {
+    uint32_t addComponent(uint32_t entityID, const T& component) {
         static uint32_t type = ComponentMetadata::typeOf<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
         Storage<T>* storage = getStorage<T>();
@@ -410,15 +410,16 @@ public:
         uint32_t componentID = storage->add(component);
         entities[location][idx] = componentType | static_cast<uint64_t>(componentID);
         componentAdded(entityID, type, componentID);
+        return componentID;
     }
 
     template <Component T, T (*Create)()>
-    void createAndAddComponent(uint32_t entityID) {
-        addComponent(entityID, Create());
+    uint32_t createAndAddComponent(uint32_t entityID) {
+        return addComponent(entityID, Create());
     }
 
-    inline void reflectCreateAndAddComponent(uint32_t type, uint32_t entityID) {
-        ComponentRegistry::reflection[type].createAndAddComponent(this, entityID);
+    inline uint32_t reflectCreateAndAddComponent(uint32_t type, uint32_t entityID) {
+        return ComponentRegistry::reflection[type].createAndAddComponent(this, entityID);
     }
 
     template <Component T>
@@ -718,7 +719,7 @@ ComponentView<T>::~ComponentView() {
 }
 
 template <Component T>
-inline void Entity::addComponent(const T& component) {
+inline uint32_t Entity::addComponent(const T& component) {
     return ecs->addComponent<T>(entityID, component);
 }
 
@@ -763,7 +764,7 @@ inline void ComponentRegistry::registerComponentType() {
     reflection[meta.typeId] = ComponentReflection{
         []() { return (void*) new Storage<T>{}; },
         [](void* storage) { delete reinterpret_cast<Storage<T>*>(storage); },
-        reinterpret_cast<void (*)(void* ecs, uint32_t)>(&Invoke<uint32_t>::thunk<ECS, ECS::createAndAddComponent<T, Create>>),
+        reinterpret_cast<uint32_t (*)(void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, uint32_t, ECS::createAndAddComponent<T, Create>>),
         &Invoke<uint32_t>::thunk<ECS, ECS::removeComponent<T>>,
         &Invoke<uint32_t, uint32_t>::thunk<ECS, ECS::removeComponent<T>>,
         reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, ECS::getComponentPtr<T>>),
