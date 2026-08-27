@@ -8,6 +8,10 @@
 #include <World.h>
 #include <prvl.h>
 
+#include <gpu_types/GpuDirectionalLight3D.h>
+#include <gpu_types/GpuPointLight3D.h>
+#include <gpu_types/GpuSpotLight3D.h>
+
 struct DirectionalLight3D {
     vec3 color;
     float strength;
@@ -117,33 +121,6 @@ private:
         prvl::mat3({1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f}),
         prvl::mat3({-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}),
         prvl::mat3({1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}),
-    };
-
-    struct GpuDirectionalLight3D {
-        vec3 color;
-        float strength;
-        vec3 dir;
-        uint32_t shadowIdx;
-    };
-
-    struct GpuSpotLight3D {
-        vec3 color;
-        float strength;
-        vec3 pos;
-        float distanceAttenuation;
-        vec3 dir;
-        float spotCosAngle;
-        uint32_t shadowIdx;
-        uint32_t __padding__[3u];
-    };
-
-    struct GpuPointLight3D {
-        vec3 color;
-        float strength;
-        vec3 pos;
-        float distanceAttenuation;
-        uint32_t shadowIdx[6u];
-        uint32_t __padding__[2u];
     };
 
     ECS* ecs;
