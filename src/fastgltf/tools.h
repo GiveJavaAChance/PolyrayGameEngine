@@ -889,10 +889,9 @@ FASTGLTF_EXPORT inline auto getLocalTransformMatrix(const Node& node) {
 			return matrix;
 		},
 		[&](const TRS& trs) {
-			mat4 tx = diag(prvl::vec4(1.0f));
+			mat4 tx = prvl::mat4(diag(trs.scale));
+			tx *= prvl::mat4(prvl::mat3(trs.rotation));
 			tx[3] = prvl::vec4(trs.translation, 1.0f);
-			tx = prvl::mat4(prvl::mat3(trs.rotation)) * tx;
-			tx = prvl::mat4(diag(trs.scale)) * tx;
 			return tx;
 		}
 	}, node.transform);
@@ -902,7 +901,7 @@ FASTGLTF_EXPORT inline auto getLocalTransformMatrix(const Node& node) {
  * Computes the transform matrix for a given node, and multiplies the given base with that matrix.
  */
 FASTGLTF_EXPORT inline auto getTransformMatrix(const Node& node, const mat4& base = diag(prvl::vec4(1.0f))) {
-	return base * getLocalTransformMatrix(node);
+	return getLocalTransformMatrix(node) * base;
 }
 
 /**
