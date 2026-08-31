@@ -31,7 +31,7 @@ vec3 PBRLighting(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 lightColor, vec3
     float G = geometrySchlickGGX(NV, roughness) *
               geometrySchlickGGX(NL, roughness);
 
-    vec3 specular = D * G * F / max(NV * NL, 0.01) * 0.25;
+    vec3 specular = D * G * F / max(NV * NL, 0.001) * 0.25;
 
     vec3 kD = (1.0 - F) * (1.0 - metallic);
 
