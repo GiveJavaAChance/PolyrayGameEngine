@@ -19,7 +19,6 @@ void main() {
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
     ivec2 size = imageSize(ssaoTexture);
     if(pos.x >= size.x || pos.y >= size.y) {
-        imageStore(ssaoTexture, pos, vec4(1.0, 0.0, 0.0, 1.0));
         return;
     }
     vec2 uv = (vec2(pos) + 0.5) / vec2(size);
