@@ -23,15 +23,20 @@ target_compile_features(Polyray PUBLIC cxx_std_20)
 
 target_include_directories(Polyray PUBLIC
     src
-    lib/glfw/include
 )
 
-target_link_directories(Polyray PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw/lib-mingw-w64
+include(FetchContent)
+
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG 3.4
 )
+
+FetchContent_MakeAvailable(glfw)
 
 target_link_libraries(Polyray PUBLIC
-    glfw3
+    glfw
 )
 
 target_compile_options(Polyray PRIVATE
