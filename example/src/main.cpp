@@ -135,8 +135,8 @@ int main() {
     ECS& ecs = world.ecs;
 
 
-    // Set up all systems you'll use (some depends on others already being in the world)
-    // The order in which the systems are added matters a tiny bit, sometimes you might get a one frame
+    // Set up all systems you'll use (some depend on others already being in the world)
+    // The order in which the systems are added matters a tiny bit, sometimes you might get a off-by-one frame
     // delay caused by systems bing out of order.
     // This order is pretty standard though:
 
