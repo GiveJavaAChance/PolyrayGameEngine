@@ -5,22 +5,23 @@
 
 #include <cstdint>
 #include <cstring>
-#include <fstream>
-#include <string>
-#include <vector>
 #include <filesystem>
-#include <windows.h>
+#include <fstream>
 #include <immintrin.h>
-#include <stb_image.h>
+#include <ostream>
 #include <rendering/GLTexture.h>
 #include <scene/SceneData.h>
-#include <ostream>
+#include <stb_image.h>
+#include <string>
+#include <vector>
+#include <windows.h>
 
 struct ResourcePath {
 private:
     std::string str;
 
     void normalize() {
+        str = std::filesystem::path{str}.lexically_normal().string();
         for (char& c : str) {
             if (c == '\\') {
                 c = '/';
@@ -60,6 +61,14 @@ public:
         return str.substr(pos + 1u);
     }
 
+    ResourcePath getParent() const {
+        size_t pos = str.find_last_of('/');
+        if (pos == std::string::npos) {
+            return ResourcePath{};
+        }
+        return ResourcePath(str.substr(0u, pos));
+    }
+
     inline std::filesystem::path getAbsolutePath() const;
 
     bool isDirectory() const {
@@ -70,7 +79,29 @@ public:
         out.write(path.str.data(), path.str.size());
         return out;
     }
+
+    inline ResourcePath& operator/=(const ResourcePath& other) {
+        str += "/";
+        str += other.str;
+        normalize();
+        return *this;
+    }
+
+    inline ResourcePath& operator/=(const std::string& other) {
+        str += "/";
+        str += other;
+        normalize();
+        return *this;
+    }
 };
+
+inline ResourcePath operator/(const ResourcePath& a, const ResourcePath& b) {
+    return ResourcePath(a.string() + "/" + b.string());
+}
+
+inline ResourcePath operator/(const ResourcePath& a, const std::string& b) {
+    return ResourcePath(a.string() + "/" + b);
+}
 
 enum ImageFormat : uint8_t {
     RGBA8,
@@ -79,7 +110,7 @@ enum ImageFormat : uint8_t {
     FLOAT32_RGB
 };
 
-template<ImageFormat F>
+template <ImageFormat F>
 struct ImageFormatType;
 
 template<> struct ImageFormatType<ImageFormat::RGBA8> { using type = uint32_t; constexpr static int format = STBI_rgb_alpha; constexpr static GLenum glFormat = GL_RGBA8; constexpr static GLenum glPixFormat = GL_RGBA; constexpr static GLenum glType = GL_UNSIGNED_BYTE; };
@@ -154,25 +185,24 @@ namespace ResourceManager {
         return content;
     }
 
-    template<ImageFormat format = RGBA8>
-    inline typename ImageFormatType<format>::type* getResourceAsImage(const ResourcePath& res, uint32_t& width, uint32_t& height) {
+    template <ImageFormat format = RGBA8>
+    inline typename ImageFormatType<format>::type* getResourceAsImage(const ResourcePath& res, uint32_t& width, uint32_t& height, bool flippedY = false) {
         std::filesystem::path path = res.getAbsolutePath();
         int channels;
+        stbi_set_flip_vertically_on_load(flippedY);
         if constexpr (format == FLOAT32_RGB) {
             return stbi_loadf(
                 reinterpret_cast<const char*>(path.u8string().c_str()),
                 reinterpret_cast<int*>(&width), reinterpret_cast<int*>(&height),
                 &channels,
-                3
-            );
+                3);
         } else {
             using PixelType = ImageFormatType<format>::type;
             PixelType* data = reinterpret_cast<PixelType*>(stbi_load(
                 reinterpret_cast<const char*>(path.u8string().c_str()),
                 reinterpret_cast<int*>(&width), reinterpret_cast<int*>(&height),
                 &channels,
-                ImageFormatType<format>::format
-            ));
+                ImageFormatType<format>::format));
             if (!data) {
                 return nullptr;
             }
@@ -181,7 +211,7 @@ namespace ResourceManager {
                 const uint32_t numWords = (numBits + 31u) >> 5u;
                 uint32_t* newData = reinterpret_cast<uint32_t*>(_mm_malloc(numWords * sizeof(uint32_t), 32u));
                 std::memset(newData, 0, numWords * sizeof(uint32_t));
-                for(uint32_t i = 0u; i < numBits; i++) {
+                for (uint32_t i = 0u; i < numBits; i++) {
                     newData[i >> 5u] |= ((data[i] > 127u) ? 1u : 0u) << (i & 31u);
                 }
                 _mm_free(data);
@@ -191,12 +221,12 @@ namespace ResourceManager {
         }
     }
 
-    template<ImageFormat fmt = RGBA8>
+    template <ImageFormat fmt = RGBA8>
     inline GLTexture getResourceAsTexture(const ResourcePath& res, const uint32_t mipLevels = 1u, const GLenum format = ImageFormatType<fmt>::glFormat) {
         uint32_t width, height;
         using PixelType = ImageFormatType<fmt>::type;
-        PixelType* pixels = getResourceAsImage<fmt>(res, width, height);
-        if(!pixels) {
+        PixelType* pixels = getResourceAsImage<fmt>(res, width, height, true);
+        if (!pixels) {
             return {};
         }
         GLTexture tex = GLTexture::createTexture2D(width, height, format, mipLevels);
