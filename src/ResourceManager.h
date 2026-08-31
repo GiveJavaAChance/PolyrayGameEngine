@@ -222,7 +222,7 @@ namespace ResourceManager {
     }
 
     template <ImageFormat fmt = RGBA8>
-    inline GLTexture getResourceAsTexture(const ResourcePath& res, const uint32_t mipLevels = 1u, const GLenum format = ImageFormatType<fmt>::glFormat) {
+    inline GLTexture getResourceAsTexture(const ResourcePath& res, int32_t mipLevels = 1, GLenum format = ImageFormatType<fmt>::glFormat) {
         uint32_t width, height;
         using PixelType = ImageFormatType<fmt>::type;
         PixelType* pixels = getResourceAsImage<fmt>(res, width, height, true);

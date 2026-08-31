@@ -8,6 +8,8 @@
 
 #include <glad/glad.h>
 
+#include <prvl.h>
+
 struct GLTexture {
     GLuint ID;
     GLenum target;
@@ -79,8 +81,13 @@ struct GLTexture {
         return ID != 0;
     }
 
-    inline static GLTexture createTexture2D(uint32_t width, uint32_t height, GLenum format = GL_RGBA8, uint32_t mipLevels = 1u) {
+    inline static GLTexture createTexture2D(uint32_t width, uint32_t height, GLenum format = GL_RGBA8, int32_t mipLevels = 1) {
         GLTexture tex;
+
+        if(mipLevels == -1) {
+            mipLevels = 1 + static_cast<int32_t>(floor(log2(max(width, height))));
+        }
+
         tex.target = GL_TEXTURE_2D;
         tex.format = format;
         tex.mipLevels = mipLevels;
@@ -97,8 +104,13 @@ struct GLTexture {
         return tex;
     }
 
-    inline static GLTexture createTextureArray(uint32_t width, uint32_t height, uint32_t layerCount, GLenum format = GL_RGBA8, uint32_t mipLevels = 1u) {
+    inline static GLTexture createTextureArray(uint32_t width, uint32_t height, uint32_t layerCount, GLenum format = GL_RGBA8, int32_t mipLevels = 1) {
         GLTexture tex;
+
+        if(mipLevels == -1) {
+            mipLevels = 1 + static_cast<int32_t>(floor(log2(max(width, height))));
+        }
+
         tex.target = GL_TEXTURE_2D_ARRAY;
         tex.format = format;
         tex.mipLevels = mipLevels;
@@ -115,8 +127,13 @@ struct GLTexture {
         return tex;
     }
 
-    inline static GLTexture createTexture3D(uint32_t width, uint32_t height, uint32_t depth, GLenum format = GL_RGBA8, uint32_t mipLevels = 1u) {
+    inline static GLTexture createTexture3D(uint32_t width, uint32_t height, uint32_t depth, GLenum format = GL_RGBA8, int32_t mipLevels = 1) {
         GLTexture tex;
+
+        if(mipLevels == -1) {
+            mipLevels = 1 + static_cast<int32_t>(floor(log2(max(width, height))));
+        }
+
         tex.target = GL_TEXTURE_3D;
         tex.format = format;
         tex.mipLevels = mipLevels;
