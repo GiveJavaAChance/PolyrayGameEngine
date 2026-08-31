@@ -1,0 +1,41 @@
+#version 430
+layout(local_size_x = 8, local_size_y = 8) in;
+
+uniform int layer;
+
+layout(binding = 0) uniform sampler2D bloomSampler;
+
+layout(binding = BLOOM_IDX, r11f_g11f_b10f) uniform writeonly image2D bloomTexture;
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(bloomTexture);
+    if(pos.x >= size.x || pos.y >= size.y) {
+        return;
+    }
+    float mip = float(layer);
+
+    vec2 uvStep = 1.0 / vec2(size);
+    vec2 uv = (vec2(pos) + 0.5) / vec2(size);
+
+    vec3 sum = vec3(0.0);
+
+    for(int dy = -1; dy <= 1; dy++) {
+        int wy = 2 - abs(dy);
+        for(int dx = -1; dx <= 1; dx++) {
+            int wx = 2 - abs(dy);
+            sum += textureLod(bloomSampler, uv + vec2(dx, dy) * uvStep, mip).rgb * float(wx * wy);
+        }
+    }
+
+    sum /= 32.0;
+
+    sum += 0.125 * (
+        textureLod(bloomSampler, uv + vec2(-1.0) * uvStep, mip).rgb +
+        textureLod(bloomSampler, uv + vec2(1.0, -1.0) * uvStep, mip).rgb +
+        textureLod(bloomSampler, uv + vec2(-1.0, 1.0) * uvStep, mip).rgb +
+        textureLod(bloomSampler, uv + vec2(1.0) * uvStep, mip).rgb
+    );
+
+    imageStore(bloomTexture, pos, vec4(sum, 1.0));
+}

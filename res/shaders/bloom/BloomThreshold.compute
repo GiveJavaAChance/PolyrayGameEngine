@@ -1,0 +1,21 @@
+#version 430
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D screenTexture;
+
+layout(binding = BLOOM_IDX, r11f_g11f_b10f) uniform writeonly image2D bloomTexture;
+
+uniform float threshold = 1.0f;
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(bloomTexture);
+    if(pos.x >= size.x || pos.y >= size.y) {
+        return;
+    }
+    vec2 uv = (vec2(pos) + 0.5) / vec2(size);
+
+    vec3 col = texture(screenTexture, uv).rgb;
+    col = max(col - threshold, 0.0);
+    imageStore(bloomTexture, pos, vec4(col, 1.0));
+}
