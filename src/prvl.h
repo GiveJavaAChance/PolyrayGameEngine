@@ -26,10 +26,10 @@ struct name##2 {                                                            \
             type t;                                                         \
         };                                                                  \
     };                                                                      \
-    constexpr type& operator[](const uint32_t idx) noexcept {               \
+    constexpr type& operator[](uint32_t idx) noexcept {                     \
         return (&x)[idx];                                                   \
     }                                                                       \
-    constexpr const type& operator[](const uint32_t idx) const noexcept {   \
+    constexpr const type& operator[](uint32_t idx) const noexcept {         \
         return (&x)[idx];                                                   \
     }                                                                       \
 };                                                                          \
@@ -60,10 +60,10 @@ struct name##3 {                                                                
             type p;                                                                 \
         };                                                                          \
     };                                                                              \
-    constexpr type& operator[](const uint32_t idx) noexcept {                       \
+    constexpr type& operator[](uint32_t idx) noexcept {                             \
         return (&x)[idx];                                                           \
     }                                                                               \
-    constexpr const type& operator[](const uint32_t idx) const noexcept {           \
+    constexpr const type& operator[](uint32_t idx) const noexcept {                 \
         return (&x)[idx];                                                           \
     }                                                                               \
 };                                                                                  \
@@ -98,10 +98,10 @@ struct name##4 {                                                                
             type q;                                                                                 \
         };                                                                                          \
     };                                                                                              \
-    constexpr type& operator[](const uint32_t idx) noexcept {                                       \
+    constexpr type& operator[](uint32_t idx) noexcept {                                             \
         return (&x)[idx];                                                                           \
     }                                                                                               \
-    constexpr const type& operator[](const uint32_t idx) const noexcept {                           \
+    constexpr const type& operator[](uint32_t idx) const noexcept {                                 \
         return (&x)[idx];                                                                           \
     }                                                                                               \
 };                                                                                                  \
@@ -606,6 +606,14 @@ struct quat {
     float y;
     float z;
     float w;
+
+    constexpr float& operator[](uint32_t idx) noexcept {
+        return (&x)[idx];
+    }
+
+    constexpr const float& operator[](uint32_t idx) const noexcept {
+        return (&x)[idx];
+    }
 };
 
 struct dquat {
@@ -613,6 +621,14 @@ struct dquat {
     double y;
     double z;
     double w;
+
+    constexpr double& operator[](uint32_t idx) noexcept {
+        return (&x)[idx];
+    }
+
+    constexpr const double& operator[](uint32_t idx) const noexcept {
+        return (&x)[idx];
+    }
 };
 
 namespace prvl {
@@ -739,6 +755,18 @@ constexpr quat slerp(const quat& a, quat b, float t) {
     return a * wa + b * wb;
 }
 
+#define prvl_QUAT_CMP(cmp)                                                  \
+constexpr bvec4 operator cmp(const quat& a, const quat& b) {                \
+    return prvl::bvec4(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z, a.w cmp b.w); \
+}
+
+prvl_QUAT_CMP(==)
+prvl_QUAT_CMP(!=)
+prvl_QUAT_CMP(>)
+prvl_QUAT_CMP(>=)
+prvl_QUAT_CMP(<)
+prvl_QUAT_CMP(<=)
+
 constexpr dquat operator+(const dquat& a, const dquat& b) {
     return dquat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
@@ -832,6 +860,18 @@ constexpr dquat slerp(const dquat& a, dquat b, double t) {
     double wb = sin(t * ang) / s;
     return a * wa + b * wb;
 }
+
+#define prvl_DQUAT_CMP(cmp)                                                 \
+constexpr bvec4 operator cmp(const dquat& a, const dquat& b) {              \
+    return prvl::bvec4(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z, a.w cmp b.w); \
+}
+
+prvl_DQUAT_CMP(==)
+prvl_DQUAT_CMP(!=)
+prvl_DQUAT_CMP(>)
+prvl_DQUAT_CMP(>=)
+prvl_DQUAT_CMP(<)
+prvl_DQUAT_CMP(<=)
 
 template<typename T>
 struct is_matrix : std::false_type {};
@@ -1274,7 +1314,7 @@ constexpr name##p##x##m operator*(const name##n##x##m& a, const name##p##x##n& b
 
 #define _prvl_MAT_MOD_MUL(name, n)                                      \
 constexpr name##n& operator*=(name##n& a, const name##n& b) noexcept {  \
-    a = a * b;                                                          \
+    a = b * a;                                                          \
     return a;                                                           \
 }
 
@@ -1898,6 +1938,58 @@ constexpr void isMultiAABBVisible(const float* planes, const bool* planeDirs, co
             out[j] &= a * x[j] + b * y[j] + c * z[j] + d >= 0.0f;
         }
     }
+}
+
+
+// Math utils from fastgltf which is also required in fastgltf:
+// For some reason, std::copysignf is not constexpr...
+constexpr float copysign(float mag, float sgn) noexcept {
+    return std::bit_cast<float>((std::bit_cast<uint32_t>(sgn) & 0x80000000u) | (std::bit_cast<uint32_t>(mag) & 0x7FFFFFFFu));
+}
+
+/**
+ * Decomposes a transform matrix into the translation, rotation, and scale components. This
+ * function does not support skew, shear, or perspective. This currently uses a quick algorithm
+ * to calculate the quaternion from the rotation matrix, which might occasionally loose some
+ * precision, though we try to use doubles here.
+ */
+constexpr void decomposeTransformMatrix(mat4 matrix, vec3& scale, quat& rotation, vec3& translation) {
+    // Extract the translation. We zero the translation out, as we reuse the matrix as
+    // the rotation matrix at the end.
+    translation = prvl::vec3(matrix[3u]);
+    matrix[3u] = prvl::vec4(0.0f, 0.0f, 0.0f, matrix[3u][3u]);
+
+    // Extract the scale. We calculate the euclidean length of the columns.
+    // We then construct a vector with those lengths.
+    scale = prvl::vec3(
+        length(matrix[0u]),
+        length(matrix[1u]),
+        length(matrix[2u])
+    );
+
+    // Remove the scaling from the matrix, leaving only the rotation.
+    // matrix is now the rotation matrix.
+    matrix[0u] /= scale.x;
+    matrix[1u] /= scale.y;
+    matrix[2u] /= scale.z;
+
+    // Construct the quaternion. This algo is copied from here:
+    // https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/christian.htm.
+    // glTF orders the components as x,y,z,w
+    rotation = prvl::quat(
+        max(0.0f, 1.0f + matrix[0u][0u] - matrix[1u][1u] - matrix[2u][2u]),
+        max(0.0f, 1.0f - matrix[0u][0u] + matrix[1u][1u] - matrix[2u][2u]),
+        max(0.0f, 1.0f - matrix[0u][0u] - matrix[1u][1u] + matrix[2u][2u]),
+        max(0.0f, 1.0f + matrix[0u][0u] + matrix[1u][1u] + matrix[2u][2u])
+    );
+    rotation.x = static_cast<float>(sqrt(static_cast<double>(rotation.x))) * 0.5f;
+    rotation.y = static_cast<float>(sqrt(static_cast<double>(rotation.y))) * 0.5f;
+    rotation.z = static_cast<float>(sqrt(static_cast<double>(rotation.z))) * 0.5f;
+    rotation.w = static_cast<float>(sqrt(static_cast<double>(rotation.w))) * 0.5f;
+
+    rotation.x = copysign(rotation.x, matrix[1u][2u] - matrix[2u][1u]);
+    rotation.y = copysign(rotation.y, matrix[2u][0u] - matrix[0u][2u]);
+    rotation.z = copysign(rotation.z, matrix[0u][1u] - matrix[1u][0u]);
 }
 
 #endif
