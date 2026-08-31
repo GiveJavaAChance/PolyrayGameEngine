@@ -25,6 +25,9 @@ float SampleShadowMapOptimizedPCF(uint shadowIdx, vec3 pos, vec3 normal, vec3 li
     vec4 lightSpacePos = shadow.lightSpaceTransform * vec4(pos, 1.0);
     vec3 shadowPos = lightSpacePos.xyz / lightSpacePos.w;
     shadowPos.xy = shadowPos.xy * 0.5 + 0.5;
+    if(shadowPos.z > 1.0) {
+        return 1.0;
+    }
 
     vec2 shadowAtlasSize = textureSize(shadowMapAtlas, 0);
     vec2 shadowMapSize = vec2(shadow.shadowMapSize);
