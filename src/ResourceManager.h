@@ -14,7 +14,12 @@
 #include <stb_image.h>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
 #include <windows.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#endif
 
 struct ResourcePath {
 private:
@@ -120,9 +125,13 @@ template<> struct ImageFormatType<ImageFormat::FLOAT32_RGB> { using type = float
 
 namespace ResourceManager {
     inline std::filesystem::path getRootDir() {
+#ifdef _WIN32
         char buffer[MAX_PATH];
         GetModuleFileNameA(nullptr, buffer, MAX_PATH);
         return std::filesystem::path(buffer).parent_path();
+#elif defined(__linux__)
+        return std::filesystem::read_symlink("/proc/self/exe").parent_path();
+#endif
     }
 
     inline DynamicArray<ResourcePath> listFiles(const ResourcePath& res) {
@@ -222,10 +231,10 @@ namespace ResourceManager {
     }
 
     template <ImageFormat fmt = RGBA8>
-    inline GLTexture getResourceAsTexture(const ResourcePath& res, int32_t mipLevels = 1, GLenum format = ImageFormatType<fmt>::glFormat) {
+    inline GLTexture getResourceAsTexture(const ResourcePath& res, int32_t mipLevels = 1, GLenum format = ImageFormatType<fmt>::glFormat, bool flippedY = true) {
         uint32_t width, height;
         using PixelType = ImageFormatType<fmt>::type;
-        PixelType* pixels = getResourceAsImage<fmt>(res, width, height, true);
+        PixelType* pixels = getResourceAsImage<fmt>(res, width, height, flippedY);
         if (!pixels) {
             return {};
         }
