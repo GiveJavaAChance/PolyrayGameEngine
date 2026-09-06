@@ -1957,39 +1957,39 @@ constexpr void decomposeTransformMatrix(mat4 matrix, vec3& scale, quat& rotation
     // Extract the translation. We zero the translation out, as we reuse the matrix as
     // the rotation matrix at the end.
     translation = prvl::vec3(matrix[3u]);
-    matrix[3u] = prvl::vec4(0.0f, 0.0f, 0.0f, matrix[3u][3u]);
+    mat3 m = prvl::mat3(matrix);
 
     // Extract the scale. We calculate the euclidean length of the columns.
     // We then construct a vector with those lengths.
     scale = prvl::vec3(
-        length(matrix[0u]),
-        length(matrix[1u]),
-        length(matrix[2u])
+        length(m[0u]),
+        length(m[1u]),
+        length(m[2u])
     );
 
     // Remove the scaling from the matrix, leaving only the rotation.
     // matrix is now the rotation matrix.
-    matrix[0u] /= scale.x;
-    matrix[1u] /= scale.y;
-    matrix[2u] /= scale.z;
+    m[0u] /= scale.x;
+    m[1u] /= scale.y;
+    m[2u] /= scale.z;
 
     // Construct the quaternion. This algo is copied from here:
     // https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/christian.htm.
     // glTF orders the components as x,y,z,w
     rotation = prvl::quat(
-        max(0.0f, 1.0f + matrix[0u][0u] - matrix[1u][1u] - matrix[2u][2u]),
-        max(0.0f, 1.0f - matrix[0u][0u] + matrix[1u][1u] - matrix[2u][2u]),
-        max(0.0f, 1.0f - matrix[0u][0u] - matrix[1u][1u] + matrix[2u][2u]),
-        max(0.0f, 1.0f + matrix[0u][0u] + matrix[1u][1u] + matrix[2u][2u])
+        max(0.0f, 1.0f + m[0u][0u] - m[1u][1u] - m[2u][2u]),
+        max(0.0f, 1.0f - m[0u][0u] + m[1u][1u] - m[2u][2u]),
+        max(0.0f, 1.0f - m[0u][0u] - m[1u][1u] + m[2u][2u]),
+        max(0.0f, 1.0f + m[0u][0u] + m[1u][1u] + m[2u][2u])
     );
     rotation.x = static_cast<float>(sqrt(static_cast<double>(rotation.x))) * 0.5f;
     rotation.y = static_cast<float>(sqrt(static_cast<double>(rotation.y))) * 0.5f;
     rotation.z = static_cast<float>(sqrt(static_cast<double>(rotation.z))) * 0.5f;
     rotation.w = static_cast<float>(sqrt(static_cast<double>(rotation.w))) * 0.5f;
 
-    rotation.x = copysign(rotation.x, matrix[1u][2u] - matrix[2u][1u]);
-    rotation.y = copysign(rotation.y, matrix[2u][0u] - matrix[0u][2u]);
-    rotation.z = copysign(rotation.z, matrix[0u][1u] - matrix[1u][0u]);
+    rotation.x = copysign(rotation.x, m[1u][2u] - m[2u][1u]);
+    rotation.y = copysign(rotation.y, m[2u][0u] - m[0u][2u]);
+    rotation.z = copysign(rotation.z, m[0u][1u] - m[1u][0u]);
 }
 
 #endif
