@@ -13,8 +13,8 @@ uniform float ditherStrength = 1.0;
 layout(binding = 0) uniform sampler2D screenTexture;
 
 void main() {
-    vec3 col = texture(screenTexture, uv).rgb;
-    col = ACESTonemap(col);
-    col = gammaCorrect(col, 1.0);
-    fragColor = vec4(ditherColor(col, ditherStrength), 1.0);
+    vec4 col = texture(screenTexture, uv);
+    col.rgb = ACESTonemap(col.rgb);
+    col.rgb = gammaCorrect(col.rgb, 1.0);
+    fragColor = vec4(ditherColor(col.rgb, ditherStrength), col.w);
 }

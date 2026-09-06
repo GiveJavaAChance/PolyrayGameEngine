@@ -26,7 +26,7 @@ private:
     GLFWwindow* handle = nullptr;
 
 public:
-    Window(const char* title, uint32_t width, uint32_t height, WindowMode mode, bool decorated) : width(width), height(height) {
+    Window(const char* title, uint32_t width, uint32_t height, WindowMode mode, bool decorated, bool transparentBackground = false) : width(width), height(height) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -35,6 +35,8 @@ public:
 
         glfwWindowHint(GLFW_MAXIMIZED, mode == MAXIMIZED && decorated);
         glfwWindowHint(GLFW_DECORATED, decorated && (mode == WINDOWED || mode == MAXIMIZED));
+
+        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, transparentBackground);
 
         if (mode == EXCLUSIVE_FULLSCREEN || (mode == MAXIMIZED && !decorated)) {
             const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());

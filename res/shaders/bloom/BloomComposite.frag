@@ -14,7 +14,7 @@ layout(binding = 2) uniform sampler2D lensDirtTexture;
 out vec4 fragColor;
 
 void main() {
-    vec3 col = texture(screenTexture, uv).rgb;
+    vec4 col = texture(screenTexture, uv);
 
     vec3 accum = texture(bloomSampler, uv).rgb / float(layers - 1);
 
@@ -24,7 +24,7 @@ void main() {
     }
     accum *= intensity * ld;
 
-    col += accum;
+    col.rgb += accum;
 
-    fragColor = vec4(col, 1.0);
+    fragColor = col;
 }
