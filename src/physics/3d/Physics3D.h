@@ -185,14 +185,14 @@ private:
 
 public:
     Physics3D(World* world, bool disabled) : ecs(&world->ecs) {
-        ecs->registerComponentListener<Collider3D, Physics3D, onStaticColliderAdded, onStaticColliderRemoved>(this);
-        ecs->registerComponentListener<PhysicsObject3D, Physics3D, onPhysicsObjectAdded, onPhysicsObjectRemoved>(this);
-        ecs->registerComponentListener<DynamicCollider3D, Physics3D, onDynamicColliderAdded, onDynamicColliderRemoved>(this);
-        world->eventBus.registerEventListener<Scene3DNodeUpdatedEvent, Physics3D, onSceneNodeUpdated>(this);
+        ecs->registerComponentListener<Collider3D, Physics3D, &Physics3D::onStaticColliderAdded, &Physics3D::onStaticColliderRemoved>(this);
+        ecs->registerComponentListener<PhysicsObject3D, Physics3D, &Physics3D::onPhysicsObjectAdded, &Physics3D::onPhysicsObjectRemoved>(this);
+        ecs->registerComponentListener<DynamicCollider3D, Physics3D, &Physics3D::onDynamicColliderAdded, &Physics3D::onDynamicColliderRemoved>(this);
+        world->eventBus.registerEventListener<Scene3DNodeUpdatedEvent, Physics3D, &Physics3D::onSceneNodeUpdated>(this);
         if (disabled) {
-            ecs->registerUpdateCallback<Physics3D, disabledPhysicsUpdate, UpdateOrder::PHYSICS>(this);
+            ecs->registerUpdateCallback<Physics3D, &Physics3D::disabledPhysicsUpdate, UpdateOrder::PHYSICS>(this);
         } else {
-            ecs->registerUpdateCallback<Physics3D, physicsUpdate, UpdateOrder::PHYSICS>(this);
+            ecs->registerUpdateCallback<Physics3D, &Physics3D::physicsUpdate, UpdateOrder::PHYSICS>(this);
         }
     }
 

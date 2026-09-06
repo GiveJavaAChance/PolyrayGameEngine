@@ -54,7 +54,7 @@ void Scene2D::removeNodes(uint32_t node) {
 }
 
 Scene2D::Scene2D(World* world) : world(world) {
-    world->ecs.registerUpdateCallback<Scene2D, frameUpdate, UpdateOrder::POST_FRAME>(this);
+    world->ecs.registerUpdateCallback<Scene2D, &Scene2D::frameUpdate, UpdateOrder::POST_FRAME>(this);
 }
 
 uint32_t Scene2D::getRootNode() const {

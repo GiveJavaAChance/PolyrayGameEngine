@@ -195,10 +195,10 @@ public:
         ShaderManager::setValue("SPOT_LIGHT3D_IDX", BindingRegistry::bindBufferBase(spotLightBuffer, GL_SHADER_STORAGE_BUFFER));
         ShaderManager::setValue("POINT_LIGHT3D_IDX", BindingRegistry::bindBufferBase(pointLightBuffer, GL_SHADER_STORAGE_BUFFER));
 
-        ecs->registerComponentListener<DirectionalLight3D, Light3DSystem, onDirectionalLightAdded, onDirectionalLightRemoved>(this);
-        ecs->registerComponentListener<SpotLight3D, Light3DSystem, onSpotLightAdded, onSpotLightRemoved>(this);
-        ecs->registerComponentListener<PointLight3D, Light3DSystem, onPointLightAdded, onPointLightRemoved>(this);
-        ecs->registerUpdateCallback<Light3DSystem, update, UpdateOrder::POST_FRAME>(this);
+        ecs->registerComponentListener<DirectionalLight3D, Light3DSystem, &Light3DSystem::onDirectionalLightAdded, &Light3DSystem::onDirectionalLightRemoved>(this);
+        ecs->registerComponentListener<SpotLight3D, Light3DSystem, &Light3DSystem::onSpotLightAdded, &Light3DSystem::onSpotLightRemoved>(this);
+        ecs->registerComponentListener<PointLight3D, Light3DSystem, &Light3DSystem::onPointLightAdded, &Light3DSystem::onPointLightRemoved>(this);
+        ecs->registerUpdateCallback<Light3DSystem, &Light3DSystem::update, UpdateOrder::POST_FRAME>(this);
     }
 
     void update(double dt) {

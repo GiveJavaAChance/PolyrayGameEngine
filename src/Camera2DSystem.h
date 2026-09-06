@@ -36,8 +36,8 @@ private:
 
 public:
     Camera2DSystem(ECS* ecs) : ecs(ecs) {
-        ecs->registerComponentListener<Camera2D, Camera2DSystem, onComponentAdded, onComponentRemoved>(this);
-        ecs->registerUpdateCallback<Camera2DSystem, update, UpdateOrder::POST_FRAME>(this);
+        ecs->registerComponentListener<Camera2D, Camera2DSystem, &Camera2DSystem::onComponentAdded, &Camera2DSystem::onComponentRemoved>(this);
+        ecs->registerUpdateCallback<Camera2DSystem, &Camera2DSystem::update, UpdateOrder::POST_FRAME>(this);
     }
 };
 

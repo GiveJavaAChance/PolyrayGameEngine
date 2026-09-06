@@ -125,19 +125,19 @@ private:
 public:
     ScriptSystem(World* world, bool disabled) : world(world) {
         ECS& ecs = world->ecs;
-        ecs.registerComponentListener<T, ScriptSystem<T>, onComponentAdded, onComponentRemoved>(this);
+        ecs.registerComponentListener<T, ScriptSystem<T>, &ScriptSystem<T>::onComponentAdded, &ScriptSystem<T>::onComponentRemoved>(this);
         if constexpr (HasSetup<T>) {
-            ecs.registerSetupCallback<ScriptSystem<T>, setup>(this);
+            ecs.registerSetupCallback<ScriptSystem<T>, &ScriptSystem<T>::setup>(this);
         }
         if constexpr (HasFrameUpdate<T>) {
-            ecs.registerUpdateCallback<ScriptSystem<T>, frameUpdate, UpdateOrder::FRAME>(this);
+            ecs.registerUpdateCallback<ScriptSystem<T>, &ScriptSystem<T>::frameUpdate, UpdateOrder::FRAME>(this);
         }
         if constexpr (HasPhysicsUpdate<T>) {
-            ecs.registerUpdateCallback<ScriptSystem<T>, physicsUpdate, UpdateOrder::PHYSICS>(this);
+            ecs.registerUpdateCallback<ScriptSystem<T>, &ScriptSystem<T>::physicsUpdate, UpdateOrder::PHYSICS>(this);
         }
         if constexpr (HasInput<T>) {
             if (!disabled) {
-                world->eventBus.registerEventListener<InputEvent, ScriptSystem<T>, input>(this);
+                world->eventBus.registerEventListener<InputEvent, ScriptSystem<T>, &ScriptSystem<T>::input>(this);
             }
         }
     }

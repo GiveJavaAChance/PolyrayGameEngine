@@ -54,7 +54,7 @@ void Scene3D::removeNodes(uint32_t node) {
 }
 
 Scene3D::Scene3D(World* world) : world(world) {
-    world->ecs.registerUpdateCallback<Scene3D, frameUpdate, UpdateOrder::POST_FRAME>(this);
+    world->ecs.registerUpdateCallback<Scene3D, &Scene3D::frameUpdate, UpdateOrder::POST_FRAME>(this);
 }
 
 uint32_t Scene3D::getRootNode() const {

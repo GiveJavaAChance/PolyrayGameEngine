@@ -78,11 +78,11 @@ private:
 
 public:
     Renderer(ECS* ecs) : ecs(ecs) {
-        ecs->registerComponentListener<RenderInstance, Renderer, onComponentAdded, onComponentRemoved>(this);
-        ecs->registerUpdateCallback<Renderer, update, UpdateOrder::POST_FRAME>(this);
+        ecs->registerComponentListener<RenderInstance, Renderer, &Renderer::onComponentAdded, &Renderer::onComponentRemoved>(this);
+        ecs->registerUpdateCallback<Renderer, &Renderer::update, UpdateOrder::POST_FRAME>(this);
     }
 
-    template <Component T, typename U = T, void (*Extract)(const T*, U*) = defaultExtract<T, U>>
+    template <Component T, typename U = T, void (*Extract)(const T*, U*) = &Renderer::defaultExtract<T, U>>
     uint32_t createGroup(Material* material, const VertexLayoutInfo& layout) {
         return groups.emplace(material, layout, ComponentMetadata::typeOf<T>(), reinterpret_cast<void (*)(const void*, void*)>(Extract), sizeof(U));
     }

@@ -61,7 +61,7 @@ public:
     ShaderBuffer cameraBuffer;
 
     RenderView2DSystem(ECS* ecs) : ecs(ecs), bufferCapacity(0u), cameraBinding(BindingRegistry::allocateBufferBinding()), cameraBuffer(GL_DYNAMIC_DRAW) {
-        ecs->registerUpdateCallback<RenderView2DSystem, update, UpdateOrder::POST_FRAME>(this);
+        ecs->registerUpdateCallback<RenderView2DSystem, &RenderView2DSystem::update, UpdateOrder::POST_FRAME>(this);
         ShaderManager::setValue("CAM2D_IDX", cameraBinding);
 
         GLint alignment;

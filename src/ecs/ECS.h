@@ -234,19 +234,6 @@ private:
         }
     }
 
-    template <Component T>
-    void read(uint32_t componentID, void* dst) {
-        T component = read<T>(componentID);
-        std::memcpy(dst, &component, sizeof(T));
-    }
-
-    template <Component T>
-    void write(uint32_t componentID, void* src) {
-        alignas(T) uint8_t component[sizeof(T)];
-        std::memcpy(component, src, sizeof(T));
-        write<T>(componentID, *reinterpret_cast<T*>(component));
-    }
-
 public:
     ECS() : fixedDT(0.006), remaining(0.0), entities(nullptr), componentCount(nullptr), componentCapacity(nullptr), entityCount(0u), entityCapacity(0u) {
         uint32_t size = ComponentRegistry::metadata.size();
@@ -638,6 +625,13 @@ public:
         return getStorage<T>()->get(ref.ID);
     }
 
+    
+    template <Component T>
+    inline void read(uint32_t componentID, void* dst) {
+        T component = read<T>(componentID);
+        std::memcpy(dst, &component, sizeof(T));
+    }
+
     inline void reflectRead(uint32_t type, uint32_t componentID, void* dst) {
         ComponentRegistry::reflection[type].read(this, componentID, dst);
     }
@@ -650,6 +644,13 @@ public:
     template <Component T>
     void write(ComponentRef<T> ref, const T& component) {
         getStorage<T>()->set(ref.ID, component);
+    }
+
+    template <Component T>
+    inline void write(uint32_t componentID, void* src) {
+        alignas(T) uint8_t component[sizeof(T)];
+        std::memcpy(component, src, sizeof(T));
+        write<T>(componentID, *reinterpret_cast<T*>(component));
     }
 
     inline void reflectWrite(uint32_t type, uint32_t componentID, void* src) {
@@ -764,14 +765,14 @@ inline void ComponentRegistry::registerComponentType() {
     reflection[meta.typeId] = ComponentReflection{
         []() { return (void*) new Storage<T>{}; },
         [](void* storage) { delete reinterpret_cast<Storage<T>*>(storage); },
-        reinterpret_cast<uint32_t (*)(void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, uint32_t, ECS::createAndAddComponent<T, Create>>),
-        &Invoke<uint32_t>::thunk<ECS, ECS::removeComponent<T>>,
-        &Invoke<uint32_t, uint32_t>::thunk<ECS, ECS::removeComponent<T>>,
-        reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, ECS::getComponentPtr<T>>),
-        &Invoke<uint32_t>::thunkReturn<ECS, bool, ECS::isComponentValid<T>>,
-        reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, ECS::getPtr<T>>),
-        &Invoke<uint32_t, void*>::thunk<ECS, ECS::read<T>>,
-        &Invoke<uint32_t, void*>::thunk<ECS, ECS::write<T>>,
+        &Invoke<uint32_t>::thunkReturn<ECS, uint32_t, &ECS::createAndAddComponent<T, Create>>,
+        &Invoke<uint32_t>::thunk<ECS, &ECS::removeComponent<T>>,
+        &Invoke<uint32_t, uint32_t>::thunk<ECS, &ECS::removeComponent<T>>,
+        reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, &ECS::getComponentPtr<T>>),
+        &Invoke<uint32_t>::thunkReturn<ECS, bool, &ECS::isComponentValid<T>>,
+        reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, &ECS::getPtr<T>>),
+        &Invoke<uint32_t, void*>::thunk<ECS, &ECS::read<T>>,
+        &Invoke<uint32_t, void*>::thunk<ECS, &ECS::write<T>>,
     };
 }
 
