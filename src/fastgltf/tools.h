@@ -898,13 +898,6 @@ FASTGLTF_EXPORT inline auto getLocalTransformMatrix(const Node& node) {
 }
 
 /**
- * Computes the transform matrix for a given node, and multiplies the given base with that matrix.
- */
-FASTGLTF_EXPORT inline auto getTransformMatrix(const Node& node, const mat4& base = diag(prvl::vec4(1.0f))) {
-	return getLocalTransformMatrix(node) * base;
-}
-
-/**
  * Iterates over every node within a scene recursively, computing the world space transform of each node,
  * and calling the callback function with that node and the transform.
  */
@@ -919,7 +912,8 @@ void iterateSceneNodes(AssetType&& asset, std::size_t sceneIndex, mat4 initial, 
 	auto function = [&](std::size_t nodeIndex, mat4 nodeMatrix, auto& self) -> void {
 		assert(asset.nodes.size() > nodeIndex);
 		auto& node = asset.nodes[nodeIndex];
-		nodeMatrix = getTransformMatrix(node, nodeMatrix);
+
+		nodeMatrix = nodeMatrix * getLocalTransformMatrix(node);
 
 		std::invoke(callback, node, std::as_const(nodeMatrix));
 
