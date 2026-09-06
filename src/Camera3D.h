@@ -28,29 +28,42 @@ struct Camera3D {
     struct {
         float nearZ;
         float fov;
-    } perspective;
+    } perspectiveInfo;
     struct {
         float width;
         float nearZ;
         float farZ;
-    } orthographic;
+    } orthographicInfo;
 
     bool current;
 
     ComponentRef<Transform3D> transformRef;
 
-    Camera3D(float nearZ = 0.1f, float fov = 90.0f) : projectionMode(ProjectionMode::PERSPECTIVE), perspective(nearZ, fov), current(false), transformRef(UINT32_MAX) {
-    }
-
-    Camera3D(float width, float nearZ = 0.1f, float farZ = 10.0f) : projectionMode(ProjectionMode::ORTHOGRAPHIC), orthographic(width, nearZ, farZ), current(false), transformRef(UINT32_MAX) {
+    Camera3D() : projectionMode(ProjectionMode::PERSPECTIVE), current(false), transformRef(UINT32_MAX) {
     }
 
     mat4 getProjection(vec2 size) {
         float aspectRatio = size.x / size.y;
         if (projectionMode == ProjectionMode::PERSPECTIVE) {
-            return reverseZPerspectiveProjection(perspective.fov * 0.0174532925199f, aspectRatio, perspective.nearZ);
+            return reverseZPerspectiveProjection(perspectiveInfo.fov * 0.0174532925199f, aspectRatio, perspectiveInfo.nearZ);
         }
-        return orthographicProjection(orthographic.width, aspectRatio, orthographic.nearZ, orthographic.farZ);
+        return orthographicProjection(orthographicInfo.width, aspectRatio, orthographicInfo.nearZ, orthographicInfo.farZ);
+    }
+
+    static Camera3D perspective(float nearZ = 0.1f, float fov = 90.0f) {
+        Camera3D cam{};
+        cam.perspectiveInfo.nearZ = nearZ;
+        cam.perspectiveInfo.fov = fov;
+        return cam;
+    }
+
+    static Camera3D orthographic(float width, float nearZ = 0.1f, float farZ = 10.0f) {
+        Camera3D cam{};
+        cam.projectionMode = ProjectionMode::ORTHOGRAPHIC;
+        cam.orthographicInfo.width = width;
+        cam.orthographicInfo.nearZ = nearZ;
+        cam.orthographicInfo.farZ = farZ;
+        return cam;
     }
 };
 
@@ -75,11 +88,11 @@ template <>
 struct ExportInfo<Camera3D> {
     constexpr static Export __export__[] = {
         {offsetof(Camera3D, projectionMode), EXPORT_BOOL, "Orthographic"},
-        {offsetof(Camera3D, perspective.nearZ), EXPORT_FLOAT, "Perspective Near Z"},
-        {offsetof(Camera3D, perspective.fov), EXPORT_FLOAT, "Perspective Fov"},
-        {offsetof(Camera3D, orthographic.width), EXPORT_FLOAT, "Orthographic Width"},
-        {offsetof(Camera3D, orthographic.nearZ), EXPORT_FLOAT, "Orthographic Near Z"},
-        {offsetof(Camera3D, orthographic.farZ), EXPORT_FLOAT, "Orthographic Far Z"},
+        {offsetof(Camera3D, perspectiveInfo.nearZ), EXPORT_FLOAT, "Perspective Near Z"},
+        {offsetof(Camera3D, perspectiveInfo.fov), EXPORT_FLOAT, "Perspective Fov"},
+        {offsetof(Camera3D, orthographicInfo.width), EXPORT_FLOAT, "Orthographic Width"},
+        {offsetof(Camera3D, orthographicInfo.nearZ), EXPORT_FLOAT, "Orthographic Near Z"},
+        {offsetof(Camera3D, orthographicInfo.farZ), EXPORT_FLOAT, "Orthographic Far Z"},
         {offsetof(Camera3D, current), EXPORT_BOOL, "Current"},
     };
 };
