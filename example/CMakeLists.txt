@@ -33,7 +33,7 @@ target_compile_options(ExampleGame PUBLIC
 # Automatically copies resources to the game's executable.
 # Game resources are copied last, allowing them to override
 # built-in Polyray resources.
-add_custom_command(TARGET ExampleGame POST_BUILD
+add_custom_target(Resources ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/${POLYRAY_DIR}/res"
         "$<TARGET_FILE_DIR:ExampleGame>/res"
@@ -41,4 +41,6 @@ add_custom_command(TARGET ExampleGame POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/res"
         "$<TARGET_FILE_DIR:ExampleGame>/res"
+
+    DEPENDS ExampleGame
 )
