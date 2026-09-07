@@ -7,6 +7,126 @@
 #include <cstdlib>
 #include <cmath>
 
+using std::min;
+using std::max;
+using std::round;
+using std::floor;
+using std::ceil;
+using std::trunc;
+using std::abs;
+using std::sin;
+using std::cos;
+using std::tan;
+using std::asin;
+using std::acos;
+using std::atan;
+using std::sinh;
+using std::cosh;
+using std::tanh;
+using std::asinh;
+using std::acosh;
+using std::atanh;
+using std::log;
+using std::pow;
+using std::exp;
+using std::sqrt;
+
+constexpr int32_t mod(int32_t a, int32_t b) noexcept {
+    return a % b;
+}
+
+constexpr uint32_t mod(uint32_t a, uint32_t b) noexcept {
+    return a % b;
+}
+
+constexpr float mod(float a, float b) noexcept {
+    return std::fmod(a, b);
+}
+
+constexpr double mod(double a, double b) noexcept {
+    return std::fmod(a, b);
+}
+
+constexpr int32_t pow(int32_t a, int32_t b) noexcept {
+    int32_t result = 1;
+    int32_t ap = a;
+    int32_t r = b;
+    while (r > 0) {
+        if (r & 1) {
+            result *= ap;
+        }
+        ap *= ap;
+        r >>= 1;
+    }
+    return result;
+}
+
+constexpr uint32_t pow(uint32_t a, uint32_t b) noexcept {
+    uint32_t result = 1u;
+    uint32_t ap = a;
+    uint32_t r = b;
+    while (r > 0u) {
+        if (r & 1u) {
+            result *= ap;
+        }
+        ap *= ap;
+        r >>= 1u;
+    }
+    return result;
+}
+
+constexpr int32_t clamp(int32_t v, int32_t min, int32_t max) noexcept {
+    return v < min ? min : (v > max ? max : v);
+}
+
+constexpr uint32_t clamp(uint32_t v, uint32_t min, uint32_t max) noexcept {
+    return v < min ? min : (v > max ? max : v);
+}
+
+constexpr float clamp(float v, float min, float max) noexcept {
+    return v < min ? min : (v > max ? max : v);
+}
+
+constexpr double clamp(double v, double min, double max) noexcept {
+    return v < min ? min : (v > max ? max : v);
+}
+
+constexpr int32_t mix(int32_t a, int32_t b, int32_t t) noexcept {
+    return a + t * (b - a);
+}
+
+constexpr uint32_t mix(uint32_t a, uint32_t b, uint32_t t) noexcept {
+    return a + t * (b - a);
+}
+
+constexpr float mix(float a, float b, float t) noexcept {
+    return a + t * (b - a);
+}
+
+constexpr double mix(double a, double b, double t) noexcept {
+    return a + t * (b - a);
+}
+
+constexpr int32_t sign(int32_t v) noexcept {
+    return v == 0 ? 0 : (v < 0 ? -1 : 1);
+}
+
+constexpr float sign(float v) noexcept {
+    return v == 0.0f ? 0.0f : (v < 0.0f ? -1.0f : 1.0f);
+}
+
+constexpr double sign(double v) noexcept {
+    return v == 0.0 ? 0.0 : (v < 0.0 ? -1.0 : 1.0);
+}
+
+constexpr float fract(float v) noexcept {
+    return v - floor(v);
+}
+
+constexpr double fract(double v) noexcept {
+    return v - floor(v);
+}
+
 namespace prvl {
 }
 
@@ -433,75 +553,19 @@ _prvl_VEC_FUNC1(name, round, v) \
 _prvl_VEC_FUNC1(name, trunc, v) \
 _prvl_VEC_FUNC1(name, exp, v)   \
 _prvl_VEC_FUNC1(name, log, v)   \
-_prvl_VEC_FUNC1(name, sqrt, v)
-
-
-#define _prvl_SCALAR_OP1(type, name, a, def)    \
-constexpr type name(type a) noexcept {          \
-    return def;                                 \
-}
-
-#define _prvl_SCALAR_OP2(type, name, a, b, def) \
-constexpr type name(type a, type b) noexcept {  \
-    return def;                                 \
-}
-
-#define _prvl_SCALAR_OP3(type, name, a, b, c, def)      \
-constexpr type name(type a, type b, type c) noexcept {  \
-    return def;                                         \
-}
-
-#define _prvl_FUNC_ALL(type)                                                    \
-_prvl_SCALAR_OP2(type, min, a, b, std::min(a, b))                               \
-_prvl_SCALAR_OP2(type, max, a, b, std::max(a, b))                               \
-_prvl_SCALAR_OP3(type, clamp, x, min, max, x < min ? min : (x > max ? max : x)) \
-_prvl_SCALAR_OP3(type, mix, a, b, t, a + t * (b - a))
-
-_prvl_FUNC_ALL(int32_t)
-_prvl_FUNC_ALL(uint32_t)
-_prvl_FUNC_ALL(float)
-_prvl_FUNC_ALL(double)
-
-_prvl_SCALAR_OP2(int32_t, mod, a, b, a % b)
-_prvl_SCALAR_OP2(uint32_t, mod, a, b, a % b)
-_prvl_SCALAR_OP2(float, mod, a, b, fmodf(a, b))
-_prvl_SCALAR_OP2(double, mod, a, b, fmod(a, b))
-
-constexpr int32_t pow(int32_t a, int32_t b) noexcept {
-    int32_t result = 1;
-    int32_t ap = a;
-    int32_t r = b;
-    while (r > 0) {
-        if (r & 1) {
-            result *= ap;
-        }
-        ap *= ap;
-        r >>= 1;
-    }
-    return result;
-}
-
-constexpr uint32_t pow(const uint32_t a, const uint32_t b) noexcept {
-    uint32_t result = 1u;
-    uint32_t ap = a;
-    uint32_t r = b;
-    while (r > 0u) {
-        if (r & 1u) {
-            result *= ap;
-        }
-        ap *= ap;
-        r >>= 1u;
-    }
-    return result;
-}
-
-_prvl_SCALAR_OP1(int32_t, sign, x, x < 0 ? -1 : 1)
-_prvl_SCALAR_OP1(float, sign, x, x < 0.0f ? -1.0f : 1.0f)
-_prvl_SCALAR_OP1(double, sign, x, x < 0.0 ? -1.0 : 1.0)
-
-_prvl_SCALAR_OP1(float, fract, x, x - floor(x))
-_prvl_SCALAR_OP1(double, fract, x, x - floor(x))
-
+_prvl_VEC_FUNC1(name, sqrt, v)  \
+_prvl_VEC_FUNC1(name, sin, v)   \
+_prvl_VEC_FUNC1(name, cos, v)   \
+_prvl_VEC_FUNC1(name, tan, v)   \
+_prvl_VEC_FUNC1(name, asin, v)  \
+_prvl_VEC_FUNC1(name, acos, v)  \
+_prvl_VEC_FUNC1(name, atan, v)  \
+_prvl_VEC_FUNC1(name, sinh, v)  \
+_prvl_VEC_FUNC1(name, cosh, v)  \
+_prvl_VEC_FUNC1(name, tanh, v)  \
+_prvl_VEC_FUNC1(name, asinh, v) \
+_prvl_VEC_FUNC1(name, acosh, v) \
+_prvl_VEC_FUNC1(name, atanh, v)
 
 _prvl_VEC_ALL(bool,     bvec)
 _prvl_VEC_ALL(int32_t,  ivec)
