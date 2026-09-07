@@ -7,6 +7,7 @@
 
 #include <BindingRegistry.h>
 #include <Camera3DSystem.h>
+#include <RenderView.h>
 #include <Viewport.h>
 #include <World.h>
 #include <prvl.h>
@@ -17,11 +18,6 @@
 
 struct RenderView3DSystem {
 private:
-    struct RenderView {
-        Viewport* viewport;
-        uint32_t cameraID;
-    };
-
     ECS* ecs;
 
     UnorderedRegistry<RenderView> views;
@@ -32,14 +28,22 @@ private:
 
     void update(double dt) {
         cameraUploadBuffer.clear();
-        uint32_t size = views.arr.size() * bufferStride;
-        cameraUploadBuffer.ensureCapacity(size);
+        uint32_t dataSize = views.arr.size() * bufferStride;
+        cameraUploadBuffer.ensureCapacity(dataSize);
         uint8_t* data = cameraUploadBuffer.data();
         for (uint32_t i = 0u; i < views.arr.size(); i++) {
-            RenderView& view = views.arr[i];
-            Camera3D* cam = ecs->getPtr<Camera3D>(view.cameraID);
-            vec2 size = prvl::vec2(view.viewport->size);
-            mat4 projection = cam->getProjection(size);
+            RenderView& rv = views.arr[i];
+            Camera3D* cam = ecs->getPtr<Camera3D>(rv.cameraID);
+            ivec2 pos = rv.viewportRegionPos;
+            ivec2 size = rv.viewportRegionSize;
+            ivec2 extents = prvl::ivec2(rv.viewport->size) - pos;
+            if (size.x == -1) {
+                size.x = extents.x;
+            }
+            if (size.y == -1) {
+                size.y = extents.y;
+            }
+            mat4 projection = cam->getProjection(prvl::vec2(size));
             mat4 inverseProjection = inverse(projection);
 
             uint32_t idx = i * bufferStride;
@@ -53,7 +57,7 @@ private:
             bufferCapacity = cameraUploadBuffer.capacity();
             cameraBuffer.setSize(bufferCapacity);
         }
-        cameraBuffer.uploadPartialData(data, size, 0u);
+        cameraBuffer.uploadPartialData(data, dataSize, 0u);
     }
 
 public:
@@ -69,8 +73,12 @@ public:
         bufferStride = (sizeof(GpuCamera3D) + alignment - 1u) / alignment * alignment;
     }
 
-    uint32_t createView(Viewport* viewport, uint32_t cameraID) {
-        return views.emplace(viewport, cameraID);
+    uint32_t createView(Viewport* viewport, uint32_t cameraID, ivec2 viewportRegionPos = {0, 0}, ivec2 viewportRegionSize = {-1, -1}) {
+        return views.emplace(viewport, cameraID, viewportRegionPos, viewportRegionSize);
+    }
+
+    RenderView& getView(uint32_t view) {
+        return views[view];
     }
 
     void use(uint32_t view) {
@@ -78,6 +86,17 @@ public:
         uint32_t loc = views.reg[view];
         glBindBufferRange(GL_UNIFORM_BUFFER, cameraBinding, cameraBuffer.ID, loc * bufferStride, sizeof(GpuCamera3D));
         rv.viewport->use();
+        ivec2 pos = rv.viewportRegionPos;
+        ivec2 size = rv.viewportRegionSize;
+        ivec2 extents = prvl::ivec2(rv.viewport->size) - pos;
+        if (size.x == -1) {
+            size.x = extents.x;
+        }
+        if (size.y == -1) {
+            size.y = extents.y;
+        }
+        glViewport(pos.x, pos.y, size.x, size.y);
+        glScissor(pos.x, pos.y, size.x, size.y);
     }
 };
 

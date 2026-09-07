@@ -30,9 +30,8 @@ struct Viewport {
         }
     }
 
-    void use() {
+    inline void use() {
         fbo.bind();
-        glViewport(0, 0, size.x, size.y);
     }
 };
 
