@@ -582,7 +582,7 @@ struct Serial<DynamicCollider2D> {
 template <>
 struct Serial<PhysicsObject2D> {
     static void serialize(World* world, uint32_t componentID, ByteWriter& output) {
-        output.write(world->ecs.read<PhysicsObject2D>({componentID}));
+        output.write(world->ecs.read<PhysicsObject2D>(componentID));
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {

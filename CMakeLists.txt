@@ -47,4 +47,6 @@ target_compile_options(Polyray PRIVATE
 target_compile_options(Polyray PUBLIC
     -mavx2
     -mfma
+
+    -Wno-missing-braces
 )

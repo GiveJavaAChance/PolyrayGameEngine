@@ -626,7 +626,7 @@ struct Serial<DynamicCollider3D> {
 template <>
 struct Serial<PhysicsObject3D> {
     static void serialize(World* world, uint32_t componentID, ByteWriter& output) {
-        output.write(world->ecs.read<PhysicsObject3D>({componentID}));
+        output.write(world->ecs.read<PhysicsObject3D>(componentID));
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
