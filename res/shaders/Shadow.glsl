@@ -12,6 +12,8 @@ layout(std430, binding = SHADOW3D_IDX) buffer ShadowCamera3DBuffer {
 
 layout(binding = 32) uniform sampler2DShadow shadowMapAtlas;
 
+// The shadow sampler code is a slightly modified version from (https://github.com/TheRealMJP/Shadows/blob/master/Shadows/Mesh.hlsl)
+
 float SampleShadowMap(vec2 base_uv, float u, float v, vec2 shadowMapSizeInv, float depth, vec2 uvScale, vec2 uvOffset) {
     vec2 uv = base_uv + vec2(u, v) * shadowMapSizeInv;
     if(any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
@@ -37,8 +39,8 @@ float SampleShadowMapOptimizedPCF(uint shadowIdx, vec3 pos, vec3 normal, vec3 li
 
     float lightDepth = shadowPos.z;
 
-    //const float bias = 0.003;
-    float bias = baseBias / max(pow(dot(normal, lightDir), 1.4), 0.01);
+    const float bias = 0.003;
+    //float bias = baseBias / max(pow(dot(normal, lightDir), 1.4), 0.01);
 
     lightDepth += bias;
 
