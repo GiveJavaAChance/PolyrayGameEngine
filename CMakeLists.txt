@@ -17,6 +17,14 @@ add_library(Polyray STATIC
 
     src/scene/2d/Scene2D.cpp
     src/scene/3d/Scene3D.cpp
+
+    src/net/Client.cpp
+    src/net/Multiplayer.cpp
+    src/net/Server.cpp
+    src/net/ServerSocket.cpp
+    src/net/Socket.cpp
+
+    src/GltfLoader.cpp
 )
 
 target_compile_features(Polyray PUBLIC cxx_std_20)
