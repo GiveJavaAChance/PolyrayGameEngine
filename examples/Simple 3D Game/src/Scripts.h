@@ -97,10 +97,8 @@ struct PlayerScript {
         currentRotation = normalize(slerp(currentRotation, targetRotation, v));
 
         Transform3D* tx = cameraPivot.getComponentPtr<Transform3D>();
-        mat4 rot = prvl::mat4(prvl::mat3(currentRotation)); // prvl::mat4(rotateY(cameraAng.y) * rotateX(cameraAng.x));
-        rot[3] = tx->local[3];
-        tx->local = rot;
-        tx->dirtyLocal = true;
+        tx->rotation = currentRotation;
+        tx->dirtyTRS = true;
     }
 
     void input(const InputEvent& event) {

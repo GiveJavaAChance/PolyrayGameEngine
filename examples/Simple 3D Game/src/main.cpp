@@ -57,7 +57,7 @@ int main() {
 
     uvec2 windowSize = prvl::uvec2(w.getWidth(), w.getHeight());
 
-    // Initialize window input event listening (mouse or keyboard input)
+    // Initialize window input event listening (mouse and keyboard input)
     Input::initWindowInput(&w);
 
     // Disable the mouse to stop the mouse from hitting the edges of the screen and allow for infinite travel
@@ -90,7 +90,7 @@ int main() {
     ECS& ecs = world.ecs;
 
     ////////////////////
-    // Create sysyems //
+    // Create systems //
     ////////////////////
 
     // Set up all systems you'll use (some depend on others already being in the world)
