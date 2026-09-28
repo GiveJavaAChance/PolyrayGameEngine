@@ -20,6 +20,7 @@ enum ExportType : uint8_t {
     EXPORT_VEC2,
     EXPORT_VEC3,
     EXPORT_VEC4,
+    EXPORT_QUAT,
     EXPORT_MAT2,
     EXPORT_MAT3,
     EXPORT_MAT4,
@@ -29,6 +30,7 @@ enum ExportType : uint8_t {
     EXPORT_DVEC2,
     EXPORT_DVEC3,
     EXPORT_DVEC4,
+    EXPORT_DQUAT,
 
     EXPORT_TEXTURE,
 
