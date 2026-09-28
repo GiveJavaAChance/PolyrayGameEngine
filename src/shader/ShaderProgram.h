@@ -4,7 +4,10 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
+
 #include <glad/glad.h>
+#include <prvl.h>
 
 template <typename>
 inline constexpr bool always_false = false;

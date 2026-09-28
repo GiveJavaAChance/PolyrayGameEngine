@@ -205,6 +205,8 @@ public:
             }
         }
         pos = 0;
+        char buffer[64u];
+        std::memset(buffer, '\n', sizeof(buffer));
         while((pos = str.find("/*", pos)) != std::string::npos) {
             size_t end = str.find("*/", pos);
             size_t c = 0;
@@ -218,10 +220,10 @@ public:
             } else {
                 str.erase(pos);
             }
-            if(c > 0) {
-                char ch[c];
-                std::memset(ch, '\n', c);
-                str.insert(pos, ch);
+            while(c > 0) {
+                size_t ch = c < sizeof(buffer) ? c : sizeof(buffer);
+                c -= ch;
+                str.insert(pos, buffer, ch);
             }
         }
         pos = 0;

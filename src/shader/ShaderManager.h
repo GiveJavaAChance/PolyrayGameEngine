@@ -3,25 +3,29 @@
 
 #pragma once
 
-#include <unordered_set>
-#include <unordered_map>
+#include <algorithm>
 #include <charconv>
 #include <string>
-#include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
+
 #include <ResourceManager.h>
 #include <shader/ShaderPreprocessor.h>
 #include <shader/ShaderProgram.h>
 #include <structure/UnorderedRegistry.h>
 
 struct VertexAttribInfo {
+    std::string name;
     GLuint location;
+    GLenum baseType;
     GLenum type;
     GLint columns;
     GLint components;
     GLsizei byteSize;
     bool instanced;
     uint32_t vboIdx;
+    bool optional;
 };
 
 struct VertexLayoutInfo {
@@ -40,6 +44,8 @@ namespace ShaderManager {
             uint32_t instanceFrom;
             std::unordered_map<std::string, uint32_t> attributeMapping;
             uint32_t maxMapping;
+
+            std::unordered_set<std::string> optionalAttributes;
         };
 
         inline UnorderedRegistry<CompiledShader> shaders;
@@ -57,7 +63,7 @@ namespace ShaderManager {
         proc.setValue(name, value);
     }
 
-    template<typename T>
+    template <typename T>
     inline void setValue(const char* name, const T& value) {
         proc.setValue<T>(name, value);
     }
@@ -70,30 +76,34 @@ namespace ShaderManager {
         GLuint shader = glCreateShader(type);
         int32_t instanceFrom = -1;
         std::unordered_map<std::string, uint32_t> attributeMap;
+        std::unordered_set<std::string> optionalAttributes;
         uint32_t maxMapping = 1u;
         std::string src(source);
         ShaderPreprocessor::clean(src);
-        if(type == GL_VERTEX_SHADER) {
+        if (type == GL_VERTEX_SHADER) {
             std::string found;
-            if(ShaderPreprocessor::findDirective(src, "instancefrom", found)) {
+            if (ShaderPreprocessor::findDirective(src, "instancefrom", found)) {
                 if (std::from_chars(found.data(), found.data() + found.size(), instanceFrom).ec != std::errc()) {
                     instanceFrom = -1;
                 }
                 maxMapping = 2u;
             }
-            if(ShaderPreprocessor::findDirective(src, "attributemap", found)) {
+            if (ShaderPreprocessor::findDirective(src, "attributemap", found)) {
                 std::vector<std::pair<std::string, std::string>> maps;
                 ShaderPreprocessor::extractDirectiveList(found, maps);
-                for(std::pair<std::string, std::string>& m : maps) {
+                for (std::pair<std::string, std::string>& m : maps) {
                     uint32_t idx;
                     if (std::from_chars(m.second.data(), m.second.data() + m.second.size(), idx).ec == std::errc()) {
-                        maxMapping = std::max(maxMapping, idx + 1u);
+                        maxMapping = max(maxMapping, idx + 1u);
                         attributeMap[m.first] = idx;
                     }
                 }
             }
+            while (ShaderPreprocessor::findDirective(src, "optional", found)) {
+                optionalAttributes.insert(found);
+            }
         }
-        if(preprocess) {
+        if (preprocess) {
             proc.process(src);
         }
         const char* processed = src.c_str();
@@ -112,12 +122,12 @@ namespace ShaderManager {
             glDeleteShader(shader);
             return 0u;
         } else {
-            return shaders.emplace(shader, type, instanceFrom >= 0, instanceFrom < 0 ? 0u : static_cast<uint32_t>(instanceFrom), attributeMap, maxMapping) + 1u;
+            return shaders.emplace(shader, type, instanceFrom >= 0, instanceFrom < 0 ? 0u : static_cast<uint32_t>(instanceFrom), attributeMap, maxMapping, optionalAttributes) + 1u;
         }
     }
 
     inline uint32_t compileShaderFile(const char* name, GLenum type, bool preprocess = true) {
-        if(shaderCache.count(name)) {
+        if (shaderCache.count(name)) {
             return shaderCache[name];
         }
         std::string src = ResourceManager::getResourceAsString(name);
@@ -162,7 +172,7 @@ namespace ShaderManager {
             }
             incomplete = true;
         }
-        if(incomplete) {
+        if (incomplete) {
             glDeleteProgram(program);
             return ShaderProgram();
         }
@@ -204,21 +214,76 @@ namespace ShaderManager {
             GLuint location = glGetAttribLocation(program.ID, nameBuf);
 
             VertexAttribInfo attr;
+            attr.name = nameBuf;
             attr.location = location;
             attr.type = type;
-            switch(type) {
-                case GL_FLOAT:      case GL_INT:      attr.columns = 1; attr.components = 1; break;
-                case GL_FLOAT_VEC2: case GL_INT_VEC2: attr.columns = 1; attr.components = 2; break;
-                case GL_FLOAT_VEC3: case GL_INT_VEC3: attr.columns = 1; attr.components = 3; break;
-                case GL_FLOAT_VEC4: case GL_INT_VEC4: attr.columns = 1; attr.components = 4; break;
+            switch (type) {
+                case GL_FLOAT:
+                case GL_INT:
+                case GL_UNSIGNED_INT:
+                    attr.columns = 1;
+                    attr.components = 1;
+                    break;
+                case GL_FLOAT_VEC2:
+                case GL_INT_VEC2:
+                case GL_UNSIGNED_INT_VEC2:
+                    attr.columns = 1;
+                    attr.components = 2;
+                    break;
+                case GL_FLOAT_VEC3:
+                case GL_INT_VEC3:
+                case GL_UNSIGNED_INT_VEC3:
+                    attr.columns = 1;
+                    attr.components = 3;
+                    break;
+                case GL_FLOAT_VEC4:
+                case GL_INT_VEC4:
+                case GL_UNSIGNED_INT_VEC4:
+                    attr.columns = 1;
+                    attr.components = 4;
+                    break;
 
-                case GL_FLOAT_MAT2: attr.columns = 2; attr.components = 2; break;
-                case GL_FLOAT_MAT3: attr.columns = 3; attr.components = 3; break;
-                case GL_FLOAT_MAT4: attr.columns = 4; attr.components = 4; break;
+                case GL_FLOAT_MAT2:
+                    attr.columns = 2;
+                    attr.components = 2;
+                    break;
+                case GL_FLOAT_MAT3:
+                    attr.columns = 3;
+                    attr.components = 3;
+                    break;
+                case GL_FLOAT_MAT4:
+                    attr.columns = 4;
+                    attr.components = 4;
+                    break;
 
                 default:
                     std::cerr << "Unsupported vertex attrib type: " << type << " at location " << location << "\n";
                     continue;
+            }
+            switch (type) {
+                case GL_FLOAT:
+                case GL_FLOAT_VEC2:
+                case GL_FLOAT_VEC3:
+                case GL_FLOAT_VEC4:
+                case GL_FLOAT_MAT2:
+                case GL_FLOAT_MAT3:
+                case GL_FLOAT_MAT4:
+                    attr.baseType = GL_FLOAT;
+                    break;
+
+                case GL_INT:
+                case GL_INT_VEC2:
+                case GL_INT_VEC3:
+                case GL_INT_VEC4:
+                    attr.baseType = GL_INT;
+                    break;
+
+                case GL_UNSIGNED_INT:
+                case GL_UNSIGNED_INT_VEC2:
+                case GL_UNSIGNED_INT_VEC3:
+                case GL_UNSIGNED_INT_VEC4:
+                    attr.baseType = GL_UNSIGNED_INT;
+                    break;
             }
             attr.byteSize = attr.components * 4;
             attr.instanced = (layout.hasInstanceFrom && location >= layout.instanceFrom);
@@ -229,6 +294,9 @@ namespace ShaderManager {
             } else {
                 attr.vboIdx = attr.instanced ? 1u : 0u;
             }
+
+            attr.optional = vertexShader.optionalAttributes.contains(nameBuf);
+
             layout.attributes.push_back(attr);
         }
         std::vector<VertexAttribInfo>& attrs = layout.attributes;
@@ -256,7 +324,11 @@ namespace ShaderManager {
             uint32_t offset = vboOffsets[attr.vboIdx];
             for (GLint col = 0; col < attr.columns; col++) {
                 GLuint attribLocation = attr.location + col;
-                glVertexArrayAttribFormat(vao, attribLocation, attr.components, GL_FLOAT, GL_FALSE, offset + col * attr.byteSize);
+                if (attr.baseType == GL_FLOAT) {
+                    glVertexArrayAttribFormat(vao, attribLocation, attr.components, attr.baseType, GL_FALSE, offset + col * attr.byteSize);
+                } else {
+                    glVertexArrayAttribIFormat(vao, attribLocation, attr.components, attr.baseType, offset + col * attr.byteSize);
+                }
                 glVertexArrayAttribBinding(vao, attribLocation, bindingIndex);
                 glEnableVertexArrayAttrib(vao, attribLocation);
                 if (attr.instanced) {
