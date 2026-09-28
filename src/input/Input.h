@@ -5,11 +5,11 @@
 
 #include <cstdint>
 
-#include <Window.h>
-
 #include <EventBus.h>
+#include <Window.h>
 #include <input/InputEvent.h>
 #include <prvl.h>
+#include <structure/UnorderedRegistry.h>
 
 enum MouseInputMode : uint32_t {
     NORMAL = GLFW_CURSOR_NORMAL,
@@ -37,15 +37,21 @@ namespace Input {
 
         constexpr static uint32_t CONTROLLER_COUNT = GLFW_JOYSTICK_LAST + 1u;
 
-        inline uint64_t keyStates[KEY_WORDS];
+        struct WindowInputState {
+            Window* window;
 
-        inline uint8_t mouseButtonStates;
+            uint64_t keyStates[KEY_WORDS];
 
-        inline vec2 mousePos;
-        inline vec2 mouseDelta;
+            uint8_t mouseButtonStates = 0u;
 
-        inline vec2 mouseDragOrigin;
-        inline vec2 mouseDragDelta;
+            vec2 mousePos = prvl::vec2();
+            vec2 mouseDelta = prvl::vec2();
+
+            vec2 mouseDragOrigin = prvl::vec2();
+            vec2 mouseDragDelta = prvl::vec2();
+        };
+
+        inline UnorderedRegistry<WindowInputState> windowInputStates;
 
         inline uint64_t controllerPresent = 0ull;
         inline uint64_t controllerButtonStates[CONTROLLER_COUNT];
@@ -60,88 +66,88 @@ namespace Input {
         glfwSetInputMode(window.nativeHandle(), GLFW_CURSOR, mode);
     }
 
-    inline void setKey(uint32_t key) {
+    inline void setKey(uint32_t key, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
         uint32_t u = key >> 6u;
         uint64_t mask = 1ull << (key & 63u);
-        if ((keyStates[u] & mask) == 0ull) {
-            eventQueue.add(InputEvent{KEY_EVENT, {.keyEvent = {key, true}}});
+        if ((windowState.keyStates[u] & mask) == 0ull) {
+            eventQueue.add(InputEvent{KEY_EVENT, {.keyEvent = {window, key, true}}});
         }
-        keyStates[u] |= mask;
+        windowState.keyStates[u] |= mask;
     }
 
-    inline void clearKey(uint32_t key) {
+    inline void clearKey(uint32_t key, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
         uint32_t u = key >> 6u;
         uint64_t mask = 1ull << (key & 63u);
-        if (keyStates[u] & mask) {
-            eventQueue.add(InputEvent{KEY_EVENT, {.keyEvent = {key, false}}});
+        if (windowState.keyStates[u] & mask) {
+            eventQueue.add(InputEvent{KEY_EVENT, {.keyEvent = {window, key, false}}});
         }
-        keyStates[u] &= ~mask;
+        windowState.keyStates[u] &= ~mask;
     }
 
-    inline bool getKey(uint32_t key) {
+    inline bool getKey(uint32_t key, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
         uint32_t u = key >> 6u;
         uint64_t mask = 1ull << (key & 63u);
-        return keyStates[u] & mask;
+        return windowState.keyStates[u] & mask;
     }
 
-    inline void setMouseButton(uint32_t button) {
+    inline void setMouseButton(uint32_t button, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
         uint8_t mask = 1u << button;
-        if ((mouseButtonStates & mask) == 0ull) {
-            eventQueue.add(InputEvent{MOUSE_BUTTON_EVENT, {.mouseButtonEvent = {button, true}}});
-            mouseDragOrigin = mousePos;
+        if ((windowState.mouseButtonStates & mask) == 0ull) {
+            eventQueue.add(InputEvent{MOUSE_BUTTON_EVENT, {.mouseButtonEvent = {window, button, true}}});
+            windowState.mouseDragOrigin = windowState.mousePos;
         }
-        mouseButtonStates |= mask;
+        windowState.mouseButtonStates |= mask;
     }
 
-    inline void clearMouseButton(uint32_t button) {
+    inline void clearMouseButton(uint32_t button, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
         uint8_t mask = 1u << button;
-        if (mouseButtonStates & mask) {
-            eventQueue.add(InputEvent{MOUSE_BUTTON_EVENT, {.mouseButtonEvent = {button, false}}});
-            mouseDragDelta = prvl::vec2();
+        if (windowState.mouseButtonStates & mask) {
+            eventQueue.add(InputEvent{MOUSE_BUTTON_EVENT, {.mouseButtonEvent = {window, button, false}}});
+            windowState.mouseDragDelta = prvl::vec2();
         }
-        mouseButtonStates &= ~mask;
+        windowState.mouseButtonStates &= ~mask;
     }
 
-    inline bool getMouseButton(uint32_t button) {
+    inline bool getMouseButton(uint32_t button, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
         uint8_t mask = 1u << button;
-        return mouseButtonStates & mask;
+        return windowState.mouseButtonStates & mask;
     }
 
-    inline void clearStates() {
-        for (uint32_t i = 0u; i < KEY_WORDS; i++) {
-            keyStates[i] = 0ull;
-        }
-        mouseButtonStates = 0u;
-        eventQueue.clear();
-    }
-
-    inline void moveMouse(vec2 newPos) {
-        if (mousePos.x == newPos.x && mousePos.y == newPos.y) {
+    inline void moveMouse(vec2 newPos, Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
+        if (windowState.mousePos.x == newPos.x && windowState.mousePos.y == newPos.y) {
             return;
         }
-        vec2 prevPos = mousePos;
-        mousePos = newPos;
-        mouseDelta = mousePos - prevPos;
-        mouseDragDelta += mouseDelta;
-        if (mouseButtonStates) {
-            eventQueue.add(InputEvent{MOUSE_DRAG_EVENT, {.mouseDragEvent = {prevPos, mousePos, mouseDragDelta, mouseDragOrigin}}});
+        vec2 prevPos = windowState.mousePos;
+        windowState.mousePos = newPos;
+        windowState.mouseDelta = windowState.mousePos - prevPos;
+        windowState.mouseDragDelta += windowState.mouseDelta;
+        if (windowState.mouseButtonStates) {
+            eventQueue.add(InputEvent{MOUSE_DRAG_EVENT, {.mouseDragEvent = {window, prevPos, windowState.mousePos, windowState.mouseDragDelta, windowState.mouseDragOrigin}}});
         } else {
-            eventQueue.add(InputEvent{MOUSE_MOVE_EVENT, {.mouseMoveEvent = {prevPos, mousePos, mouseDelta}}});
+            eventQueue.add(InputEvent{MOUSE_MOVE_EVENT, {.mouseMoveEvent = {window, prevPos, windowState.mousePos, windowState.mouseDelta}}});
         }
     }
 
-    inline void scroll(float amt) {
-        eventQueue.add(InputEvent{MOUSE_SCROLL_EVENT, {.scrollEvent = {amt}}});
+    inline void scroll(float amt, Window* window = nullptr) {
+        eventQueue.add(InputEvent{MOUSE_SCROLL_EVENT, {.scrollEvent = {window, amt}}});
     }
 
-    inline vec2 getMousePosition() {
-        return mousePos;
+    inline vec2 getMousePosition(Window* window = nullptr) {
+        WindowInputState& windowState = window ? windowInputStates[window->getInputID()] : windowInputStates.arr[0u];
+        return windowState.mousePos;
     }
 
     inline uint32_t getControllers(uint32_t controllers[CONTROLLER_COUNT]) {
         uint32_t idx = 0u;
-        for(uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
-            if(controllerPresent & (1ull << i)) {
+        for (uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
+            if (controllerPresent & (1ull << i)) {
                 controllers[idx++] = i;
             }
         }
@@ -164,7 +170,7 @@ namespace Input {
     inline void pollEvents(EventBus* eventBus = nullptr) {
         glfwPollEvents();
         for (uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
-            if((controllerPresent & (1ull << i)) == 0ull) {
+            if ((controllerPresent & (1ull << i)) == 0ull) {
                 continue;
             }
             uint64_t buttonStates = controllerButtonStates[i];
@@ -176,12 +182,12 @@ namespace Input {
                     bool on = buttonStates & mask;
                     if (buttons[j] == GLFW_PRESS) {
                         buttonStates |= mask;
-                        if(!on) {
+                        if (!on) {
                             eventQueue.add(InputEvent{CONTROLLER_BUTTON_EVENT, {.controllerButtonEvent = {i, j, true}}});
                         }
                     } else {
                         buttonStates &= ~mask;
-                        if(on) {
+                        if (on) {
                             eventQueue.add(InputEvent{CONTROLLER_BUTTON_EVENT, {.controllerButtonEvent = {i, j, false}}});
                         }
                     }
@@ -190,7 +196,7 @@ namespace Input {
             controllerButtonStates[i] = buttonStates;
             const float* axes = glfwGetJoystickAxes(i, &count);
             vec4 axesStates = prvl::vec4();
-            if(count != 0 && axes) {
+            if (count != 0 && axes) {
                 for (int j = 0; j < count; j++) {
                     axesStates[j] = axes[j];
                 }
@@ -205,28 +211,36 @@ namespace Input {
         eventQueue.clear();
     }
 
-    inline void init(const Window& window) {
-        GLFWwindow* handle = window.nativeHandle();
+    inline void initWindowInput(Window* window) {
+        GLFWwindow* handle = window->nativeHandle();
+        window->getInputID() = windowInputStates.emplace(window);
         glfwSetKeyCallback(handle, [](GLFWwindow* win, int key, int scancode, int action, int mods) {
+            Window* w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(win));
             if (action == GLFW_PRESS) {
-                setKey(key);
+                setKey(key, w);
             } else if (action == GLFW_RELEASE) {
-                clearKey(key);
+                clearKey(key, w);
             }
         });
         glfwSetMouseButtonCallback(handle, [](GLFWwindow* win, int button, int action, int mods) {
+            Window* w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(win));
             if (action == GLFW_PRESS) {
-                setMouseButton(button);
+                setMouseButton(button, w);
             } else if (action == GLFW_RELEASE) {
-                clearMouseButton(button);
+                clearMouseButton(button, w);
             }
         });
         glfwSetCursorPosCallback(handle, [](GLFWwindow* win, double xpos, double ypos) {
-            moveMouse(prvl::vec2(xpos, ypos));
+            Window* w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(win));
+            moveMouse(prvl::vec2(xpos, ypos), w);
         });
         glfwSetScrollCallback(handle, [](GLFWwindow* win, double xOffset, double yOffset) {
-            scroll(static_cast<float>(yOffset));
+            Window* w = reinterpret_cast<Window*>(glfwGetWindowUserPointer(win));
+            scroll(static_cast<float>(yOffset), w);
         });
+    }
+
+    inline void initControllerInput() {
         glfwSetJoystickCallback([](int jid, int event) {
             uint64_t mask = 1ull << jid;
             if (event == GLFW_CONNECTED) {
@@ -235,20 +249,23 @@ namespace Input {
                 controllerPresent &= ~mask;
             }
         });
-        for(uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
+        for (uint32_t i = 0u; i < CONTROLLER_COUNT; i++) {
             if (glfwJoystickPresent(i)) {
                 controllerPresent |= 1ull << i;
             }
         }
     }
 
-    inline void exit(const Window& window) {
-        GLFWwindow* handle = window.nativeHandle();
-        glfwSetKeyCallback(handle, nullptr);
-        glfwSetCharCallback(handle, nullptr);
-        glfwSetMouseButtonCallback(handle, nullptr);
-        glfwSetCursorPosCallback(handle, nullptr);
-        glfwSetScrollCallback(handle, nullptr);
+    inline void exit() {
+        DynamicArray<WindowInputState>& windowStates = windowInputStates.arr;
+        for (uint32_t i = 0u; i < windowStates.size(); i++) {
+            GLFWwindow* handle = windowStates[i].window->nativeHandle();
+            glfwSetKeyCallback(handle, nullptr);
+            glfwSetCharCallback(handle, nullptr);
+            glfwSetMouseButtonCallback(handle, nullptr);
+            glfwSetCursorPosCallback(handle, nullptr);
+            glfwSetScrollCallback(handle, nullptr);
+        }
         glfwSetJoystickCallback(nullptr);
     }
 }

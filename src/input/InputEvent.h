@@ -18,29 +18,36 @@ enum InputEventType : uint8_t {
     CONTROLLER_BUTTON_EVENT
 };
 
+struct Window;
+
 struct InputEvent {
     InputEventType type;
     union {
         struct {
+            Window* window;
             uint32_t key;
             bool pressed;
         } keyEvent;
         struct {
+            Window* window;
             uint32_t button;
             bool pressed;
         } mouseButtonEvent;
         struct {
+            Window* window;
             vec2 from;
             vec2 to;
             vec2 delta;
         } mouseMoveEvent;
         struct {
+            Window* window;
             vec2 from;
             vec2 to;
             vec2 delta;
             vec2 origin;
         } mouseDragEvent;
         struct {
+            Window* window;
             float amt;
         } scrollEvent;
         struct {
