@@ -9,43 +9,43 @@
 #include <rendering/ShaderBuffer.h>
 #include <shader/ShaderManager.h>
 
+#include <Mesh.h>
+
 struct RenderObject {
     ShaderBuffer vbo;
-    ShaderBuffer instanceVbo;
-    GLuint vao;
     uint32_t vertexCount = 0u;
+    ShaderBuffer ebo;
+    uint32_t indexCount = 0u;
+    ShaderBuffer instanceVbo;
     uint32_t instanceCount = 0u;
+    GLuint vao;
+    
     GLenum mode = GL_TRIANGLES;
 
-    RenderObject(const VertexLayoutInfo& layout) : vbo(GL_STATIC_DRAW), instanceVbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(layout, {vbo.ID, instanceVbo.ID})) {
+    RenderObject(const VertexLayoutInfo& layout) : vbo(GL_STATIC_DRAW), ebo(GL_STATIC_DRAW), instanceVbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(layout, {vbo.ID, instanceVbo.ID})) {
+        glVertexArrayElementBuffer(vao, ebo.ID);
     }
 
-    template <typename T>
-    void uploadVertices(const T* vertices, uint32_t count) {
-        if (count == vertexCount) {
-            vbo.uploadPartialData(vertices, vertexCount, 0);
-        } else {
-            vbo.uploadData<T>(vertices, count);
-            vertexCount = count;
-        }
+    template <typename V>
+    void uploadMesh(const Mesh<V>& mesh) {
+        vbo.uploadData(mesh.vertices.data(), mesh.vertices.size());
+        ebo.uploadData(mesh.indices.data(), mesh.indices.size());
+        vertexCount = mesh.vertices.size();
+        indexCount = mesh.indices.size();
     }
 
     template <typename T>
     void uploadInstances(const T* instances, uint32_t count) {
-        if (count == instanceCount) {
-            instanceVbo.uploadPartialData<T>(instances, instanceCount, 0);
-        } else {
-            instanceVbo.uploadData<T>(instances, count);
-            instanceCount = count;
-        }
+        instanceVbo.uploadData<T>(instances, count);
+        instanceCount = count;
     }
 
     void render() {
-        if (vertexCount == 0u || instanceCount == 0u) {
+        if (vertexCount == 0u || indexCount == 0u || instanceCount == 0u) {
             return;
         }
         glBindVertexArray(vao);
-        glDrawArraysInstanced(mode, 0, vertexCount, instanceCount);
+        glDrawElementsInstanced(mode, indexCount, GL_UNSIGNED_INT, nullptr, instanceCount);
     }
 };
 
