@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <Camera3D.h>
+#include <Profiler.h>
 #include <ecs/ECS.h>
 
 struct Camera3DSystem {
@@ -24,6 +25,7 @@ private:
     }
 
     void update(double dt) {
+        PROFILE_SCOPE(Camera3DSystem_Update)
         Storage<Camera3D>& cameraStorage = ecs->view<Camera3D>();
         DynamicArray<Camera3D>& cameras = cameraStorage.data;
         for (uint32_t i = 0u; i < cameras.size(); i++) {

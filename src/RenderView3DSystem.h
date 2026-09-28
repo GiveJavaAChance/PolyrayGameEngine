@@ -1,6 +1,7 @@
 #ifndef RENDERVIEW3DSYSTEM_H_INCLUDED
 #define RENDERVIEW3DSYSTEM_H_INCLUDED
 
+#include "Profiler.h"
 #pragma once
 
 #include <cstdint>
@@ -27,6 +28,7 @@ private:
     DynamicArray<uint8_t> cameraUploadBuffer;
 
     void update(double dt) {
+        PROFILE_SCOPE(RenderView3DSystem_Update)
         cameraUploadBuffer.clear();
         uint32_t dataSize = views.arr.size() * bufferStride;
         cameraUploadBuffer.ensureCapacity(dataSize);
@@ -36,7 +38,7 @@ private:
             Camera3D* cam = ecs->getPtr<Camera3D>(rv.cameraID);
             ivec2 pos = rv.viewportRegionPos;
             ivec2 size = rv.viewportRegionSize;
-            ivec2 extents = prvl::ivec2(rv.viewport->size) - pos;
+            ivec2 extents = prvl::ivec2(rv.viewport->size()) - pos;
             if (size.x == -1) {
                 size.x = extents.x;
             }
@@ -88,7 +90,7 @@ public:
         rv.viewport->use();
         ivec2 pos = rv.viewportRegionPos;
         ivec2 size = rv.viewportRegionSize;
-        ivec2 extents = prvl::ivec2(rv.viewport->size) - pos;
+        ivec2 extents = prvl::ivec2(rv.viewport->size()) - pos;
         if (size.x == -1) {
             size.x = extents.x;
         }
