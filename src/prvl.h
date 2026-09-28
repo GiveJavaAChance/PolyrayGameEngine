@@ -3,9 +3,15 @@
 
 #pragma once
 
+#include <algorithm>
+#include <bit>
 #include <cstdint>
 #include <cstdlib>
 #include <cmath>
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 
 using std::min;
 using std::max;
@@ -726,7 +732,7 @@ namespace prvl {
 }
 
 constexpr quat operator+(const quat& a, const quat& b) {
-    return quat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+    return prvl::quat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
 
 constexpr quat& operator+=(quat& a, const quat& b) {
@@ -738,11 +744,15 @@ constexpr quat& operator+=(quat& a, const quat& b) {
 }
 
 constexpr quat operator-(const quat& q) {
-    return quat(-q.x, -q.y, -q.z, -q.w);
+    return prvl::quat(-q.x, -q.y, -q.z, -q.w);
 }
 
 constexpr quat operator*(const quat& q, float s) {
-    return quat(q.x * s, q.y * s, q.z * s, q.w * s);
+    return prvl::quat(q.x * s, q.y * s, q.z * s, q.w * s);
+}
+
+constexpr quat operator*(float s, const quat& q) {
+    return prvl::quat(q.x * s, q.y * s, q.z * s, q.w * s);
 }
 
 constexpr quat& operator*=(quat& q, float s) {
@@ -753,8 +763,16 @@ constexpr quat& operator*=(quat& q, float s) {
     return q;
 }
 
+constexpr quat& operator*=(float s, quat& q) {
+    q.x *= s;
+    q.y *= s;
+    q.z *= s;
+    q.w *= s;
+    return q;
+}
+
 constexpr quat operator*(const quat& a, const quat& b) {
-    return quat(
+    return prvl::quat(
         a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
         a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
         a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
@@ -775,7 +793,7 @@ constexpr quat& operator*=(quat& a, const quat& b) {
 }
 
 constexpr quat operator/(const quat& q, float s) {
-    return quat(q.x / s, q.y / s, q.z / s, q.w / s);
+    return prvl::quat(q.x / s, q.y / s, q.z / s, q.w / s);
 }
 
 constexpr quat& operator/=(quat& q, float s) {
@@ -792,11 +810,11 @@ constexpr float dot(const quat& a, const quat& b) {
 
 constexpr quat normalize(const quat& q) {
     float inv = 1.0f / sqrtf(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
-    return quat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+    return prvl::quat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
 }
 
 constexpr quat conjugate(const quat& q) {
-    return quat(-q.x, -q.y, -q.z, q.w);
+    return prvl::quat(-q.x, -q.y, -q.z, q.w);
 }
 
 constexpr quat inverse(const quat& q) {
@@ -832,7 +850,7 @@ prvl_QUAT_CMP(<)
 prvl_QUAT_CMP(<=)
 
 constexpr dquat operator+(const dquat& a, const dquat& b) {
-    return dquat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+    return prvl::dquat(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
 
 constexpr dquat& operator+=(dquat& a, const dquat& b) {
@@ -844,11 +862,15 @@ constexpr dquat& operator+=(dquat& a, const dquat& b) {
 }
 
 constexpr dquat operator-(const dquat& q) {
-    return dquat(-q.x, -q.y, -q.z, -q.w);
+    return prvl::dquat(-q.x, -q.y, -q.z, -q.w);
 }
 
 constexpr dquat operator*(const dquat& q, double s) {
-    return dquat(q.x * s, q.y * s, q.z * s, q.w * s);
+    return prvl::dquat(q.x * s, q.y * s, q.z * s, q.w * s);
+}
+
+constexpr dquat operator*(double s, const dquat& q) {
+    return prvl::dquat(q.x * s, q.y * s, q.z * s, q.w * s);
 }
 
 constexpr dquat& operator*=(dquat& q, double s) {
@@ -859,8 +881,16 @@ constexpr dquat& operator*=(dquat& q, double s) {
     return q;
 }
 
+constexpr dquat& operator*=(double s, dquat& q) {
+    q.x *= s;
+    q.y *= s;
+    q.z *= s;
+    q.w *= s;
+    return q;
+}
+
 constexpr dquat operator*(const dquat& a, const dquat& b) {
-    return dquat(
+    return prvl::dquat(
         a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
         a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
         a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
@@ -881,7 +911,7 @@ constexpr dquat& operator*=(dquat& a, const dquat& b) {
 }
 
 constexpr dquat operator/(const dquat& q, double s) {
-    return dquat(q.x / s, q.y / s, q.z / s, q.w / s);
+    return prvl::dquat(q.x / s, q.y / s, q.z / s, q.w / s);
 }
 
 constexpr dquat& operator/=(dquat& q, double s) {
@@ -898,11 +928,11 @@ constexpr double dot(const dquat& a, const dquat& b) {
 
 constexpr dquat normalize(const dquat& q) {
     double inv = 1.0 / sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
-    return dquat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
+    return prvl::dquat(q.x * inv, q.y * inv, q.z * inv, q.w * inv);
 }
 
 constexpr dquat conjugate(const dquat& q) {
-    return dquat(-q.x, -q.y, -q.z, q.w);
+    return prvl::dquat(-q.x, -q.y, -q.z, q.w);
 }
 
 constexpr dquat inverse(const dquat& q) {
@@ -2007,8 +2037,20 @@ constexpr void isMultiAABBVisible(const float* planes, const bool* planeDirs, co
 
 // Math utils from fastgltf which is also required in fastgltf:
 // For some reason, std::copysignf is not constexpr...
-constexpr float copysign(float mag, float sgn) noexcept {
+constexpr float copysignConstexpr(float mag, float sgn) noexcept {
     return std::bit_cast<float>((std::bit_cast<uint32_t>(sgn) & 0x80000000u) | (std::bit_cast<uint32_t>(mag) & 0x7FFFFFFFu));
+}
+
+constexpr mat4 trsToMatrix(const vec3& translation, const quat& rotation, const vec3& scale) {
+    mat4 tx = prvl::mat4(prvl::mat3(rotation) * diag(scale));
+    tx[3] = prvl::vec4(translation, 1.0f);
+    return tx;
+}
+
+constexpr mat3 trsToMatrix(const vec2& translation, float rotation, const vec2& scale) {
+    float s = sin(rotation);
+    float c = cos(rotation);
+    return prvl::mat3(prvl::vec3(c * scale.x, s * scale.x, 0.0f), prvl::vec3(-s * scale.y, c * scale.y, 0.0f), prvl::vec3(translation, 1.0f));
 }
 
 /**
@@ -2051,9 +2093,9 @@ constexpr void decomposeTransformMatrix(mat4 matrix, vec3& scale, quat& rotation
     rotation.z = static_cast<float>(sqrt(static_cast<double>(rotation.z))) * 0.5f;
     rotation.w = static_cast<float>(sqrt(static_cast<double>(rotation.w))) * 0.5f;
 
-    rotation.x = copysign(rotation.x, m[1u][2u] - m[2u][1u]);
-    rotation.y = copysign(rotation.y, m[2u][0u] - m[0u][2u]);
-    rotation.z = copysign(rotation.z, m[0u][1u] - m[1u][0u]);
+    rotation.x = copysignConstexpr(rotation.x, m[1u][2u] - m[2u][1u]);
+    rotation.y = copysignConstexpr(rotation.y, m[2u][0u] - m[0u][2u]);
+    rotation.z = copysignConstexpr(rotation.z, m[0u][1u] - m[1u][0u]);
 }
 
 #endif
