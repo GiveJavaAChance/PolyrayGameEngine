@@ -4,14 +4,23 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
 #include <prvl.h>
+#include <utils/perf.h>
+
+#include <GLFW/glfw3.h>
+
+#ifdef _WIN32
+#include <windowsx.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#endif
 
 enum WindowMode : uint8_t {
     WINDOWED,
@@ -25,8 +34,53 @@ private:
     uint32_t height = 0u;
     GLFWwindow* handle = nullptr;
 
+    std::function<void(double)> updateFunc;
+    uint64_t lastTime;
+    double dt = 1.0 / 60.0;
+
+    uint32_t inputID;
+
+    void updateLoop() {
+        if (!updateFunc) {
+            return;
+        }
+        updateFunc(dt);
+        update();
+        uint64_t time = Time::nanoTime();
+        dt = static_cast<double>(time - lastTime) / 1000000000.0;
+        lastTime = time;
+    }
+
+#ifdef _WIN32
+    WNDPROC wndProc;
+
+    static LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        if (!window) {
+            return DefWindowProc(hwnd, msg, wParam, lParam);
+        }
+        switch (msg) {
+            case WM_ENTERSIZEMOVE: {
+                SetTimer(hwnd, 1, 1, nullptr);
+                break;
+            }
+            case WM_EXITSIZEMOVE: {
+                KillTimer(hwnd, 1);
+                break;
+            }
+            case WM_TIMER: {
+                if (wParam == 1) {
+                    window->updateLoop();
+                }
+                return 0;
+            }
+        }
+        return CallWindowProc(window->wndProc, hwnd, msg, wParam, lParam);
+    }
+#endif
+
 public:
-    Window(const char* title, uint32_t width, uint32_t height, WindowMode mode, bool decorated, bool transparentBackground = false) : width(width), height(height) {
+    Window(const char* title, uint32_t width, uint32_t height, WindowMode mode, bool decorated, bool alwaysOnTop = false, bool transparentBackground = false) : width(width), height(height) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -38,6 +92,10 @@ public:
 
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, transparentBackground);
 
+        glfwWindowHint(GLFW_FLOATING, alwaysOnTop);
+
+        uint32_t borderlessFix = 0u;
+
         if (mode == EXCLUSIVE_FULLSCREEN || (mode == MAXIMIZED && !decorated)) {
             const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
             if (!mode) {
@@ -45,16 +103,13 @@ public:
             } else {
                 this->width = mode->width;
                 this->height = mode->height;
+                borderlessFix = 1u;
             }
         }
-        handle = glfwCreateWindow(this->width, this->height, title, mode == EXCLUSIVE_FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
+        handle = glfwCreateWindow(this->width + borderlessFix, this->height, title, mode == EXCLUSIVE_FULLSCREEN ? glfwGetPrimaryMonitor() : nullptr, nullptr);
         if (!handle) {
             std::cerr << "Failed to create the GLFW window" << std::endl;
             std::exit(1);
-        }
-
-        if(mode == MAXIMIZED && decorated) {
-            glfwSetWindowPos(handle, 0, 0);
         }
 
         glfwSetWindowUserPointer(handle, this);
@@ -65,6 +120,12 @@ public:
         glfwSwapInterval(1);
         glfwShowWindow(handle);
         glfwFocusWindow(handle);
+
+#ifdef _WIN32
+        HWND hwnd = glfwGetWin32Window(handle);
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+        wndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&Window::windowProc)));
+#endif
 
         if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
             std::cerr << "Failed to initialize GLAD" << std::endl;
@@ -78,6 +139,29 @@ public:
 
     inline GLFWwindow* nativeHandle() const {
         return handle;
+    }
+
+    inline uint32_t& getInputID() {
+        return inputID;
+    }
+
+    void enableClickthrough() {
+#ifdef _WIN32
+        HWND hwnd = glfwGetWin32Window(handle);
+        LONG_PTR exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+        exStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT;
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, exStyle);
+#else
+        std::cerr << "Mouse passthough not supported." << std::endl;
+#endif
+    }
+
+    inline void run(std::function<void(double)> updateFunc) {
+        this->updateFunc = updateFunc;
+        lastTime = Time::nanoTime();
+        while (isWindowOpen()) {
+            updateLoop();
+        }
     }
 
     inline void update() {
