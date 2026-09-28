@@ -181,7 +181,7 @@ public:
     uint32_t getCount() const {
         uint32_t count = 0u;
         for(uint32_t i = 0u; i < size; i++) {
-            __builtin_popcountll(words[i]);
+            count += __builtin_popcountll(words[i]);
         }
         return count;
     }
