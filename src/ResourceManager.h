@@ -259,6 +259,9 @@ namespace ResourceManager {
 }
 
 inline std::filesystem::path ResourcePath::getAbsolutePath() const {
+    if (std::filesystem::exists(str)) {
+        return str;
+    }
     return ResourceManager::getRootDir() / str;
 }
 
