@@ -18,12 +18,13 @@ enum SSAOResolveMode : uint32_t {
 
 struct SSAO {
     GLTexture ssaoTexture;
+    uint32_t ssaoBinding;
     ShaderProgram ssao;
     ShaderProgram ssaoResolve;
 
-    SSAO(uint32_t width, uint32_t height) {
-        this->ssaoTexture = GLTexture::createTexture2D(width, height, GL_R16F);
-        ShaderManager::setValue("SSAO_IDX", BindingRegistry::bindImageTexture(ssaoTexture, 0, false, 0, GL_READ_WRITE));
+    SSAO(uvec2 size) : ssaoTexture(GLTexture::createTexture2D(size.x, size.y, GL_R16F)), ssaoBinding(BindingRegistry::allocateTextureBinding()) {
+        ShaderManager::setValue("SSAO_IDX", ssaoBinding);
+        glBindImageTexture(ssaoBinding, ssaoTexture.ID, 0, false, 0, GL_READ_WRITE, ssaoTexture.format);
 
         this->ssao = ShaderManager::createProgram({ShaderManager::compileShaderFile("res/shaders/SSAO.compute", GL_COMPUTE_SHADER)});
         this->ssaoResolve = ShaderManager::createProgram({ShaderManager::compileShaderFile("res/shaders/SSAOResolve.compute", GL_COMPUTE_SHADER)});
@@ -40,6 +41,14 @@ struct SSAO {
         ssao.setUniform("samples", ssaoKernel, 64u);
     }
 
+    void setSize(uvec2 newSize) {
+        if (newSize.x != ssaoTexture.width || newSize.y != ssaoTexture.width) {
+            ssaoTexture.destroy();
+            ssaoTexture = GLTexture::createTexture2D(newSize.x, newSize.y, GL_R16F);
+            glBindImageTexture(ssaoBinding, ssaoTexture.ID, 0, false, 0, GL_READ_WRITE, ssaoTexture.format);
+        }
+    }
+
     void update(const GLTexture& depthTexture) {
         glBindTextureUnit(0, depthTexture.ID);
         uint32_t groupsX = (ssaoTexture.width + 7u) >> 3u;
@@ -48,7 +57,7 @@ struct SSAO {
         ssao.dispatchCompute(groupsX, groupsY, 1u, GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
     }
 
-    void resolve(const GLTexture& aoTexture, SSAOResolveMode resolveMode) {
+    void resolve(SSAOResolveMode resolveMode) {
         uint32_t groupsX = (ssaoTexture.width + 7u) >> 3u;
         uint32_t groupsY = (ssaoTexture.height + 7u) >> 3u;
         ssaoResolve.use();

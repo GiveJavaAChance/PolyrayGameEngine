@@ -16,5 +16,5 @@ void main() {
     vec4 col = texture(screenTexture, uv);
     col.rgb = ACESTonemap(col.rgb);
     col.rgb = gammaCorrect(col.rgb, 1.0);
-    fragColor = vec4(ditherColor(col.rgb, ditherStrength), col.w);
+    fragColor = ditherColor(col, ditherStrength);
 }

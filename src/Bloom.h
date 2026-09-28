@@ -12,7 +12,8 @@
 
 struct Bloom {
 private:
-    uint32_t layers;
+    GLenum bloomFormat;
+
     GLuint bloomBinding;
 
     ShaderProgram bloomThreshold;
@@ -26,16 +27,24 @@ public:
     float intensity;
     float threshold;
 
-    Bloom(uint32_t width, uint32_t height, uint32_t layers, GLenum format)
-        : layers(layers), bloomBinding(BindingRegistry::allocateTextureBinding()), bloomComposite(ShaderManager::compileShaderFile("res/shaders/bloom/BloomComposite.frag", GL_FRAGMENT_SHADER)),
-          bloomTexture(GLTexture::createTexture2D(width, height, format, layers)), intensity(1.0f), threshold(1.0f) {
+    Bloom(uvec2 size, GLenum format)
+        : bloomFormat(format), bloomBinding(BindingRegistry::allocateTextureBinding()),
+          bloomComposite(ShaderManager::compileShaderFile("res/shaders/bloom/BloomComposite.frag", GL_FRAGMENT_SHADER)),
+          bloomTexture(GLTexture::createTexture2D(size.x, size.y, format, -1)), intensity(1.0f), threshold(1.0f) {
         bloomTexture.setInterpolation(true);
         ShaderManager::setValue("BLOOM_IDX", bloomBinding);
         this->bloomThreshold = ShaderManager::createProgram({ShaderManager::compileShaderFile("res/shaders/bloom/BloomThreshold.compute", GL_COMPUTE_SHADER)});
         this->bloomDownsample = ShaderManager::createProgram({ShaderManager::compileShaderFile("res/shaders/bloom/BloomDownsample.compute", GL_COMPUTE_SHADER)});
         this->bloomUpsample = ShaderManager::createProgram({ShaderManager::compileShaderFile("res/shaders/bloom/BloomUpsample.compute", GL_COMPUTE_SHADER)});
-        bloomComposite.quadProgram.use();
-        bloomComposite.quadProgram.setUniform("layers", static_cast<int32_t>(layers));
+        bloomComposite.quadProgram.setUniform("layers", static_cast<int32_t>(bloomTexture.mipLevels));
+    }
+
+    void setSize(uvec2 newSize) {
+        if (newSize.x != bloomTexture.width || newSize.y != bloomTexture.height) {
+            bloomTexture.destroy();
+            bloomTexture = GLTexture::createTexture2D(newSize.x, newSize.y, bloomFormat, -1);
+            bloomComposite.quadProgram.setUniform("layers", static_cast<int32_t>(bloomTexture.mipLevels));
+        }
     }
 
     void render(GLTexture& colorTexture, GLTexture* lensDirtTexture = nullptr) {
@@ -47,7 +56,7 @@ public:
 
         glBindTextureUnit(0, bloomTexture.ID);
         bloomDownsample.use();
-        for (uint32_t i = 1u; i < layers; i++) {
+        for (uint32_t i = 1u; i < bloomTexture.mipLevels; i++) {
             bloomDownsample.setUniform("layer", static_cast<int32_t>(i - 1u));
             glBindImageTexture(bloomBinding, bloomTexture.ID, i, GL_FALSE, 0, GL_WRITE_ONLY, bloomTexture.format);
             uint32_t wid = bloomTexture.width >> i;
@@ -55,7 +64,7 @@ public:
             bloomDownsample.dispatchCompute((wid + 7u) >> 3u, (hei + 7u) >> 3u, 1u, GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         }
         bloomUpsample.use();
-        for (uint32_t i = layers - 1u; i > 0u; i--) {
+        for (uint32_t i = bloomTexture.mipLevels - 1u; i > 0u; i--) {
             uint32_t j = i - 1u;
             bloomUpsample.setUniform("layer", static_cast<int32_t>(i));
             glBindImageTexture(bloomBinding, bloomTexture.ID, j, GL_FALSE, 0, GL_READ_WRITE, bloomTexture.format);

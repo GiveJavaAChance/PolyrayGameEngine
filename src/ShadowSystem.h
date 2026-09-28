@@ -10,6 +10,8 @@
 
 #include <gpu_types/GpuCamera3D.h>
 
+#define SHADOW_SIZE 1024u
+
 struct ShadowSystem {
     uint32_t shadowsX;
     uint32_t shadowsY;
@@ -25,7 +27,7 @@ struct ShadowSystem {
 
     UnorderedRegistry<GpuCamera3D> shadowCameras;
 
-    ShadowSystem(uint32_t shadowsX, uint32_t shadowsY) : shadowsX(shadowsX), shadowsY(shadowsY), maxShadowCount(shadowsX * shadowsY), shadowAtlas(GLTexture::createTexture2D(2048u * shadowsX, 2048u * shadowsY, GL_DEPTH_COMPONENT32)), shadowBuffer(std::initializer_list<GLTexture*>{}, &shadowAtlas), shadowCamBuffer(GL_DYNAMIC_DRAW), cameraBuffer(GL_DYNAMIC_DRAW) {
+    ShadowSystem(uint32_t shadowsX, uint32_t shadowsY) : shadowsX(shadowsX), shadowsY(shadowsY), maxShadowCount(shadowsX * shadowsY), shadowAtlas(GLTexture::createTexture2D(SHADOW_SIZE * shadowsX, SHADOW_SIZE * shadowsY, GL_DEPTH_COMPONENT32)), shadowBuffer(std::initializer_list<GLTexture*>{}, &shadowAtlas), shadowCamBuffer(GL_DYNAMIC_DRAW), cameraBuffer(GL_DYNAMIC_DRAW) {
         shadowAtlas.setInterpolation(true);
         glTextureParameteri(shadowAtlas.ID, GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
         glTextureParameteri(shadowAtlas.ID, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
@@ -78,9 +80,9 @@ struct ShadowSystem {
             uvec2 shadowMapSize;
         };
         uint32_t i = shadowCameras.reg[shadowId];
-        uint32_t shadowX = (i % shadowsX) * 2048u;
-        uint32_t shadowY = (i / shadowsX) * 2048u;
-        Shadow shadow{cam.projection * cam.cameraTransform * tr, {shadowX, shadowY}, {2048u, 2048u}};
+        uint32_t shadowX = (i % shadowsX) * SHADOW_SIZE;
+        uint32_t shadowY = (i / shadowsX) * SHADOW_SIZE;
+        Shadow shadow{cam.projection * cam.cameraTransform * tr, {shadowX, shadowY}, {SHADOW_SIZE, SHADOW_SIZE}};
         shadowCamBuffer.uploadPartialData(&shadow, 1u, i);
         cameraBuffer.uploadPartialData((void*) &cam, sizeof(GpuCamera3D), i * cameraBufferStride);
     }
@@ -89,12 +91,12 @@ struct ShadowSystem {
         shadowBuffer.bind();
         glEnable(GL_DEPTH_TEST);
         for (uint32_t i = 0u; i < shadowCameras.size(); i++) {
-            uint32_t shadowX = (i % shadowsX) * 2048u;
-            uint32_t shadowY = (i / shadowsX) * 2048u;
+            uint32_t shadowX = (i % shadowsX) * SHADOW_SIZE;
+            uint32_t shadowY = (i / shadowsX) * SHADOW_SIZE;
 
-            glViewport(shadowX, shadowY, 2048u, 2048u);
+            glViewport(shadowX, shadowY, SHADOW_SIZE, SHADOW_SIZE);
             glEnable(GL_SCISSOR_TEST);
-            glScissor(shadowX, shadowY, 2048u, 2048u);
+            glScissor(shadowX, shadowY, SHADOW_SIZE, SHADOW_SIZE);
             glClear(GL_DEPTH_BUFFER_BIT);
             glDisable(GL_SCISSOR_TEST);
 

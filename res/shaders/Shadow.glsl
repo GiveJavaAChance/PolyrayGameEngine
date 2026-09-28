@@ -39,8 +39,8 @@ float SampleShadowMapOptimizedPCF(uint shadowIdx, vec3 pos, vec3 normal, vec3 li
 
     float lightDepth = shadowPos.z;
 
-    const float bias = 0.003;
-    //float bias = baseBias / max(pow(dot(normal, lightDir), 1.4), 0.01);
+    //const float bias = 0.003;
+    float bias = baseBias / max(pow(dot(normal, lightDir), 1.4), 0.01);
 
     lightDepth += bias;
 
