@@ -8,36 +8,36 @@
 #include <serial/Serial.h>
 #include <typereg.h>
 
-#define SCRIPT                                 \
-Entity entity;                                 \
-World* world;                                  \
-template <Component T>                         \
-inline void addComponent(const T& component) { \
-    entity.addComponent(component);            \
-}                                              \
-template <Component T>                         \
-inline bool setComponent(const T& component) { \
-    return entity.setComponent(component);     \
-}                                              \
-template <Component T>                         \
-inline void removeComponent() {                \
-    entity.removeComponent<T>();               \
-}                                              \
-template <Component T>                         \
-inline bool getComponent(T& out) {             \
-    return entity.getComponent(out);           \
-}                                              \
-template <Component T>                         \
-inline T* getComponentPtr() {                  \
-    return entity.getComponentPtr<T>();        \
-}                                              \
-template <Component T>                         \
-inline uint32_t getComponentCount() {          \
-    return entity.getComponentCount<T>();      \
-}                                              \
-template <Component T>                         \
-inline uint32_t getComponents(T* const ptr) {  \
-    return entity.getComponents(ptr);          \
+#define SCRIPT                                          \
+uint32_t entityID;                                      \
+World* world;                                           \
+template <Component T>                                  \
+inline void addComponent(const T& component) {          \
+    world->ecs.addComponent(entityID, component);       \
+}                                                       \
+template <Component T>                                  \
+inline bool setComponent(const T& component) {          \
+    return world->ecs.setComponent(entityID, component);\
+}                                                       \
+template <Component T>                                  \
+inline void removeComponent() {                         \
+    world->ecs.removeComponent<T>(entityID);            \
+}                                                       \
+template <Component T>                                  \
+inline bool getComponent(T& out) {                      \
+    return world->ecs.getComponent(entityID, out);      \
+}                                                       \
+template <Component T>                                  \
+inline T* getComponentPtr() {                           \
+    return world->ecs.getComponentPtr<T>(entityID);     \
+}                                                       \
+template <Component T>                                  \
+inline uint32_t getComponentCount() {                   \
+    return world->ecs.getComponentCount<T>(entityID);   \
+}                                                       \
+template <Component T>                                  \
+inline uint32_t getComponents(T* const ptr) {           \
+    return world->ecs.getComponents(entityID, ptr);     \
 }
 
 #define REGISTER_SCRIPT(name)                                 \
@@ -52,7 +52,7 @@ struct Serial<name> {                                         \
 
 template <typename T>
 concept IsScript = requires(T t) {
-    { t.entity } -> std::convertible_to<Entity&>;
+    { t.entityID } -> std::convertible_to<uint32_t&>;
     { t.world } -> std::convertible_to<World*>;
 };
 
@@ -86,7 +86,7 @@ private:
 
     void onComponentAdded(Entity e, uint32_t id) {
         T* s = world->ecs.getPtr<T>(id);
-        s->entity = e;
+        s->entityID = e.entityID;
         s->world = world;
     }
 
