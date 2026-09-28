@@ -5,9 +5,10 @@
 
 #include <iostream>
 
-#include <GLFW/glfw3.h>
-
 #include <ecs/ECS.h>
+#include <input/Input.h>
+
+#include <GLFW/glfw3.h>
 
 namespace Engine {
     inline void init() {
@@ -19,6 +20,7 @@ namespace Engine {
     }
 
     inline void exit() {
+        Input::exit();
         glfwTerminate();
     }
 }
