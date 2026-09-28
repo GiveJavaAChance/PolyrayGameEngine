@@ -21,6 +21,9 @@ private:
     template <typename Event>
     inline void fireImpl(Event* evt) {
         uint32_t ID = EventTypes::getTypeId<Event>();
+        if(ID >= listeners.size()) {
+            return;
+        }
         DynamicArray<EventListener>& l = listeners[ID];
         for (uint32_t i = 0u; i < l.size(); i++) {
             EventListener& listener = l[i];
