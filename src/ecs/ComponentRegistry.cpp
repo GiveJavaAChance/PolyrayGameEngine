@@ -2,10 +2,14 @@
 
 #include <Camera2D.h>
 #include <Camera3D.h>
-#include <Light3DSystem.h>
-#include <Renderer.h>
+#include <RenderInstance.h>
+#include <SkinInstance.h>
 #include <Transform2D.h>
 #include <Transform3D.h>
+#include <animation/AnimationSystem.h>
+#include <light/3d/DirectionalLight3D.h>
+#include <light/3d/PointLight3D.h>
+#include <light/3d/SpotLight3D.h>
 #include <physics/2d/Collider2D.h>
 #include <physics/2d/DynamicCollider2D.h>
 #include <physics/2d/Physics2D.h>
@@ -27,10 +31,12 @@ void ComponentRegistry::registerBuiltInComponents() {
     registerComponentType<PhysicsObject3D>();
     registerComponentType<Collider3D>();
     registerComponentType<DynamicCollider3D>();
-
-    registerComponentType<RenderInstance>();
-
     registerComponentType<DirectionalLight3D>();
     registerComponentType<SpotLight3D>();
     registerComponentType<PointLight3D>();
+
+    registerComponentType<RenderInstance>();
+    registerComponentType<SkinInstance>();
+
+    registerComponentType<AnimationInstance>();
 }
