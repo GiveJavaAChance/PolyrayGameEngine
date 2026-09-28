@@ -2,15 +2,17 @@
 #define DYNAMICARRAY_H_INCLUDED
 
 #pragma once
+
+#include <Allocator.h>
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 #include <type_traits>
 #include <utility>
-#include <Allocator.h>
 
 using u32 = uint32_t;
 
-template<typename T>
+template <typename T>
 struct DynamicArray {
 private:
     u32 length;
@@ -18,8 +20,17 @@ private:
     u32 pos;
 
 public:
-
     DynamicArray(uint32_t initialSize = 16u) : length(initialSize), ptr(alloc<T>(initialSize)), pos(0u) {
+    }
+
+    DynamicArray(std::initializer_list<T>&& arr) : length(arr.size()), ptr(alloc<T>(arr.size())), pos(arr.size()) {
+        if constexpr (std::is_trivially_copyable_v<T>) {
+            std::memcpy(ptr, arr.begin(), length * sizeof(T));
+        } else {
+            for (u32 i = 0; i < pos; ++i) {
+                new (ptr + i) T(std::move(arr.begin()[i]));
+            }
+        }
     }
 
     ~DynamicArray() {
@@ -41,7 +52,7 @@ public:
     }
 
     DynamicArray& operator=(DynamicArray&& other) noexcept {
-        if(this != &other) {
+        if (this != &other) {
             free(ptr);
             length = other.length;
             ptr = other.ptr;
@@ -55,7 +66,9 @@ public:
 
     // This function simply ensures that there's enough capacity and reallocates the array if it's too small
     void ensureCapacity(u32 cap, bool clear = false) {
-        if (cap <= length) return;
+        if (cap <= length) {
+            return;
+        }
         cap = (cap * 3u) >> 1u; // 1.5x growth rate
         T* tmp = alloc<T>(cap);
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -75,8 +88,8 @@ public:
     }
 
     // Function for emplacing one thing directly
-    template<typename... Args>
-    inline void emplace(Args&&... args) {
+    template <typename... Args>
+    inline T& emplace(Args&&... args) {
         ensureCapacity(pos + 1u);
         T* place = ptr + pos;
         if constexpr (std::is_aggregate_v<T>) {
@@ -85,6 +98,7 @@ public:
             new (place) T(std::forward<Args>(args)...);
         }
         pos++;
+        return *place;
     }
 
     // Function for adding one thing at a time
@@ -98,7 +112,7 @@ public:
     }
 
     // Function for adding multiple things at the same time
-    inline void addAll(T* p, u32 count) {
+    inline void addAll(const T* p, u32 count) {
         ensureCapacity(pos + count);
         std::memcpy(ptr + pos, p, count * sizeof(T));
         pos += count;
@@ -111,13 +125,13 @@ public:
     }
 
     inline void removeEnd(u32 count) {
-        pos-= count;
+        pos -= count;
     }
 
     // Simply resets the position, and optionally clears the data
     inline void clear(bool clear = false) {
-        if(clear) {
-            std::memset(ptr, 0, pos * sizeof(T));
+        if (clear) {
+            std::memset(reinterpret_cast<void*>(ptr), 0, pos * sizeof(T));
         }
         pos = 0u;
     }
