@@ -1,0 +1,13 @@
+*
+!src/
+!src/**
+!res/
+!res/**
+!examples/
+!examples/**
+!.clang-format
+!.clangd
+!.gitignore
+!CMakeLists.txt
+!LICENSE
+!README.md
