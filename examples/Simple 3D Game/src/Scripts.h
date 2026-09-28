@@ -36,7 +36,7 @@ struct PlayerScript {
         uint32_t rootNode = scene->getRootNode();
         root = scene->getEntity(rootNode);
 
-        uint32_t node = scene->getNode(entity);
+        uint32_t node = scene->getNode(entityID);
         uint32_t pivotNode = scene->getChild(node, 0u);
         cameraPivot = scene->getEntity(pivotNode);
     }
@@ -113,7 +113,7 @@ struct PlayerScript {
         if (event.type != MOUSE_MOVE_EVENT) {
             return;
         }
-        vec2 d = event.mouseMoveEvent.delta / prvl::vec2(viewport->size) * 2.0f;
+        vec2 d = event.mouseMoveEvent.delta / prvl::vec2(viewport->size()) * 2.0f;
         cameraAng.x -= d.y;
         cameraAng.y += d.x;
     }
