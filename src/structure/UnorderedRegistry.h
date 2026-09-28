@@ -3,12 +3,11 @@
 
 #pragma once
 
-#include <vector>
 #include <structure/Registry.h>
 
 template<typename T>
 struct UnorderedRegistry {
-    std::vector<T> arr;
+    DynamicArray<T> arr;
     Registry reg;
 
     UnorderedRegistry() noexcept {
@@ -16,26 +15,26 @@ struct UnorderedRegistry {
 
     template<typename... Args>
     inline uint32_t emplace(Args&&... args) {
-        arr.emplace_back(args...);
+        arr.emplace(args...);
         return reg.create();
     }
 
     inline uint32_t add(const T& e) {
-        arr.push_back(e);
+        arr.add(e);
         return reg.create();
     }
 
     inline uint32_t add(T&& e) {
-        arr.push_back(e);
+        arr.add(e);
         return reg.create();
     }
 
     inline void remove(const uint32_t ID) {
         uint32_t loc;
         if(reg.remove(ID, loc)) {
-            arr[loc] = std::move(arr.back());
+            arr[loc] = std::move(arr[arr.size() - 1u]);
         }
-        arr.pop_back();
+        arr.removeEnd(1u);
     }
 
     inline T* data() {
