@@ -22,6 +22,8 @@ struct GLTexture {
     uint32_t height;
     uint32_t depth;
 
+    GLuint64 bindlessHandle;
+
     void updateFiltering() {
         GLint mode = GL_NEAREST + (interpolation & 1);
         glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, (mipLevels > 1u) ? (GL_NEAREST_MIPMAP_NEAREST + interpolation) : mode);
@@ -64,10 +66,17 @@ struct GLTexture {
 
     void generateMipmap() {
         if (mipLevels <= 1u) {
-            std::cerr << "Can't generate mipmaps since mipmapping is disabled." << std::endl;
             return;
         }
         glGenerateTextureMipmap(ID);
+    }
+
+    GLuint64 getBindlessHandle() {
+        if (bindlessHandle == 0ull) {
+            bindlessHandle = glGetTextureHandleARB(ID);
+            glMakeTextureHandleResidentARB(bindlessHandle);
+        }
+        return bindlessHandle;
     }
 
     void destroy() {
@@ -95,6 +104,7 @@ struct GLTexture {
         tex.width = width;
         tex.height = height;
         tex.depth = 1u;
+        tex.bindlessHandle = 0ull;
 
         glCreateTextures(GL_TEXTURE_2D, 1, &tex.ID);
         tex.updateFiltering();
@@ -118,6 +128,7 @@ struct GLTexture {
         tex.width = width;
         tex.height = height;
         tex.depth = layerCount;
+        tex.bindlessHandle = 0ull;
 
         glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &tex.ID);
         tex.updateFiltering();
@@ -141,6 +152,7 @@ struct GLTexture {
         tex.width = width;
         tex.height = height;
         tex.depth = depth;
+        tex.bindlessHandle = 0ull;
 
         glCreateTextures(GL_TEXTURE_3D, 1, &tex.ID);
         tex.updateFiltering();
@@ -148,6 +160,24 @@ struct GLTexture {
         glTextureParameteri(tex.ID, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTextureParameteri(tex.ID, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         glTextureStorage3D(tex.ID, mipLevels, format, width, height, depth);
+        return tex;
+    }
+
+    inline static GLTexture createTexture2DMSAA(uint32_t width, uint32_t height, uint32_t MSAASamples, GLenum format = GL_RGBA8) {
+        GLTexture tex;
+
+        tex.target = GL_TEXTURE_2D_MULTISAMPLE;
+        tex.format = format;
+        tex.mipLevels = 1u;
+        tex.interpolation = 0;
+        tex.width = width;
+        tex.height = height;
+        tex.depth = 1u;
+        tex.bindlessHandle = 0ull;
+
+        glCreateTextures(GL_TEXTURE_2D_MULTISAMPLE, 1, &tex.ID);
+        glTextureStorage2DMultisample(tex.ID, MSAASamples, format, width, height, GL_TRUE);
+
         return tex;
     }
 

@@ -15,11 +15,16 @@ struct GLFramebuffer {
     GLTexture color;
     GLTexture depth;
 
-    GLFramebuffer(uint32_t width, uint32_t height, GLenum colorFormat = GL_RGBA8, GLenum depthFormat = GL_DEPTH_COMPONENT32) {
+    GLFramebuffer(uint32_t width, uint32_t height, GLenum colorFormat = GL_RGBA8, GLenum depthFormat = GL_DEPTH_COMPONENT32, uint32_t MSAASamples = 1u) {
         glCreateFramebuffers(1, &ID);
 
-        color = GLTexture::createTexture2D(width, height, colorFormat);
-        depth = GLTexture::createTexture2D(width, height, depthFormat);
+        if(MSAASamples == 1u) {
+            color = GLTexture::createTexture2D(width, height, colorFormat);
+            depth = GLTexture::createTexture2D(width, height, depthFormat);
+        } else {
+            color = GLTexture::createTexture2DMSAA(width, height, MSAASamples, colorFormat);
+            depth = GLTexture::createTexture2DMSAA(width, height, MSAASamples, depthFormat);
+        }
 
         glNamedFramebufferTexture(ID, GL_COLOR_ATTACHMENT0, color.ID, 0);
         glNamedFramebufferTexture(ID, GL_DEPTH_ATTACHMENT, depth.ID, 0);
