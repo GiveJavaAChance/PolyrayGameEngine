@@ -8,6 +8,7 @@
 
 #include <EventBus.h>
 #include <ecs/ECS.h>
+#include <utils/ThreadPool.h>
 
 struct World {
 private:
@@ -22,15 +23,17 @@ public:
     ECS ecs;
     EventBus eventBus;
 
+    ThreadPool<8u> threadPool;
+
     DynamicArray<System> systems;
 
     World() {
     }
 
     ~World() {
-        for(uint32_t i = 0u; i < systems.size(); i++) {
+        for (uint32_t i = 0u; i < systems.size(); i++) {
             System& system = systems[i];
-            if(system.instance && system.destruct) {
+            if (system.instance && system.destruct) {
                 system.destruct(system.instance);
             }
         }
@@ -57,23 +60,22 @@ public:
         while (idx >= systems.size()) {
             systems.emplace(nullptr, nullptr);
         }
-        systems[idx] = System{
-            system,
-            [](void* ptr) { delete reinterpret_cast<Sys*>(ptr); }
-        };
+        systems[idx] = System{system, [](void* ptr) { delete reinterpret_cast<Sys*>(ptr); }};
     }
 
     template <typename Sys>
     Sys* getSystem() {
         uint32_t id = SystemTypes::getTypeId<Sys>();
-        if(id > systems.size()) {
+        if (id > systems.size()) {
             return nullptr;
         }
         return reinterpret_cast<Sys*>(systems[id].instance);
     }
 
     void update(double dt) {
+        threadPool.start();
         ecs.update(dt);
+        threadPool.stop();
     }
 };
 
