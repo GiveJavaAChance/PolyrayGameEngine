@@ -1,25 +1,95 @@
-# Polyray Game Engine [C++ Version]
+# Polyray Game Engine
 
-The C++ Version of Polyray is a major rewrite of the engine architecture and design, but tries to maintain as much of the original version as possible.
+**[Polyray Engine Showcase Video](https://www.youtube.com/watch?v=T_zjOHQ6_jU)**
 
-Currently, it's in the process of translating over much of the Java version with many features still missing.
+## Features
 
-**[Polyray Engine Showcase Video](https://www.youtube.com/watch?v=JZVfSlKjolc)**
+* No OOP, inheritance or virtuals, everything is data oriented
+* Custom made ECS
+  - Supports custom component storage implementations
+* 2D and 3D scene systems
+* 2D and 3D Verlet integrated physics engine
+  - Supports custom collider types
+* Rendering features
+  - Default materials are PBR
+  - Shadow mapping
+  - SSAO
+  - Bloom
+  - Improved Alpha 2 Cover
+* Animation system
+  - Can animate any member of a component
+* Skinning system
+* Compile-time scripting system
+* GLSL-like math library (prvl)
+  - Aims to be as close to real glsl as possible
+* GLTF loader
+  - Constructs a scene complete with meshes, animations skins, lights and cameras
+* Multiplayer
+  - Custom packet protocol
+  - Has both a client manager and server hosting
+* Profiler
+  - High resolution profiler using `rdtsc` (~20 cycle overhead)
+* Both Windows and Linux compatible
 
-## Major differences (as of now)
 
-* An actual shader pipeline with shader reflection for automatic VAO creation, no need for VertexBufferTemplate anymore!
-* The ECS now owns all* component data with fully cutomizable storage layouts. (custom storages are wip)
-* There are now discrete update orders: pre-physics, physics (fixed dt), post-physics, frame update, post-frame. This hopefully makes it much easier to register callbacks correctly.
+## Work in progress
 
-## Currently working on
-
-* Rendering pipeline.
-* Audio engine.
-* General design and arcitectural improvements.
+* Animation system
+* GLTF loader
+* Skinning system
+* Rendering pipeline
+* Better multiplayer system
+* More rendering features
 
 ##
 
-## Future idea: Project/Module Manager
+## Images
+*Note: Features shown below are not yet avaliable. They will be made into modules in the near future however*
+#### 2D Probe-based RTGI
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(28).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(29).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(30).png" width="300"><br></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(31).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(40).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(41).png" width="300"><br></td>
+  </tr>
+</table>
 
-When using the engine, it's quite hard to get going, tons of groundwork has to be done in order to get a good foundation to build from, which is actually the complete opposite of what the engine is designed for. Due to this, an idea has popped up, which is to focus on the modularity aspect and create a project manager app which will take care of that. It'd write most of the boilerplate, auto-generate pretty much everything for the project, including adding all selected modules, setting up callbacks etc. and all that would be left by the user is to make the game itself.
+#### Heightmap terrain
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(8).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(17).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(19).png" width="300"><br></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(16).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(21).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(32).png" width="300"><br></td>
+  </tr>
+</table>
+
+#### Voxel raytracing
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(35).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(37).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(38).png" width="300"><br></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(43).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(44).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(45).png" width="300"><br></td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(46).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(49).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(50).png" width="300"><br></td>
+  </tr>
+</table>
+
+*More images can be found in* [examples/images](https://github.com/GiveJavaAChance/PolyrayGameEngine/tree/polyray-cpp/examples/images)
