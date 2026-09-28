@@ -44,6 +44,11 @@ private:
         Scene* scene = world->getSystem<Scene>();
 
         write<uint8_t>(buffer, 0u);
+
+        std::string& name = scene->getNodeName(node);
+        write(buffer, static_cast<uint32_t>(name.length()));
+        buffer.addAll(reinterpret_cast<const uint8_t*>(name.c_str()), name.length());
+
         writeEntity(buffer, world, scene->getEntity(node).entityID);
 
         uint32_t childCount = scene->getChildCount(node);

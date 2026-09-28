@@ -9,26 +9,32 @@
 #include <serial/Serial.h>
 
 struct Transform2D {
-    mat3 global;
+    vec2 position;
+    float rotation;
+    vec2 scale;
+
     mat3 local;
-    bool dirtyGlobal;
+    mat3 global;
+
+    bool dirtyTRS;
     bool dirtyLocal;
+    bool dirtyGlobal;
 
-    Transform2D(const mat3& tx) : global(diag(prvl::vec3(1.0f))), local(tx), dirtyGlobal(false), dirtyLocal(true) {
-    }
-
-    Transform2D() : Transform2D(diag(prvl::vec3(1.0f))) {
+    Transform2D(const vec2& position = prvl::vec2(), float rotation = 0.0f, const vec2& scale = prvl::vec2(1.0f)) : position(position), rotation(rotation), scale(scale), local(diag(prvl::vec3(1.0f))), global(diag(prvl::vec3(1.0f))), dirtyTRS(true), dirtyLocal(false), dirtyGlobal(false) {
     }
 };
 
 template <>
 struct Serial<Transform2D> {
     static void serialize(World* world, uint32_t componentID, ByteWriter& output) {
-        output.write(world->ecs.getPtr<Transform2D>(componentID)->local);
+        Transform2D* tx = world->ecs.getPtr<Transform2D>(componentID);
+        output.write(tx->position);
+        output.write(tx->rotation);
+        output.write(tx->scale);
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
-        e.addComponent(Transform2D{input.read<mat3>()});
+        e.addComponent(Transform2D{input.read<vec2>(), input.read<float>(), input.read<vec2>()});
     }
 };
 

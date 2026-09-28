@@ -228,7 +228,7 @@ public:
     }
 
     void physicsUpdate(double dt) {
-        PROFILE_SCOPE(Physics3DUpdate)
+        PROFILE_SCOPE(Physics3D_Update)
         Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
         MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
@@ -491,8 +491,8 @@ public:
             col.impl.posY = posY + col.offsetY;
             col.impl.posZ = posZ + col.offsetZ;
             if (Transform3D* tx = ecs->getPtr<Transform3D>(objects.column<9>()[loc])) {
-                tx->local[3] = prvl::vec4(posX, posY, posZ, 1.0f);
-                tx->dirtyLocal = true;
+                tx->position = prvl::vec3(posX, posY, posZ);
+                tx->dirtyTRS = true;
             }
         }
         /*time[8] = rdtsc();
@@ -555,8 +555,8 @@ public:
             col.impl.posY = posY + col.offsetY;
             col.impl.posZ = posZ + col.offsetZ;
             if (Transform3D* tx = ecs->getPtr<Transform3D>(objects.column<9>()[loc])) {
-                tx->local[3] = prvl::vec4(posX, posY, posZ, 1.0f);
-                tx->dirtyLocal = true;
+                tx->position = prvl::vec3(posX, posY, posZ);
+                tx->dirtyTRS = true;
             }
         }
     }

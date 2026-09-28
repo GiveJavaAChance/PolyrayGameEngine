@@ -39,15 +39,21 @@ private:
         if (fromNode != UINT32_MAX) {
             stack.push_back(fromNode);
         }
+        DynamicArray<char> nameBuffer;
         while (reader.pos < reader.length) {
             uint8_t instruction = reader.read<uint8_t>();
             if (instruction == 0u) {
+                nameBuffer.clear();
+                uint32_t nameLength = reader.read<uint32_t>();
+                nameBuffer.reserve(nameLength + 1u);
+                reader.read(nameBuffer.data(), nameLength);
+                nameBuffer[nameLength] = 0;
                 Entity e = readEntity(reader, ecs, world);
                 uint32_t n;
                 if (stack.size() == 0u) {
-                    n = scene->setRootNode(e);
+                    n = scene->setRootNode(e, nameBuffer.data());
                 } else {
-                    n = scene->addNode(stack.back(), e);
+                    n = scene->addNode(stack.back(), e, nameBuffer.data());
                 }
                 stack.push_back(n);
                 if (first) {

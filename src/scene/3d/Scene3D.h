@@ -34,9 +34,9 @@ public:
 
     uint32_t getRootNode() const;
 
-    uint32_t setRootNode(const Entity& e);
+    uint32_t setRootNode(const Entity& e, const std::string& name);
 
-    uint32_t addNode(uint32_t parent, const Entity& e);
+    uint32_t addNode(uint32_t parent, const Entity& e, const std::string& name);
 
     void removeNode(uint32_t node);
 
@@ -44,13 +44,21 @@ public:
 
     uint32_t getChildCount(uint32_t node);
 
+    uint32_t getChild(uint32_t node, const char* name, uint32_t nameLength = UINT32_MAX);
+
+    uint32_t getNode(uint32_t node, const char* path, uint32_t pathLength = UINT32_MAX);
+
+    std::string& getNodeName(uint32_t node);
+
+    std::string getNodePath(uint32_t node, uint32_t fromNode = UINT32_MAX);
+
     uint32_t getParent(uint32_t node);
 
     void setParent(uint32_t node, uint32_t newParent, bool rebase = true);
 
     Entity getEntity(uint32_t node);
 
-    uint32_t getNode(const Entity& e);
+    uint32_t getNode(uint32_t entityID);
 
     void frameUpdate(double dt);
 };

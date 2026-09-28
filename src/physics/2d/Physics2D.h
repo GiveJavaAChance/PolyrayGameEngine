@@ -222,7 +222,7 @@ public:
     }
 
     void physicsUpdate(double dt) {
-        PROFILE_SCOPE(Physics2DUpdate)
+        PROFILE_SCOPE(Physics2D_Update)
         Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
         MultiDynamicArray<double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
@@ -458,8 +458,8 @@ public:
             col.impl.posX = posX + col.offsetX;
             col.impl.posY = posY + col.offsetY;
             if (Transform2D* tx = ecs->getPtr<Transform2D>(objects.column<6>()[loc])) {
-                tx->local[2] = prvl::vec3(posX, posY, 1.0f);
-                tx->dirtyLocal = true;
+                tx->position = prvl::vec2(posX, posY);
+                tx->dirtyTRS = true;
             }
         }
         /*time[8] = rdtsc();
@@ -511,8 +511,8 @@ public:
             col.impl.posX = posX + col.offsetX;
             col.impl.posY = posY + col.offsetY;
             if (Transform2D* tx = ecs->getPtr<Transform2D>(objects.column<6>()[loc])) {
-                tx->local[2] = prvl::vec3(posX, posY, 1.0f);
-                tx->dirtyLocal = true;
+                tx->position = prvl::vec2(posX, posY);
+                tx->dirtyTRS = true;
             }
         }
     }

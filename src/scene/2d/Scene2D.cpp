@@ -17,6 +17,11 @@ void Scene2D::updateNode(uint32_t node, Transform2D* nodeData, bool dirty) {
         uint32_t child = sceneNode.children[i];
         if (Transform2D* childData = ecs.getComponentPtr<Transform2D>(nodes[child].entityID)) {
             bool childDirty = dirty;
+            if (childData->dirtyTRS) {
+                childData->local = trsToMatrix(childData->position, childData->rotation, childData->scale);
+                childData->dirtyTRS = false;
+                childDirty = true;
+            }
             if (childData->dirtyGlobal) {
                 childData->local = inverse(global) * childData->global;
                 childData->dirtyGlobal = false;
@@ -61,15 +66,15 @@ uint32_t Scene2D::getRootNode() const {
     return root;
 }
 
-uint32_t Scene2D::setRootNode(const Entity& e) {
-    uint32_t id = nodes.emplace(e.entityID, 0u);
+uint32_t Scene2D::setRootNode(const Entity& e, const std::string& name) {
+    uint32_t id = nodes.emplace(name, e.entityID, UINT32_MAX);
     entityMap[e.entityID] = id;
     root = id;
     return id;
 }
 
-uint32_t Scene2D::addNode(uint32_t parent, const Entity& e) {
-    uint32_t id = nodes.emplace(e.entityID, parent);
+uint32_t Scene2D::addNode(uint32_t parent, const Entity& e, const std::string& name) {
+    uint32_t id = nodes.emplace(name, e.entityID, parent);
     entityMap[e.entityID] = id;
     nodes[parent].children.add(id);
     return id;
@@ -86,6 +91,65 @@ uint32_t Scene2D::getChild(uint32_t node, uint32_t index) {
 
 uint32_t Scene2D::getChildCount(uint32_t node) {
     return nodes[node].children.size();
+}
+
+uint32_t Scene2D::getChild(uint32_t node, const char* name, uint32_t nameLength) {
+    DynamicArray<uint32_t>& children = nodes[node].children;
+    for (uint32_t i = 0u; i < children.size(); i++) {
+        uint32_t child = children[i];
+        const std::string& childName = nodes[child].name;
+        uint32_t maxLength = min(nameLength, static_cast<uint32_t>(childName.length() + 1u));
+        for (uint32_t j = 0u; j < maxLength; j++) {
+            if (childName[j] != name[j]) {
+                goto next;
+            }
+        }
+        return child;
+    next:;
+    }
+    return UINT32_MAX;
+}
+
+uint32_t Scene2D::getNode(uint32_t node, const char* path, uint32_t pathLength) {
+    uint32_t currentNode = node;
+    uint32_t pos = 0u;
+    while (path[pos] && pos < pathLength) {
+        uint32_t start = pos;
+        while (path[pos] && pos < pathLength && path[pos] != '/') {
+            pos++;
+        }
+        uint32_t end = pos;
+        currentNode = getChild(currentNode, path + start, end - start);
+        if (currentNode == UINT32_MAX) {
+            return UINT32_MAX;
+        }
+        if (path[pos] == '/') {
+            pos++;
+        }
+    }
+    return currentNode;
+}
+
+std::string& Scene2D::getNodeName(uint32_t node) {
+    return nodes[node].name;
+}
+
+std::string Scene2D::getNodePath(uint32_t node, uint32_t fromNode) {
+    DynamicArray<uint32_t> nodePath;
+    uint32_t currentNode = node;
+    while (currentNode != fromNode) {
+        nodePath.add(currentNode);
+        currentNode = getParent(currentNode);
+    }
+    std::string path;
+    for (uint32_t i = nodePath.size(); i >= 1u; i--) {
+        uint32_t idx = i - 1u;
+        path += getNodeName(nodePath[idx]);
+        if (idx > 0u) {
+            path += "/";
+        }
+    }
+    return path;
 }
 
 uint32_t Scene2D::getParent(uint32_t node) {
@@ -111,22 +175,27 @@ Entity Scene2D::getEntity(uint32_t node) {
     return Entity{nodes[node].entityID, &world->ecs};
 }
 
-uint32_t Scene2D::getNode(const Entity& e) {
-    return entityMap[e.entityID];
+uint32_t Scene2D::getNode(uint32_t entityID) {
+    return entityMap[entityID];
 }
 
 void Scene2D::frameUpdate(double dt) {
-    PROFILE_SCOPE(Scene2DUpdate)
+    PROFILE_SCOPE(Scene2D_Update)
     if (nodes.size() == 0u) {
         return;
     }
     if (Transform2D* rootData = world->ecs.getComponentPtr<Transform2D>(nodes[root].entityID)) {
+        if (rootData->dirtyTRS) {
+            rootData->local = trsToMatrix(rootData->position, rootData->rotation, rootData->scale);
+            rootData->dirtyLocal = true;
+        }
         if (rootData->dirtyGlobal) {
             rootData->local = rootData->global;
         } else if (rootData->dirtyLocal) {
             rootData->global = rootData->local;
         }
-        updateNode(root, rootData, rootData->dirtyLocal || rootData->dirtyGlobal);
+        updateNode(root, rootData, rootData->dirtyTRS || rootData->dirtyLocal || rootData->dirtyGlobal);
+        rootData->dirtyTRS = false;
         rootData->dirtyLocal = false;
         rootData->dirtyGlobal = false;
     }
