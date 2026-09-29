@@ -75,8 +75,8 @@ struct ExportInfo<AnimationInstance> {
     constexpr static Export __export__[] = {
         {offsetof(AnimationInstance, speed), EXPORT_FLOAT, "Speed"},
         {offsetof(AnimationInstance, repeat), EXPORT_BOOL, "Repeats"},
-        {offsetof(AnimationInstance, time), EXPORT_DOUBLE, "Current Time"},
-        {offsetof(AnimationInstance, playing), EXPORT_DOUBLE, "Playing"},
+        {offsetof(AnimationInstance, time), EXPORT_FLOAT, "Current Time"},
+        {offsetof(AnimationInstance, playing), EXPORT_BOOL, "Playing"},
     };
 };
 
@@ -302,12 +302,15 @@ public:
             bool update = instance.dirty;
             instance.dirty = false;
             if (instance.playing) {
-                instance.time += dt;
-                if (instance.time >= animation.duration) {
+                instance.time += static_cast<float>(dt) * instance.speed;
+                if (instance.time >= animation.duration || instance.time < 0.0f) {
                     if (instance.repeat) {
                         instance.time = mod(instance.time, animation.duration);
+                        if (instance.time < 0.0f) {
+                            instance.time += animation.duration;
+                        }
                     } else {
-                        instance.time = animation.duration;
+                        instance.time = clamp(instance.time, 0.0f, animation.duration);
                         instance.playing = false;
                     }
                 }
