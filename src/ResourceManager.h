@@ -118,10 +118,38 @@ enum ImageFormat : uint8_t {
 template <ImageFormat F>
 struct ImageFormatType;
 
-template<> struct ImageFormatType<ImageFormat::RGBA8> { using type = uint32_t; constexpr static int format = STBI_rgb_alpha; constexpr static GLenum glFormat = GL_RGBA8; constexpr static GLenum glPixFormat = GL_RGBA; constexpr static GLenum glType = GL_UNSIGNED_BYTE; };
-template<> struct ImageFormatType<ImageFormat::BINARY> { using type = uint32_t; constexpr static int format = STBI_grey; constexpr static GLenum glFormat = GL_R8; constexpr static GLenum glPixFormat = GL_R; constexpr static GLenum glType = GL_UNSIGNED_BYTE; };
-template<> struct ImageFormatType<ImageFormat::BYTE_GRAY> { using type = uint8_t; constexpr static int format = STBI_grey; constexpr static GLenum glFormat = GL_R8; constexpr static GLenum glPixFormat = GL_R; constexpr static GLenum glType = GL_UNSIGNED_BYTE; };
-template<> struct ImageFormatType<ImageFormat::FLOAT32_RGB> { using type = float; constexpr static int format = STBI_rgb; constexpr static GLenum glFormat = GL_R11F_G11F_B10F; constexpr static GLenum glPixFormat = GL_RGB; constexpr static GLenum glType = GL_FLOAT; };
+template <>
+struct ImageFormatType<ImageFormat::RGBA8> {
+    using type = uint32_t;
+    constexpr static int format = STBI_rgb_alpha;
+    constexpr static GLenum glFormat = GL_RGBA8;
+    constexpr static GLenum glPixFormat = GL_RGBA;
+    constexpr static GLenum glType = GL_UNSIGNED_BYTE;
+};
+template <>
+struct ImageFormatType<ImageFormat::BINARY> {
+    using type = uint32_t;
+    constexpr static int format = STBI_grey;
+    constexpr static GLenum glFormat = GL_R8;
+    constexpr static GLenum glPixFormat = GL_R;
+    constexpr static GLenum glType = GL_UNSIGNED_BYTE;
+};
+template <>
+struct ImageFormatType<ImageFormat::BYTE_GRAY> {
+    using type = uint8_t;
+    constexpr static int format = STBI_grey;
+    constexpr static GLenum glFormat = GL_R8;
+    constexpr static GLenum glPixFormat = GL_R;
+    constexpr static GLenum glType = GL_UNSIGNED_BYTE;
+};
+template <>
+struct ImageFormatType<ImageFormat::FLOAT32_RGB> {
+    using type = float;
+    constexpr static int format = STBI_rgb;
+    constexpr static GLenum glFormat = GL_R11F_G11F_B10F;
+    constexpr static GLenum glPixFormat = GL_RGB;
+    constexpr static GLenum glType = GL_FLOAT;
+};
 
 namespace ResourceManager {
     inline std::filesystem::path getRootDir() {
@@ -140,10 +168,9 @@ namespace ResourceManager {
         if (!std::filesystem::is_directory(path)) {
             return files;
         }
-        size_t off = getRootDir().string().size() + 1ull;
+        std::filesystem::path root = getRootDir();
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(path)) {
-            std::filesystem::path file = entry.path();
-            files.emplace(file.string().substr(off));
+            files.emplace(std::filesystem::relative(entry.path(), root).string());
         }
         return files;
     }
@@ -259,7 +286,7 @@ namespace ResourceManager {
 }
 
 inline std::filesystem::path ResourcePath::getAbsolutePath() const {
-    if (std::filesystem::exists(str)) {
+    if (std::filesystem::path(str).is_absolute()) {
         return str;
     }
     return ResourceManager::getRootDir() / str;
