@@ -42,7 +42,7 @@ struct SSAO {
     }
 
     void setSize(uvec2 newSize) {
-        if (newSize.x != ssaoTexture.width || newSize.y != ssaoTexture.width) {
+        if (newSize.x != ssaoTexture.width || newSize.y != ssaoTexture.height) {
             ssaoTexture.destroy();
             ssaoTexture = GLTexture::createTexture2D(newSize.x, newSize.y, GL_R16F);
             glBindImageTexture(ssaoBinding, ssaoTexture.ID, 0, false, 0, GL_READ_WRITE, ssaoTexture.format);
