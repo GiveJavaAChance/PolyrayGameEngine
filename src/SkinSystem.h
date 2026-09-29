@@ -72,7 +72,7 @@ public:
 
     void update(double dt) {
         PROFILE_SCOPE(SkinSystem_Update)
-        DynamicArray<SkinInstance>& skinInstances = ecs->view<SkinInstance>().data;
+        VirtualArray<SkinInstance>& skinInstances = ecs->view<SkinInstance>().data;
         if (skinInstances.size() == 0u) {
             return;
         }

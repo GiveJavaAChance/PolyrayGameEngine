@@ -292,7 +292,7 @@ public:
 
     void update(double dt) {
         PROFILE_SCOPE(AnimationSystem_Update)
-        DynamicArray<AnimationInstance>& animationInstances = world->ecs.view<AnimationInstance>().data;
+        VirtualArray<AnimationInstance>& animationInstances = world->ecs.view<AnimationInstance>().data;
         for (uint32_t i = 0u; i < animationInstances.size(); i++) {
             AnimationInstance& instance = animationInstances[i];
             if (!animations.reg.valid(instance.animationID)) {

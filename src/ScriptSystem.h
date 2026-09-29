@@ -8,47 +8,47 @@
 #include <serial/Serial.h>
 #include <typereg.h>
 
-#define SCRIPT                                          \
-uint32_t entityID;                                      \
-World* world;                                           \
-template <Component T>                                  \
-inline void addComponent(const T& component) {          \
-    world->ecs.addComponent(entityID, component);       \
-}                                                       \
-template <Component T>                                  \
-inline bool setComponent(const T& component) {          \
-    return world->ecs.setComponent(entityID, component);\
-}                                                       \
-template <Component T>                                  \
-inline void removeComponent() {                         \
-    world->ecs.removeComponent<T>(entityID);            \
-}                                                       \
-template <Component T>                                  \
-inline bool getComponent(T& out) {                      \
-    return world->ecs.getComponent(entityID, out);      \
-}                                                       \
-template <Component T>                                  \
-inline T* getComponentPtr() {                           \
-    return world->ecs.getComponentPtr<T>(entityID);     \
-}                                                       \
-template <Component T>                                  \
-inline uint32_t getComponentCount() {                   \
-    return world->ecs.getComponentCount<T>(entityID);   \
-}                                                       \
-template <Component T>                                  \
-inline uint32_t getComponents(T* const ptr) {           \
-    return world->ecs.getComponents(entityID, ptr);     \
-}
+#define SCRIPT                                                          \
+    uint32_t entityID;                                                  \
+    World* world;                                                       \
+    template <typename T>                                               \
+    inline void addComponent(T&& component) {                           \
+        world->ecs.addComponent(entityID, std::move(component));        \
+    }                                                                   \
+    template <typename T>                                               \
+    inline bool setComponent(T&& component) {                           \
+        return world->ecs.setComponent(entityID, std::move(component)); \
+    }                                                                   \
+    template <typename T>                                               \
+    inline void removeComponent() {                                     \
+        world->ecs.removeComponent<T>(entityID);                        \
+    }                                                                   \
+    template <typename T>                                               \
+    inline bool getComponent(T& out) {                                  \
+        return world->ecs.getComponent(entityID, out);                  \
+    }                                                                   \
+    template <typename T>                                               \
+    inline T* getComponentPtr() {                                       \
+        return world->ecs.getComponentPtr<T>(entityID);                 \
+    }                                                                   \
+    template <typename T>                                               \
+    inline uint32_t getComponentCount() {                               \
+        return world->ecs.getComponentCount<T>(entityID);               \
+    }                                                                   \
+    template <typename T>                                               \
+    inline uint32_t getComponents(T* const ptr) {                       \
+        return world->ecs.getComponents(entityID, ptr);                 \
+    }
 
-#define REGISTER_SCRIPT(name)                                 \
-template <>                                                   \
-struct Serial<name> {                                         \
-    static void serialize(World*, uint32_t, ByteWriter&) {    \
-    }                                                         \
-    static void deserialize(World*, Entity& e, ByteReader&) { \
-        e.addComponent(name{});                               \
-    }                                                         \
-};
+#define REGISTER_SCRIPT(name)                                     \
+    template <>                                                   \
+    struct Serial<name> {                                         \
+        static void serialize(World*, uint32_t, ByteWriter&) {    \
+        }                                                         \
+        static void deserialize(World*, Entity& e, ByteReader&) { \
+            e.addComponent(name{});                               \
+        }                                                         \
+    };
 
 template <typename T>
 concept IsScript = requires(T t) {
@@ -78,7 +78,6 @@ concept HasInput = requires(T& t, const InputEvent& event) {
 
 template <typename T>
 struct ScriptSystem {
-    static_assert(std::is_standard_layout_v<T>, "Script types must be [StandardLayoutType](https://en.cppreference.com/cpp/language/classes#Standard-layout_class).");
     static_assert(IsScript<T>, "Type given is not a script.");
 
 private:

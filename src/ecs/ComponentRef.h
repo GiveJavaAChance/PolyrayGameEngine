@@ -3,9 +3,9 @@
 
 #pragma once
 
-#include <ecs/Component.h>
+#include <cstdint>
 
-template<Component T>
+template <typename T>
 struct ComponentRef {
     uint32_t ID;
 };

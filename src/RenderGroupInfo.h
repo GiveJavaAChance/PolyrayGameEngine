@@ -15,7 +15,7 @@ struct RenderGroupInfo {
     uint32_t memberOffset;
     uint32_t memberSize;
 
-    template <Component T, typename V, V T::* Member>
+    template <typename T, typename V, V T::* Member>
     static RenderGroupInfo create(const MaterialType& materialType) {
         return RenderGroupInfo{materialType, ComponentMetadata::typeOf<T>(), member_offset<T, V, Member>(), sizeof(V)};
     }

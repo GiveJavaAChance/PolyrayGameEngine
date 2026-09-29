@@ -6,27 +6,28 @@
 #include <cstdint>
 
 #include <structure/Registry.h>
+#include <structure/VirtualArray.h>
 
 template <typename T>
 struct Storage {
     constexpr static bool __DEFAULT__ = true;
 
-    DynamicArray<T> data;
+    VirtualArray<T> data;
     Registry reg;
 
-    inline uint32_t add(const T& component) noexcept {
-        data.add(component);
+    inline uint32_t add(T&& component) noexcept {
+        data.emplace(std::move(component));
         return reg.create();
     }
 
-    inline void set(uint32_t componentID, const T& component) noexcept {
-        data[reg[componentID]] = component;
+    inline void set(uint32_t componentID, T&& component) noexcept {
+        data[reg[componentID]] = std::move(component);
     }
 
     inline void remove(uint32_t componentID) noexcept {
         uint32_t loc;
         if (reg.remove(componentID, loc)) {
-            data[loc] = data[data.size() - 1u];
+            data[loc] = std::move(data[data.size() - 1u]);
         }
         data.removeEnd(1u);
     }
@@ -35,7 +36,11 @@ struct Storage {
         return reg.valid(componentID);
     }
 
-    inline T& get(uint32_t id) const noexcept {
+    inline T& get(uint32_t id) noexcept {
+        return data[reg[id]];
+    }
+
+    inline const T& get(uint32_t id) const noexcept {
         return data[reg[id]];
     }
 };

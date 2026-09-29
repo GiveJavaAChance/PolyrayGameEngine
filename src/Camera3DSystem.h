@@ -27,7 +27,7 @@ private:
     void update(double dt) {
         PROFILE_SCOPE(Camera3DSystem_Update)
         Storage<Camera3D>& cameraStorage = ecs->view<Camera3D>();
-        DynamicArray<Camera3D>& cameras = cameraStorage.data;
+        VirtualArray<Camera3D>& cameras = cameraStorage.data;
         for (uint32_t i = 0u; i < cameras.size(); i++) {
             Camera3D& cam = cameras[i];
             Transform3D* tx = ecs->getPtr(cam.transformRef);

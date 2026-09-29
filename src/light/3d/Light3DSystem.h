@@ -110,7 +110,7 @@ public:
         PROFILE_SCOPE(Light3DSystem_Update)
         Storage<Transform3D>& transforms = ecs->view<Transform3D>();
 
-        DynamicArray<DirectionalLight3D>& directionalLights = ecs->view<DirectionalLight3D>().data;
+        VirtualArray<DirectionalLight3D>& directionalLights = ecs->view<DirectionalLight3D>().data;
         uint32_t dirBufferSize = directionalLights.size() * sizeof(GpuDirectionalLight3D) + 16u;
         uint8_t* dirBuffer = alloc<uint8_t>(dirBufferSize);
         uint32_t directionalLightCount = directionalLights.size();
@@ -129,7 +129,7 @@ public:
             std::memcpy(dirBuffer + i * sizeof(GpuDirectionalLight3D) + 16u, &dir, sizeof(GpuDirectionalLight3D));
         }
 
-        DynamicArray<SpotLight3D>& spotLights = ecs->view<SpotLight3D>().data;
+        VirtualArray<SpotLight3D>& spotLights = ecs->view<SpotLight3D>().data;
         uint32_t spotBufferSize = spotLights.size() * sizeof(GpuSpotLight3D) + 16u;
         uint8_t* spotBuffer = alloc<uint8_t>(spotBufferSize);
         uint32_t spotLightCount = spotLights.size();
@@ -148,7 +148,7 @@ public:
             std::memcpy(spotBuffer + i * sizeof(GpuSpotLight3D) + 16u, &spot, sizeof(GpuSpotLight3D));
         }
 
-        DynamicArray<PointLight3D>& pointLights = ecs->view<PointLight3D>().data;
+        VirtualArray<PointLight3D>& pointLights = ecs->view<PointLight3D>().data;
         uint32_t pointBufferSize = pointLights.size() * sizeof(GpuPointLight3D) + 16u;
         uint8_t* pointBuffer = alloc<uint8_t>(pointBufferSize);
         uint32_t pointLightCount = pointLights.size();

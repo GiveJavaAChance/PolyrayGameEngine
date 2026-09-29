@@ -8,16 +8,12 @@
 
 #include <EventBus.h>
 #include <ecs/ECS.h>
+#include <structure/Arena.h>
 #include <utils/ThreadPool.h>
 
 struct World {
 private:
     TYPE_REGISTRY(SystemTypes)
-
-    struct System {
-        void* instance;
-        void (*destruct)(void*);
-    };
 
 public:
     ECS ecs;
@@ -25,42 +21,37 @@ public:
 
     ThreadPool<8u> threadPool;
 
-    DynamicArray<System> systems;
+    Arena systemArena;
+    DynamicArray<void*> systems;
 
     World() {
-    }
-
-    ~World() {
-        for (uint32_t i = 0u; i < systems.size(); i++) {
-            System& system = systems[i];
-            if (system.instance && system.destruct) {
-                system.destruct(system.instance);
-            }
-        }
     }
 
     World(const World&) = delete;
     World& operator=(const World&) = delete;
 
-    World(World&& other) noexcept : ecs(std::move(other.ecs)), eventBus(std::move(other.eventBus)), systems(std::move(other.systems)) {
+    World(World&& other) noexcept
+        : ecs(std::move(other.ecs)), eventBus(std::move(other.eventBus)),
+          systemArena(std::move(other.systemArena)), systems(std::move(other.systems)) {
     }
 
     World& operator=(World&& other) noexcept {
         if (this != &other) {
             ecs = std::move(other.ecs);
             eventBus = std::move(other.eventBus);
+            systemArena = std::move(other.systemArena);
             systems = std::move(other.systems);
         }
         return *this;
     }
 
-    template <typename Sys>
-    void addSystem(Sys* system) {
+    template <typename Sys, typename... Args>
+    void createSystem(Args&&... args) {
         uint32_t idx = SystemTypes::getTypeId<Sys>();
         while (idx >= systems.size()) {
-            systems.emplace(nullptr, nullptr);
+            systems.emplace(nullptr);
         }
-        systems[idx] = System{system, [](void* ptr) { delete reinterpret_cast<Sys*>(ptr); }};
+        systems[idx] = &systemArena.emplace<Sys>(std::forward<Args>(args)...);
     }
 
     template <typename Sys>
@@ -69,7 +60,7 @@ public:
         if (id > systems.size()) {
             return nullptr;
         }
-        return reinterpret_cast<Sys*>(systems[id].instance);
+        return reinterpret_cast<Sys*>(systems[id]);
     }
 
     void update(double dt) {

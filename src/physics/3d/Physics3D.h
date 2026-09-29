@@ -150,7 +150,7 @@ private:
     }
 
     void refreshStaticColliders() {
-        DynamicArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
+        VirtualArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
         if (staticColliders.size() == 0) {
             if (staticBVH) {
                 delete staticBVH;
@@ -232,8 +232,8 @@ public:
         Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
         MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
-        DynamicArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
-        DynamicArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
+        VirtualArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
+        VirtualArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
 
         // uint64_t time[9];
         // time[0] = rdtsc();
@@ -512,7 +512,7 @@ public:
         Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
         MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
-        DynamicArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
+        VirtualArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
 
         const __m256d zero = _mm256_set1_pd(0.0);
         uint32_t updateI = 0u;

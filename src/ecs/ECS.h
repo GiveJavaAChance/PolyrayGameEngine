@@ -13,7 +13,6 @@
 #include <structure/Registry.h>
 #include <typereg.h>
 
-#include <ecs/Component.h>
 #include <ecs/ComponentMetadata.h>
 #include <ecs/ComponentRef.h>
 #include <ecs/Storage.h>
@@ -27,29 +26,29 @@ struct Entity {
     uint32_t entityID;
     ECS* ecs;
 
-    template <Component T>
-    inline uint32_t addComponent(const T& component);
+    template <typename T>
+    inline uint32_t addComponent(T&& component);
 
-    template <Component T>
-    inline bool setComponent(const T& component);
+    template <typename T>
+    inline bool setComponent(T&& component);
 
-    template <Component T>
+    template <typename T>
     inline void removeComponent();
 
-    template <Component T>
+    template <typename T>
     inline bool getComponent(T& out);
 
-    template <Component T>
+    template <typename T>
     inline T* getComponentPtr();
 
-    template <Component T>
+    template <typename T>
     inline uint32_t getComponentCount();
 
-    template <Component T>
+    template <typename T>
     inline uint32_t getComponents(T* const ptr);
 };
 
-template <Component T>
+template <typename T>
 struct ComponentView {
 private:
     ECS* ecs;
@@ -88,7 +87,7 @@ struct ComponentReflection {
 
 struct ComponentRegistry {
 private:
-    template <Component T>
+    template <typename T>
     inline static T defaultConstruct() {
         return T{};
     }
@@ -97,7 +96,7 @@ public:
     inline static DynamicArray<ComponentMetadata> metadata;
     inline static DynamicArray<ComponentReflection> reflection;
 
-    template <Component T, T (*Create)() = defaultConstruct<T>>
+    template <typename T, T (*Create)() = defaultConstruct<T>>
     inline static void registerComponentType();
 
     inline static void setStorageAllocator(uint32_t typeId, void* (*allocateStorage)(), void (*freeStorage)(void*)) {
@@ -122,7 +121,7 @@ private:
     constexpr static uint64_t TYPE_MASK = 0xFFFF000000000000ull;
     constexpr static uint64_t ID_MASK = 0x0000FFFFFFFFFFFFull;
 
-    template <Component T>
+    template <typename T>
     inline static T defaultConstruct() {
         return T{};
     }
@@ -199,7 +198,7 @@ private:
         componentCapacity[entityLocation] = cap;
     }
 
-    template <Component T>
+    template <typename T>
     Storage<T>* getStorage() {
         return reinterpret_cast<Storage<T>*>(storages[ComponentMetadata::typeOf<T>()]);
     }
@@ -311,12 +310,12 @@ public:
         return *this;
     }
 
-    template <Component T, typename System, void (System::*OnAdded)(Entity, uint32_t), void (System::*OnRemoved)(Entity, uint32_t)>
+    template <typename T, typename System, void (System::*OnAdded)(Entity, uint32_t), void (System::*OnRemoved)(Entity, uint32_t)>
     void registerComponentListener(System* system) {
         listeners[ComponentMetadata::typeOf<T>()].emplace(system, &Invoke<Entity, uint32_t>::thunk<System, OnAdded>, &Invoke<Entity, uint32_t>::thunk<System, OnRemoved>);
     }
 
-    template <Component T, void (*OnAdded)(Entity, uint32_t), void (*OnRemoved)(Entity, uint32_t)>
+    template <typename T, void (*OnAdded)(Entity, uint32_t), void (*OnRemoved)(Entity, uint32_t)>
     void registerComponentListener() {
         listeners[ComponentMetadata::typeOf<T>()].emplace(nullptr, &Invoke<Entity, uint32_t>::wrapThunk<OnAdded>, &Invoke<Entity, uint32_t>::wrapThunk<OnRemoved>);
     }
@@ -386,21 +385,22 @@ public:
         }
     }
 
-    template <Component T>
-    uint32_t addComponent(uint32_t entityID, const T& component) {
-        static uint32_t type = ComponentMetadata::typeOf<T>();
+    template <typename T>
+    uint32_t addComponent(uint32_t entityID, T&& component) {
+        using ComponentType = std::remove_cvref_t<T>;
+        static uint32_t type = ComponentMetadata::typeOf<ComponentType>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T>* storage = getStorage<T>();
+        Storage<ComponentType>* storage = getStorage<ComponentType>();
         uint32_t location = entityRegistry[entityID];
         uint32_t idx = componentCount[location]++;
         ensureComponentCapacity(location, componentCount[location]);
-        uint32_t componentID = storage->add(component);
+        uint32_t componentID = storage->add(std::move(component));
         entities[location][idx] = componentType | static_cast<uint64_t>(componentID);
         componentAdded(entityID, type, componentID);
         return componentID;
     }
 
-    template <Component T, T (*Create)()>
+    template <typename T, T (*Create)()>
     uint32_t createAndAddComponent(uint32_t entityID) {
         return addComponent(entityID, Create());
     }
@@ -409,24 +409,25 @@ public:
         return ComponentRegistry::reflection[type].createAndAddComponent(this, entityID);
     }
 
-    template <Component T>
-    bool setComponent(uint32_t entityID, const T& component) {
-        static uint32_t type = ComponentMetadata::typeOf<T>();
+    template <typename T>
+    bool setComponent(uint32_t entityID, T&& component) {
+        using ComponentType = std::remove_cvref_t<T>;
+        static uint32_t type = ComponentMetadata::typeOf<ComponentType>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
-        Storage<T>* storage = getStorage<T>();
+        Storage<T>* storage = getStorage<ComponentType>();
         uint32_t location = entityRegistry[entityID];
         uint64_t* entity = entities[location];
         uint32_t size = componentCount[location];
         for (uint32_t i = 0u; i < size; i++) {
             if ((entity[i] & TYPE_MASK) == componentType) {
-                storage->set(static_cast<uint32_t>(entity[i] & ID_MASK), component);
+                storage->set(static_cast<uint32_t>(entity[i] & ID_MASK), std::move(component));
                 return true;
             }
         }
         return false;
     }
 
-    template <Component T>
+    template <typename T>
     void removeComponent(uint32_t entityID) {
         static uint32_t type = ComponentMetadata::typeOf<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
@@ -449,7 +450,7 @@ public:
         ComponentRegistry::reflection[type].removeComponent(this, entityID);
     }
 
-    template <Component T>
+    template <typename T>
     void removeComponent(uint32_t entityID, uint32_t componentID) {
         static uint32_t type = ComponentMetadata::typeOf<T>();
         Storage<T>* storage = getStorage<T>();
@@ -470,7 +471,7 @@ public:
         ComponentRegistry::reflection[type].removeComponentByID(this, entityID, componentID);
     }
 
-    template <Component T>
+    template <typename T>
     bool getComponent(uint32_t entityID, T& out) {
         static uint32_t type = ComponentMetadata::typeOf<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
@@ -487,7 +488,7 @@ public:
         return false;
     }
 
-    template <Component T>
+    template <typename T>
     T* getComponentPtr(uint32_t entityID) {
         Storage<T>* storage = getStorage<T>();
         using ReturnT = decltype(storage->get(0));
@@ -510,7 +511,7 @@ public:
         return ComponentRegistry::reflection[type].getComponentPtr(this, entityID);
     }
 
-    template <Component T>
+    template <typename T>
     uint32_t getComponentCount(uint32_t entityID) {
         static uint64_t componentType = static_cast<uint64_t>(ComponentMetadata::typeOf<T>()) << TYPE_SHIFT;
         uint32_t location = entityRegistry[entityID];
@@ -539,7 +540,7 @@ public:
         return count;
     }
 
-    template <Component T>
+    template <typename T>
     uint32_t getComponents(uint32_t entityID, T* const ptr) {
         static uint32_t type = ComponentMetadata::typeOf<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
@@ -556,7 +557,7 @@ public:
         return idx;
     }
 
-    template <Component T>
+    template <typename T>
     bool getComponentID(uint32_t entityID, uint32_t& componentID) {
         static uint32_t type = ComponentMetadata::typeOf<T>();
         static uint64_t componentType = static_cast<uint64_t>(type) << TYPE_SHIFT;
@@ -586,7 +587,7 @@ public:
         return false;
     }
 
-    template <Component T>
+    template <typename T>
     bool isComponentValid(uint32_t componentID) {
         return getStorage<T>()->valid(componentID);
     }
@@ -595,7 +596,7 @@ public:
         return ComponentRegistry::reflection[type].isComponentValid(this, componentID);
     }
 
-    template <Component T>
+    template <typename T>
     T* getPtr(uint32_t componentID) {
         Storage<T>* storage = getStorage<T>();
         using ReturnT = decltype(storage->get(0));
@@ -610,23 +611,22 @@ public:
         return ComponentRegistry::reflection[type].getPtr(this, componentID);
     }
 
-    template <Component T>
+    template <typename T>
     T* getPtr(ComponentRef<T> ref) {
         return getPtr<T>(ref.ID);
     }
 
-    template <Component T>
+    template <typename T>
     T read(uint32_t componentID) {
         return getStorage<T>()->get(componentID);
     }
 
-    template <Component T>
+    template <typename T>
     T read(ComponentRef<T> ref) {
         return getStorage<T>()->get(ref.ID);
     }
 
-    
-    template <Component T>
+    template <typename T>
     inline void read(uint32_t componentID, void* dst) {
         T component = read<T>(componentID);
         std::memcpy(dst, &component, sizeof(T));
@@ -636,28 +636,28 @@ public:
         ComponentRegistry::reflection[type].read(this, componentID, dst);
     }
 
-    template <Component T>
-    void write(uint32_t componentID, const T& component) {
-        getStorage<T>()->set(componentID, component);
+    template <typename T>
+    void write(uint32_t componentID, T&& component) {
+        getStorage<T>()->set(componentID, std::forward<T>(component));
     }
 
-    template <Component T>
-    void write(ComponentRef<T> ref, const T& component) {
-        getStorage<T>()->set(ref.ID, component);
+    template <typename T>
+    void write(ComponentRef<T> ref, T&& component) {
+        getStorage<T>()->set(ref.ID, std::forward<T>(component));
     }
 
-    template <Component T>
+    template <typename T>
     inline void write(uint32_t componentID, void* src) {
         alignas(T) uint8_t component[sizeof(T)];
         std::memcpy(component, src, sizeof(T));
-        write<T>(componentID, *reinterpret_cast<T*>(component));
+        write<T>(componentID, std::forward<T>(*reinterpret_cast<T*>(component)));
     }
 
     inline void reflectWrite(uint32_t type, uint32_t componentID, void* src) {
         ComponentRegistry::reflection[type].write(this, componentID, src);
     }
 
-    template <Component T>
+    template <typename T>
     Storage<T>& view() {
         return *getStorage<T>();
     }
@@ -708,53 +708,53 @@ public:
     }
 };
 
-template <Component T>
+template <typename T>
 ComponentView<T>::ComponentView(ECS* ecs, ComponentRef<T> ref) : ecs(ecs), ref(ref), temp(ecs->read(ref)) {
 }
 
-template <Component T>
+template <typename T>
 ComponentView<T>::~ComponentView() {
     if (dirty) {
-        ecs->write(ref, temp);
+        ecs->write(ref, std::move(temp));
     }
 }
 
-template <Component T>
-inline uint32_t Entity::addComponent(const T& component) {
-    return ecs->addComponent<T>(entityID, component);
+template <typename T>
+inline uint32_t Entity::addComponent(T&& component) {
+    return ecs->addComponent(entityID, std::move(component));
 }
 
-template <Component T>
-inline bool Entity::setComponent(const T& component) {
-    return ecs->setComponent<T>(entityID, component);
+template <typename T>
+inline bool Entity::setComponent(T&& component) {
+    return ecs->setComponent(entityID, std::move(component));
 }
 
-template <Component T>
+template <typename T>
 inline void Entity::removeComponent() {
     return ecs->removeComponent<T>(entityID);
 }
 
-template <Component T>
+template <typename T>
 inline bool Entity::getComponent(T& out) {
     return ecs->getComponent<T>(entityID, out);
 }
 
-template <Component T>
+template <typename T>
 inline T* Entity::getComponentPtr() {
     return ecs->getComponentPtr<T>(entityID);
 }
 
-template <Component T>
+template <typename T>
 inline uint32_t Entity::getComponentCount() {
     return ecs->getComponentCount<T>(entityID);
 }
 
-template <Component T>
+template <typename T>
 inline uint32_t Entity::getComponents(T* const ptr) {
     return ecs->getComponents<T>(entityID, ptr);
 }
 
-template <Component T, T (*Create)()>
+template <typename T, T (*Create)()>
 inline void ComponentRegistry::registerComponentType() {
     ComponentMetadata meta = ComponentMetadata::get<T>();
     while (meta.typeId >= metadata.size()) {

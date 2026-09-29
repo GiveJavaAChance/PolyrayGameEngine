@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <ecs/Component.h>
 #include <ecs/Export.h>
 #include <serial/Serial.h>
 #include <structure/DynamicArray.h>
@@ -17,7 +16,7 @@ struct ComponentMetadata {
 private:
     TYPE_REGISTRY(ComponentTypes)
 
-    template <Component T>
+    template <typename T>
     constexpr static const Export* getExports() {
         if constexpr (HasExport<T>) {
             return ExportInfo<T>::__export__;
@@ -26,7 +25,7 @@ private:
         }
     }
 
-    template <Component T>
+    template <typename T>
     constexpr static uint32_t getExportCount() {
         if constexpr (HasExport<T>) {
             return sizeof(ExportInfo<T>::__export__) / sizeof(Export);
@@ -48,12 +47,12 @@ public:
     const Export* exports;
     uint32_t exportCount;
 
-    template <Component T>
+    template <typename T>
     inline static uint32_t typeOf() {
         return ComponentTypes::getTypeId<T>();
     }
 
-    template <Component T>
+    template <typename T>
     inline static ComponentMetadata get() {
         return ComponentMetadata{
             ComponentTypes::getTypeId<T>(),
@@ -63,7 +62,7 @@ public:
             &Serial<T>::serialize,
             &Serial<T>::deserialize,
             getExports<T>(),
-            getExportCount<T>()
+            getExportCount<T>(),
         };
     }
 
