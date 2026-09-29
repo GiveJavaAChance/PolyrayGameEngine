@@ -40,4 +40,13 @@ struct Serial<SpotLight3D> {
     }
 };
 
+template <>
+struct ExportInfo<SpotLight3D> {
+    constexpr static Export __export__[] = {
+        {offsetof(SpotLight3D, color), EXPORT_COLOR_RGB, "Color"},
+        {offsetof(SpotLight3D, strength), EXPORT_FLOAT, "Strength"},
+        {offsetof(SpotLight3D, distanceAttenuation), EXPORT_FLOAT, "Distance Attenuation"},
+    };
+};
+
 #endif

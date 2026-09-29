@@ -39,4 +39,13 @@ struct Serial<PointLight3D> {
     }
 };
 
+template <>
+struct ExportInfo<PointLight3D> {
+    constexpr static Export __export__[] = {
+        {offsetof(PointLight3D, color), EXPORT_COLOR_RGB, "Color"},
+        {offsetof(PointLight3D, strength), EXPORT_FLOAT, "Strength"},
+        {offsetof(PointLight3D, distanceAttenuation), EXPORT_FLOAT, "Distance Attenuation"},
+    };
+};
+
 #endif

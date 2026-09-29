@@ -1,6 +1,7 @@
 #ifndef DIRECTIONALLIGHT3D_H_INCLUDED
 #define DIRECTIONALLIGHT3D_H_INCLUDED
 
+#include "ecs/Export.h"
 #pragma once
 
 #include <World.h>
@@ -37,6 +38,14 @@ struct Serial<DirectionalLight3D> {
         input.read(&light, SIZE);
         e.addComponent(light);
     }
+};
+
+template <>
+struct ExportInfo<DirectionalLight3D> {
+    constexpr static Export __export__[] = {
+        {offsetof(DirectionalLight3D, color), EXPORT_COLOR_RGB, "Color"},
+        {offsetof(DirectionalLight3D, strength), EXPORT_FLOAT, "Strength"},
+    };
 };
 
 #endif
