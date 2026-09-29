@@ -21,6 +21,8 @@
 #include <Environment.h>
 
 #include "Scripts.h"
+#include "ShadowSystem.h"
+#include "scene/3d/Scene3D.h"
 
 Window* window;
 
@@ -99,39 +101,40 @@ int main() {
     // This order is pretty standard though:
 
     // Physics engine
-    Physics3D* physics = new Physics3D(&world, false);
-    ColliderShape3D::registerBuiltinColliders(physics);
-    world.addSystem(physics);
+    world.createSystem<Physics3D>(&world, false);
+    ColliderShape3D::registerBuiltinColliders(world.getSystem<Physics3D>());
 
     // Animation system (not used)
-    // AnimationSystem* animationSystem = new AnimationSystem(&world);
-    // world.addSystem(animationSystem);
+    // world.createSystem<AnimationSystem>(&world);
 
     // Scene graph system
-    Scene3D* scene = new Scene3D(&world);
-    world.addSystem(scene);
+    world.createSystem<Scene3D>(&world);
 
     // Camera system
-    world.addSystem(new Camera3DSystem(&ecs));
+    world.createSystem<Camera3DSystem>(&ecs);
 
     // Render view system
-    RenderView3DSystem* renderViewSystem = new RenderView3DSystem(&ecs);
-    world.addSystem(renderViewSystem);
+    world.createSystem<RenderView3DSystem>(&ecs);
 
     // Skinning system (not used)
-    // world.addSystem(new SkinSystem(&ecs));
+    // world.createSystem<SkinSystem>(&ecs);
 
     // Renderer
-    Renderer* renderer = new Renderer(&ecs);
-    world.addSystem(renderer);
+    world.createSystem<Renderer>(&ecs);
 
     // Shadow and lights
-    ShadowSystem* shadowSystem = new ShadowSystem(5u, 5u);
-    world.addSystem(shadowSystem);
-    world.addSystem(new Light3DSystem(&ecs, shadowSystem, 128u, 128u, 128u));
+    world.createSystem<ShadowSystem>(16u, 16u);
+    world.createSystem<Light3DSystem>(&ecs, world.getSystem<ShadowSystem>(), 128u, 128u, 128u);
 
     // Scripting
-    world.addSystem(new ScriptSystem<PlayerScript>(&world, false));
+    world.createSystem<ScriptSystem<PlayerScript>>(&world, false);
+
+    // Keeping pointers to the systems for easier access
+    Physics3D* physics = world.getSystem<Physics3D>();
+    Scene3D* scene = world.getSystem<Scene3D>();
+    RenderView3DSystem* renderViewSystem = world.getSystem<RenderView3DSystem>();
+    Renderer* renderer = world.getSystem<Renderer>();
+    ShadowSystem* shadowSystem = world.getSystem<ShadowSystem>();
 
     /////////////////////
     // Setup rendering //
