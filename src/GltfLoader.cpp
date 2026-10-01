@@ -7,7 +7,7 @@
 #include <fastgltf/types.h>
 
 #include <Camera3D.h>
-#include <MaterialType.h>
+#include <RenderGroupInfo.h>
 #include <Renderer.h>
 #include <ResourceManager.h>
 #include <SkinSystem.h>
@@ -224,7 +224,6 @@ GpuPBRMaterial loadMaterial(const DynamicArray<GLTexture>& textures, const fastg
     }
 
     mat.alphaCutoff = material.alphaCutoff;
-    mat.doubleSided = material.doubleSided;
 
     mat.baseColorUvTransform = getUvTransform(material.pbrData.baseColorTexture);
     mat.normalUvTransform = getUvTransform(material.normalTexture);
@@ -263,27 +262,21 @@ std::string getAttributeName(fastgltf::Asset& asset, const fastgltf::Primitive& 
     return attribute;
 }
 
-void loadMeshes(const DynamicArray<RenderGroupInfo>& renderGroups, const DynamicArray<GpuPBRMaterial>& materials, fastgltf::Asset& asset, const fastgltf::Mesh& mesh, DynamicArray<DynamicArray<uint32_t>>& renderObjects, World* world) {
+void loadMeshes(const DynamicArray<RenderGroupInfo>& renderGroups, const DynamicArray<GpuPBRMaterial>& materials, fastgltf::Asset& asset, const fastgltf::Mesh& mesh, DynamicArray<DynamicArray<uint64_t>>& renderObjects, World* world) {
     Renderer* renderer = world->getSystem<Renderer>();
-
     renderObjects.emplace();
-    DynamicArray<uint32_t>& objects = renderObjects[renderObjects.size() - 1u];
+    DynamicArray<uint64_t>& objects = renderObjects[renderObjects.size() - 1u];
     for (std::size_t primitiveIndex = 0; primitiveIndex < mesh.primitives.size(); ++primitiveIndex) {
         const fastgltf::Primitive& primitive = mesh.primitives[primitiveIndex];
-
         const fastgltf::Attribute* positionAttribute = primitive.findAttribute("POSITION");
         if (positionAttribute == primitive.attributes.end()) {
             continue;
         }
         uint32_t vertexCount = static_cast<uint32_t>(asset.accessors[positionAttribute->accessorIndex].count);
 
-        VertexLayoutInfo* vertexLayout = nullptr;
-        uint32_t matchIdx = 0u;
-        uint32_t maxMatch = 0u;
-
+        DynamicArray<uint32_t> candidates;
         for (uint32_t i = 0u; i < renderGroups.size(); i++) {
             VertexLayoutInfo& layout = renderGroups[i].materialType.vertexLayout;
-            uint32_t matched = 0u;
             for (uint32_t j = 0u; j < layout.attributes.size(); j++) {
                 VertexAttribInfo& attribute = layout.attributes[j];
                 if (attribute.instanced) {
@@ -293,38 +286,57 @@ void loadMeshes(const DynamicArray<RenderGroupInfo>& renderGroups, const Dynamic
                 if (attrib == primitive.attributes.end() && !attribute.optional) {
                     goto next;
                 }
-                matched++;
             }
-            if (matched > maxMatch) {
-                vertexLayout = &layout;
-                matchIdx = i;
-                maxMatch = matched;
-            }
+            candidates.add(i);
         next:;
         }
-
-        if (!vertexLayout) {
+        if (candidates.size() == 0u) {
             std::cerr << "No material type found!" << std::endl;
             continue;
         }
 
-        uint32_t vertexSize = 0u;
+        uint32_t materialIndex = 0u;
+        if (!primitive.mappings.empty() && primitive.mappings[0u].has_value()) {
+            materialIndex = primitive.mappings[0u].value();
+        } else {
+            materialIndex = primitive.materialIndex.value();
+        }
+        fastgltf::Material& gltfMaterial = asset.materials[materialIndex];
 
-        for (uint32_t i = 0u; i < vertexLayout->attributes.size(); i++) {
-            VertexAttribInfo& attribute = vertexLayout->attributes[i];
+        uint32_t matchIdx = UINT32_MAX;
+        for (uint32_t i = 0u; i < candidates.size(); i++) {
+            uint32_t idx = candidates[i];
+            RenderRequirements& req = renderGroups[idx].requirements;
+            bool match = true;
+            if (req.alphaMode) {
+                match &= static_cast<uint8_t>(gltfMaterial.alphaMode) == req.alphaMode.value;
+            }
+            if (match) {
+                matchIdx = idx;
+                break;
+            }
+        }
+        if (matchIdx == UINT32_MAX) {
+            std::cerr << "No material type found!" << std::endl;
+            continue;
+        }
+
+        VertexLayoutInfo& vertexLayout = renderGroups[matchIdx].materialType.vertexLayout;
+
+        uint32_t vertexSize = 0u;
+        for (uint32_t i = 0u; i < vertexLayout.attributes.size(); i++) {
+            VertexAttribInfo& attribute = vertexLayout.attributes[i];
             if (attribute.instanced) {
                 continue;
             }
             vertexSize += attribute.columns * attribute.byteSize;
         }
 
-        uint32_t vertexBufferSize = vertexCount * vertexSize;
+        size_t vertexBufferSize = vertexCount * vertexSize;
         uint8_t* vertexData = alloc<uint8_t>(vertexBufferSize);
-
         uint32_t baseOffset = 0u;
-
-        for (uint32_t i = 0u; i < vertexLayout->attributes.size(); i++) {
-            VertexAttribInfo& attribute = vertexLayout->attributes[i];
+        for (uint32_t i = 0u; i < vertexLayout.attributes.size(); i++) {
+            VertexAttribInfo& attribute = vertexLayout.attributes[i];
             if (attribute.instanced) {
                 continue;
             }
@@ -336,120 +348,81 @@ void loadMeshes(const DynamicArray<RenderGroupInfo>& renderGroups, const Dynamic
             const fastgltf::Accessor& accessor = asset.accessors[attrib->accessorIndex];
             if (attribute.name == "COLOR") {
                 if (accessor.type == fastgltf::AccessorType::Vec3) {
-                    fastgltf::iterateAccessorWithIndex<vec3>(asset, accessor,
-                        [&](vec3 value, std::size_t index) {
-                            vec4 color = prvl::vec4(value, 1.0f);
-                            std::memcpy(vertexData + baseOffset + vertexSize * index, &color, attribute.byteSize);
-                        });
+                    fastgltf::iterateAccessorWithIndex<vec3>(asset, accessor, [&](vec3 value, std::size_t index) { vec4 color = prvl::vec4(value, 1.0f); std::memcpy(vertexData + baseOffset + vertexSize * index, &color, attribute.byteSize); });
                 } else {
-                    fastgltf::iterateAccessorWithIndex<vec4>(asset, accessor,
-                        [&](vec4 value, std::size_t index) {
-                            std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                        });
+                    fastgltf::iterateAccessorWithIndex<vec4>(asset, accessor, [&](vec4 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                 }
                 baseOffset += attribute.columns * attribute.byteSize;
                 continue;
             }
             if (attribute.name == "TANGENT") {
-                fastgltf::iterateAccessorWithIndex<vec4>(asset, accessor,
-                    [&](vec4 value, std::size_t index) {
-                        std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                    });
+                fastgltf::iterateAccessorWithIndex<vec4>(asset, accessor, [&](vec4 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                 baseOffset += attribute.columns * attribute.byteSize;
                 continue;
             }
             if (attribute.baseType == GL_FLOAT) {
                 switch (attribute.components) {
                     case 1: {
-                        fastgltf::iterateAccessorWithIndex<float>(asset, accessor,
-                            [&](float value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<float>(asset, accessor, [&](float value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                     case 2: {
-                        fastgltf::iterateAccessorWithIndex<vec2>(asset, accessor,
-                            [&](vec2 value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<vec2>(asset, accessor, [&](vec2 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                     case 3: {
-                        fastgltf::iterateAccessorWithIndex<vec3>(asset, accessor,
-                            [&](vec3 value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<vec3>(asset, accessor, [&](vec3 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                     case 4: {
-                        fastgltf::iterateAccessorWithIndex<vec4>(asset, accessor,
-                            [&](vec4 value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<vec4>(asset, accessor, [&](vec4 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                 }
             } else if (attribute.baseType == GL_UNSIGNED_BYTE || attribute.baseType == GL_UNSIGNED_SHORT || attribute.baseType == GL_UNSIGNED_INT) {
                 switch (attribute.components) {
                     case 1: {
-                        fastgltf::iterateAccessorWithIndex<uint32_t>(asset, accessor,
-                            [&](uint32_t value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<uint32_t>(asset, accessor, [&](uint32_t value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                     case 2: {
-                        fastgltf::iterateAccessorWithIndex<uvec2>(asset, accessor,
-                            [&](uvec2 value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<uvec2>(asset, accessor, [&](uvec2 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                     case 3: {
-                        fastgltf::iterateAccessorWithIndex<uvec3>(asset, accessor,
-                            [&](uvec3 value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<uvec3>(asset, accessor, [&](uvec3 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                     case 4: {
-                        fastgltf::iterateAccessorWithIndex<uvec4>(asset, accessor,
-                            [&](uvec4 value, std::size_t index) {
-                                std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize);
-                            });
+                        fastgltf::iterateAccessorWithIndex<uvec4>(asset, accessor, [&](uvec4 value, std::size_t index) { std::memcpy(vertexData + baseOffset + vertexSize * index, &value, attribute.byteSize); });
                         break;
                     }
                 }
             }
             baseOffset += attribute.columns * attribute.byteSize;
         }
-
         const fastgltf::Accessor& indexAccessor = asset.accessors[primitive.indicesAccessor.value()];
-        uint32_t* indices = alloc<uint32_t>(indexAccessor.count);
-        fastgltf::copyFromAccessor<uint32_t>(asset, indexAccessor, indices);
-
-        uint32_t materialIndex = 0u;
-        if (!primitive.mappings.empty() && primitive.mappings[0u].has_value()) {
-            materialIndex = primitive.mappings[0u].value();
-        } else {
-            materialIndex = primitive.materialIndex.value();
-        }
+        uint32_t* indexData = alloc<uint32_t>(indexAccessor.count);
+        uint32_t indexCount = indexAccessor.count;
+        fastgltf::copyFromAccessor<uint32_t>(asset, indexAccessor, indexData);
 
         GpuPBRMaterial& mat = materials[materialIndex];
-        RenderState renderState{};
-        renderState.doubleSided = static_cast<bool>(mat.doubleSided);
-
+        uint64_t pipelineStateFlags = 0ull;
+        if (!gltfMaterial.doubleSided) {
+            pipelineStateFlags |= PipelineStateFlags::BACKFACE_CULLING;
+        }
+        if (gltfMaterial.alphaMode == fastgltf::AlphaMode::Blend) {
+            pipelineStateFlags |= PipelineStateFlags::ALPHA_BLEND;
+        } else if (gltfMaterial.alphaMode == fastgltf::AlphaMode::Mask) {
+            pipelineStateFlags |= PipelineStateFlags::ALPHA_TO_COVER;
+        }
         uint32_t renderGroup = renderer->getOrCreateGroup(renderGroups[matchIdx]);
-        uint32_t materialID = renderer->addMaterialInstance(renderGroup, mat, renderState);
-        uint32_t object = renderer->createObject(renderGroup, materialID);
-        objects.add(object);
-        RenderObject& obj = renderer->getObject(object);
-        obj.vbo.uploadData(vertexData, vertexBufferSize);
-        obj.ebo.uploadData(indices, indexAccessor.count);
-        obj.vertexCount = vertexCount;
-        obj.indexCount = indexAccessor.count;
+        uint32_t pipelineStateID = renderer->getOrCreatePipelineState(renderGroup, pipelineStateFlags);
+        uint32_t materialID = renderer->addMaterialInstance(renderGroup, mat);
+        uint64_t objectID = renderer->createObject(renderGroup, materialID, pipelineStateID, vertexData, vertexCount, indexData, indexCount);
+        objects.add(objectID);
         free(vertexData);
-        free(indices);
+        free(indexData);
     }
 }
 
@@ -681,7 +654,7 @@ uint32_t GltfLoader::load(const ResourcePath& res, World* world, uint32_t fromNo
         materials.add(loadMaterial(textures, material));
     }
 
-    DynamicArray<DynamicArray<uint32_t>> renderObjects;
+    DynamicArray<DynamicArray<uint64_t>> renderObjects;
     for (fastgltf::Mesh& mesh : asset.meshes) {
         loadMeshes(renderGroups, materials, asset, mesh, renderObjects, world);
     }
@@ -737,7 +710,7 @@ uint32_t GltfLoader::load(const ResourcePath& res, World* world, uint32_t fromNo
         }
 
         if (node.meshIndex.has_value()) {
-            DynamicArray<uint32_t>& objects = renderObjects[node.meshIndex.value()];
+            DynamicArray<uint64_t>& objects = renderObjects[node.meshIndex.value()];
             for (uint32_t i = 0u; i < objects.size(); i++) {
                 ecs.addComponent(entityID, RenderInstance{objects[i]});
             }

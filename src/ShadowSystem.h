@@ -13,6 +13,14 @@
 #define SHADOW_SIZE 1024u
 
 struct ShadowSystem {
+private:
+    struct Shadow {
+        mat4 lightSpaceTransform;
+        uvec2 shadowMapOffset;
+        uvec2 shadowMapSize;
+    };
+
+public:
     uint32_t shadowsX;
     uint32_t shadowsY;
     uint32_t maxShadowCount;
@@ -22,27 +30,28 @@ struct ShadowSystem {
 
     ShaderBuffer shadowCamBuffer;
 
-    ShaderBuffer cameraBuffer;
     uint32_t cameraBufferStride;
+    ShaderBuffer cameraBuffer;
 
     UnorderedRegistry<GpuCamera3D> shadowCameras;
 
-    ShadowSystem(uint32_t shadowsX, uint32_t shadowsY) : shadowsX(shadowsX), shadowsY(shadowsY), maxShadowCount(shadowsX * shadowsY), shadowAtlas(GLTexture::createTexture2D(SHADOW_SIZE * shadowsX, SHADOW_SIZE * shadowsY, GL_DEPTH_COMPONENT32)), shadowBuffer(std::initializer_list<GLTexture*>{}, &shadowAtlas), shadowCamBuffer(GL_DYNAMIC_DRAW), cameraBuffer(GL_DYNAMIC_DRAW) {
+    ShadowSystem(uint32_t shadowsX, uint32_t shadowsY)
+        : shadowsX(shadowsX), shadowsY(shadowsY), maxShadowCount(shadowsX * shadowsY),
+          shadowAtlas(GLTexture::createTexture2D(SHADOW_SIZE * shadowsX, SHADOW_SIZE * shadowsY, GL_DEPTH_COMPONENT32)),
+          shadowBuffer(std::initializer_list<GLTexture*>{}, &shadowAtlas),
+          shadowCamBuffer(maxShadowCount * sizeof(Shadow)),
+          cameraBufferStride(ShaderBuffer::getUniformBufferStride(sizeof(GpuCamera3D))),
+          cameraBuffer(maxShadowCount * cameraBufferStride) {
         shadowAtlas.setInterpolation(true);
         glTextureParameteri(shadowAtlas.ID, GL_TEXTURE_COMPARE_FUNC, GL_GEQUAL);
         glTextureParameteri(shadowAtlas.ID, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
         shadowAtlas.setWrapMode(GL_CLAMP_TO_BORDER);
         float borderColor[] = {0.0f, 0.0f, 0.0f, 0.0f};
-        glTextureParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-        shadowCamBuffer.setSize(maxShadowCount * (sizeof(mat4) + sizeof(vec4)));
-        ShaderManager::setValue("SHADOW3D_IDX", BindingRegistry::bindBufferBase(shadowCamBuffer, GL_SHADER_STORAGE_BUFFER));
+        glTextureParameterfv(shadowAtlas.ID, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-        GLint alignment;
-        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &alignment);
-        cameraBufferStride = (sizeof(GpuCamera3D) + alignment - 1u) / alignment * alignment;
-
-        cameraBuffer.setSize(maxShadowCount * cameraBufferStride);
         glBindTextureUnit(32u, shadowAtlas.ID);
+
+        ShaderManager::setValue("SHADOW3D_IDX", BindingRegistry::bindBufferBase(shadowCamBuffer, GL_SHADER_STORAGE_BUFFER));
     }
 
     uint32_t createOrthographicShadowCaster(float width, float depth) {
@@ -74,17 +83,12 @@ struct ShadowSystem {
         mat4 tr = diag(prvl::vec4(1.0f));
         tr[3] = prvl::vec4(-cam.cameraPos, 1.0f);
 
-        struct Shadow {
-            mat4 lightSpaceTransform;
-            uvec2 shadowMapOffset;
-            uvec2 shadowMapSize;
-        };
         uint32_t i = shadowCameras.reg[shadowId];
         uint32_t shadowX = (i % shadowsX) * SHADOW_SIZE;
         uint32_t shadowY = (i / shadowsX) * SHADOW_SIZE;
         Shadow shadow{cam.projection * cam.cameraTransform * tr, {shadowX, shadowY}, {SHADOW_SIZE, SHADOW_SIZE}};
-        shadowCamBuffer.uploadPartialData(&shadow, 1u, i);
-        cameraBuffer.uploadPartialData((void*) &cam, sizeof(GpuCamera3D), i * cameraBufferStride);
+        shadowCamBuffer.uploadData(&shadow, sizeof(Shadow), i * sizeof(Shadow));
+        cameraBuffer.uploadData(&cam, sizeof(GpuCamera3D), i * cameraBufferStride);
     }
 
     void renderShadows(GLuint cameraBinding, Renderer* renderer) {

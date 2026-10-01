@@ -39,11 +39,11 @@ struct MaterialType {
     }
 
     inline static MaterialType staticPBR() {
-        uint32_t vertStaticPBR      = ShaderManager::compileShaderFile("res/shaders/3d/StaticPBR.vert", GL_VERTEX_SHADER);
-        uint32_t vertStaticPBRDepth = ShaderManager::compileShaderFile("res/shaders/3d/StaticPBRDepth.vert", GL_VERTEX_SHADER);
-        uint32_t fragPBR            = ShaderManager::compileShaderFile("res/shaders/3d/PBR.frag", GL_FRAGMENT_SHADER);
-        uint32_t fragPBRDeferred    = ShaderManager::compileShaderFile("res/shaders/3d/PBRDeferred.frag", GL_FRAGMENT_SHADER);
-        uint32_t fragPBRDepth       = ShaderManager::compileShaderFile("res/shaders/3d/PBRDepth.frag", GL_FRAGMENT_SHADER);
+        uint32_t vertStaticPBR      = ShaderManager::compileShaderFile("res/shaders/3d/vert/StaticPBR.vert", GL_VERTEX_SHADER);
+        uint32_t vertStaticPBRDepth = ShaderManager::compileShaderFile("res/shaders/3d/vert/StaticPBRDepth.vert", GL_VERTEX_SHADER);
+        uint32_t fragPBR            = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBR.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDeferred    = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBRDeferred.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDepth       = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBRDepth.frag", GL_FRAGMENT_SHADER);
 
         ShaderProgram forwardShader = ShaderManager::createProgram({vertStaticPBR, fragPBR});
         return MaterialType{
@@ -54,11 +54,41 @@ struct MaterialType {
     }
 
     inline static MaterialType skinnedPBR() {
-        uint32_t vertSkinnedPBR      = ShaderManager::compileShaderFile("res/shaders/3d/SkinnedPBR.vert", GL_VERTEX_SHADER);
-        uint32_t vertSkinnedPBRDepth = ShaderManager::compileShaderFile("res/shaders/3d/SkinnedPBRDepth.vert", GL_VERTEX_SHADER);
-        uint32_t fragPBR             = ShaderManager::compileShaderFile("res/shaders/3d/PBR.frag", GL_FRAGMENT_SHADER);
-        uint32_t fragPBRDeferred     = ShaderManager::compileShaderFile("res/shaders/3d/PBRDeferred.frag", GL_FRAGMENT_SHADER);
-        uint32_t fragPBRDepth        = ShaderManager::compileShaderFile("res/shaders/3d/PBRDepth.frag", GL_FRAGMENT_SHADER);
+        uint32_t vertSkinnedPBR      = ShaderManager::compileShaderFile("res/shaders/3d/vert/SkinnedPBR.vert", GL_VERTEX_SHADER);
+        uint32_t vertSkinnedPBRDepth = ShaderManager::compileShaderFile("res/shaders/3d/vert/SkinnedPBRDepth.vert", GL_VERTEX_SHADER);
+        uint32_t fragPBR             = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBR.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDeferred     = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBRDeferred.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDepth        = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBRDepth.frag", GL_FRAGMENT_SHADER);
+
+        ShaderProgram forwardShader = ShaderManager::createProgram({vertSkinnedPBR, fragPBR});
+        return MaterialType{
+            ShaderManager::getVertexLayout(forwardShader),
+            forwardShader,
+            ShaderManager::createProgram({vertSkinnedPBR, fragPBRDeferred}),
+            ShaderManager::createProgram({vertSkinnedPBRDepth, fragPBRDepth})};
+    }
+    
+    inline static MaterialType maskedStaticPBR() {
+        uint32_t vertStaticPBR      = ShaderManager::compileShaderFile("res/shaders/3d/vert/StaticPBR.vert", GL_VERTEX_SHADER);
+        uint32_t vertStaticPBRDepth = ShaderManager::compileShaderFile("res/shaders/3d/vert/MaskedStaticPBRDepth.vert", GL_VERTEX_SHADER);
+        uint32_t fragPBR            = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBR.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDeferred    = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBRDeferred.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDepth       = ShaderManager::compileShaderFile("res/shaders/3d/frag/MaskedPBRDepth.frag", GL_FRAGMENT_SHADER);
+
+        ShaderProgram forwardShader = ShaderManager::createProgram({vertStaticPBR, fragPBR});
+        return MaterialType{
+            ShaderManager::getVertexLayout(forwardShader),
+            forwardShader,
+            ShaderManager::createProgram({vertStaticPBR, fragPBRDeferred}),
+            ShaderManager::createProgram({vertStaticPBRDepth, fragPBRDepth})};
+    }
+
+    inline static MaterialType maskedSkinnedPBR() {
+        uint32_t vertSkinnedPBR      = ShaderManager::compileShaderFile("res/shaders/3d/vert/SkinnedPBR.vert", GL_VERTEX_SHADER);
+        uint32_t vertSkinnedPBRDepth = ShaderManager::compileShaderFile("res/shaders/3d/vert/MaskedSkinnedPBRDepth.vert", GL_VERTEX_SHADER);
+        uint32_t fragPBR             = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBR.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDeferred     = ShaderManager::compileShaderFile("res/shaders/3d/frag/PBRDeferred.frag", GL_FRAGMENT_SHADER);
+        uint32_t fragPBRDepth        = ShaderManager::compileShaderFile("res/shaders/3d/frag/MaskedPBRDepth.frag", GL_FRAGMENT_SHADER);
 
         ShaderProgram forwardShader = ShaderManager::createProgram({vertSkinnedPBR, fragPBR});
         return MaterialType{

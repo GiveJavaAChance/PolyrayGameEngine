@@ -13,8 +13,7 @@ struct PBRMaterial {
     uint64_t metallicRoughnessTexture;
 
     vec2 baseMetallicRougness;
-    float alphaCutoff;
-    uint doubleSided;
 
     vec3 F0;
+    float alphaCutoff;
 };

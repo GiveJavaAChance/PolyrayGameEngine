@@ -20,12 +20,10 @@ struct GpuPBRMaterial {
     uint64_t metallicRoughnessTexture;
 
     vec2 baseMetallicRougness;
-    float alphaCutoff;
-    uint32_t doubleSided;
+    float __padding__[2u];
 
     vec3 F0;
-
-    float __padding__;
+    float alphaCutoff;
 };
 
 #endif

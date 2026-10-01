@@ -20,6 +20,7 @@
 
 #include <Environment.h>
 
+#include "PipelineStateFlags.h"
 #include "Scripts.h"
 #include "ShadowSystem.h"
 #include "scene/3d/Scene3D.h"
@@ -66,14 +67,13 @@ int main() {
     Input::setMouseInputMode(w, MouseInputMode::DISABLED);
 
     // Create a environment buffer to store the global ambient color
-    ShaderBuffer environmentBuffer(GL_DYNAMIC_DRAW);
-    environmentBuffer.setSize(sizeof(Environment));
+    ShaderBuffer environmentBuffer(sizeof(Environment));
     ShaderManager::setValue("ENV_IDX", BindingRegistry::bindBufferBase(environmentBuffer, GL_UNIFORM_BUFFER));
 
     // Set the ambient color and upload it
     Environment env;
     env.ambientColor = prvl::vec3(0.2f, 0.5f, 1.0f);
-    environmentBuffer.uploadPartialData(&env, 1, 0);
+    environmentBuffer.uploadData(&env, sizeof(Environment));
 
     // Initialize opengl state (subject to change later)
     glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
@@ -179,13 +179,19 @@ int main() {
 
     // This is what tells the renderer what will supply the instance data to the material
     // In this case, we want to instance based on the global transform of the entities
-    RenderGroupInfo groupInfo = RenderGroupInfo::create<Transform3D, mat4, &Transform3D::global>(materialType);
+    RenderGroupInfo groupInfo = RenderGroupInfo::create<Transform3D, &Transform3D::global>(materialType);
 
     // Create a render group using the group info
     uint32_t groupID = renderer->getOrCreateGroup(groupInfo);
 
+    // For the material we are using, it is fully opaque, so backface culling can be enabled
+    uint64_t pipelineState = PipelineStateFlags::BACKFACE_CULLING;
+
+    // Register the pipeline state
+    uint32_t pipelineStateID = renderer->getOrCreatePipelineState(groupID, pipelineState);
+
     // Now we create the material instance which is what contains the material properties such as textures, color, etc.
-    // Note: Types with a Gpu* prefix have the same size and layout as the GPU type
+    // Note: Types with a Gpu* prefix have the same size and layout as the GPU equivalent type
     GpuPBRMaterial material{};
 
     // The base color is multiplied by the base color texture, so we just use vec4(1.0) as the base color
@@ -244,9 +250,6 @@ int main() {
     // The base color texture used is fully opaque, so no alpha cutoff needed
     material.alphaCutoff = 0.0f;
 
-    // The material is not double sided
-    material.doubleSided = false;
-
     // For the base reflectivity, we'll just use a simple platic-ish reflectivity
     material.F0 = prvl::vec3(0.05f);
     // A table of different values of F0: (https://learnopengl.com/PBR/Theory)
@@ -263,15 +266,7 @@ int main() {
     // Silver	                (0.95, 0.93, 0.88)
 
     // Create material instance in the group
-    // Note: The RenderState is what pipeline state will be set to when rendering using this material,
-    //       since this material isn't double sided, it's disabled here as well
-    uint32_t materialID = renderer->addMaterialInstance(groupID, material, RenderState{.doubleSided = false});
-
-    // Create a render object using the group and material instance
-    uint32_t cube = renderer->createObject(groupID, materialID);
-
-    // Get the render object
-    RenderObject& obj = renderer->getObject(cube);
+    uint32_t materialID = renderer->addMaterialInstance(groupID, material);
 
     // Define the vertex struct
     struct Vertex {
@@ -284,8 +279,8 @@ int main() {
     // The Shape util looks at what members the vertex type has (by name) and constructs the mesh with those attributes
     Mesh<Vertex> mesh = Shape::box<Vertex>(prvl::vec3(0.0f), prvl::vec3(1.0f));
 
-    // Upload the mesh data
-    obj.uploadMesh(mesh);
+    // Create a render object using the group, material instance, pipeline state and the mesh
+    uint32_t cube = renderer->createObject(groupID, materialID, pipelineStateID, mesh);
 
     //////////////////////
     // Creating a scene //
@@ -434,7 +429,7 @@ int main() {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, resolvedFbo.ID);
         glBlitFramebuffer(0, 0, windowSize.x, windowSize.y, 0, 0, windowSize.x, windowSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
-        // Update SSAO
+        // Update SSAO using resolved depth
         ssao.update(resolvedFbo.depth);
 
         // Resolve SSAO into main ambient occlusion texture

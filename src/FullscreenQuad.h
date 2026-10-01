@@ -19,13 +19,19 @@ struct FullscreenQuad {
 
     GLTexture* texture = nullptr;
 
-    FullscreenQuad(const ShaderProgram& shader) : quadProgram(shader), vbo(GL_STATIC_DRAW), vao(ShaderManager::createVAO(ShaderManager::getVertexLayout(shader), {vbo.ID})) {
+    FullscreenQuad(const ShaderProgram& shader) : quadProgram(shader) {
         float quadVertices[]{
             -1.0f, 1.0f,
             -1.0f, -1.0f,
             1.0f, 1.0f,
-            1.0f, -1.0f};
-        vbo.uploadData(quadVertices, 8);
+            1.0f, -1.0f,
+        };
+        vbo = ShaderBuffer(sizeof(quadVertices));
+        vbo.uploadData(quadVertices, sizeof(quadVertices));
+
+        VertexLayoutInfo layout = ShaderManager::getVertexLayout(shader);
+        vao = ShaderManager::createVAO(layout);
+        ShaderManager::setVAOBuffers(vao, layout, {vbo.ID});
     }
 
     FullscreenQuad(uint32_t fragmentShader) : FullscreenQuad(ShaderManager::createProgram({ShaderManager::compileShaderSource("#version 330 core\nlayout(location = 0) in vec2 pos;\nout vec2 uv;\nvoid main() {\nuv = pos * 0.5 + 0.5;\ngl_Position = vec4(pos, 0.0, 1.0);\n}", GL_VERTEX_SHADER, false), fragmentShader})) {

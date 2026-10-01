@@ -25,6 +25,8 @@ add_library(Polyray STATIC
     src/net/Socket.cpp
 
     src/GltfLoader.cpp
+
+    src/RenderGroupInfo.cpp
 )
 
 target_compile_features(Polyray PUBLIC cxx_std_20)

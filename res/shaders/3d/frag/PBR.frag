@@ -54,10 +54,6 @@ void main() {
 
     vec3 viewDir = normalize(cameraPos - pos);
 
-    if(bool(material.doubleSided)) {
-        normal *= sign(dot(viewDir, normal));
-    }
-
     vec3 color = vec3(0.0);
 
     for(uint i = 0u; i < directionalLight3DCount; i++) {

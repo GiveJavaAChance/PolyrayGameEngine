@@ -30,7 +30,12 @@ struct GltfLight {
 };
 
 struct GltfLoader {
-    static uint32_t load(const ResourcePath& res, World* world, uint32_t fromNode, const DynamicArray<RenderGroupInfo>& renderGroups = {RenderGroupInfo::create<Transform3D, mat4, &Transform3D::global>(MaterialType::staticPBR()), RenderGroupInfo::create<SkinInstance, decltype(SkinInstance::data), &SkinInstance::data>(MaterialType::skinnedPBR())});
+    static uint32_t load(const ResourcePath& res, World* world, uint32_t fromNode, const DynamicArray<RenderGroupInfo>& renderGroups = {
+                                                                                       RenderGroupInfo::staticPBR(),
+                                                                                       RenderGroupInfo::skinnedPBR(),
+                                                                                       RenderGroupInfo::maskedStaticPBR(),
+                                                                                       RenderGroupInfo::maskedStaticPBR(),
+                                                                                   });
 };
 
 #endif

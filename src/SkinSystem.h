@@ -11,7 +11,7 @@
 #include <ecs/ECS.h>
 #include <glad/glad.h>
 #include <prvl.h>
-#include <rendering/ShaderBuffer.h>
+#include <rendering/DynamicShaderBuffer.h>
 #include <shader/ShaderManager.h>
 #include <structure/DynamicArray.h>
 #include <structure/UnorderedRegistry.h>
@@ -31,8 +31,9 @@ private:
 
     uint32_t skinJointCount = 0u;
     DynamicArray<mat4> skinJointUploadBuffer;
-    DynamicArray<uint32_t> skinInstanceUploadBuffer;
-    bool dirtySkinBuffer = true;
+
+    DynamicShaderBuffer skinJointBuffer;
+    DynamicShaderBuffer skinInstanceBuffer;
 
     void onComponentAdded(Entity e, uint32_t id) {
         SkinInstance* instance = ecs->getPtr<SkinInstance>(id);
@@ -43,15 +44,14 @@ private:
     }
 
 public:
-    ShaderBuffer skinJointBuffer;
-    ShaderBuffer skinInstanceBuffer;
-    uint32_t skinJointBinding;
-    uint32_t skinInstanceBinding;
+    GLuint skinJointBinding;
+    GLuint skinInstanceBinding;
 
     SkinSystem(ECS* ecs)
-        : ecs(ecs), skinJointBuffer(GL_DYNAMIC_DRAW), skinInstanceBuffer(GL_STATIC_DRAW),
-          skinJointBinding(BindingRegistry::bindBufferBase(skinJointBuffer, GL_SHADER_STORAGE_BUFFER)),
-          skinInstanceBinding(BindingRegistry::bindBufferBase(skinInstanceBuffer, GL_SHADER_STORAGE_BUFFER)) {
+        : ecs(ecs), skinJointBuffer(1ull << 20u, GL_DYNAMIC_STORAGE_BIT),
+          skinInstanceBuffer(1ull << 16u, GL_DYNAMIC_STORAGE_BIT),
+          skinJointBinding(BindingRegistry::bindBufferBase(skinJointBuffer.buffer, GL_SHADER_STORAGE_BUFFER)),
+          skinInstanceBinding(BindingRegistry::bindBufferBase(skinInstanceBuffer.buffer, GL_SHADER_STORAGE_BUFFER)) {
         ecs->registerComponentListener<SkinInstance, SkinSystem, &SkinSystem::onComponentAdded, &SkinSystem::onComponentRemoved>(this);
         ecs->registerUpdateCallback<SkinSystem, &SkinSystem::update, UpdateOrder::POST_FRAME>(this);
         ShaderManager::setValue("SKIN_JOINT_IDX", skinJointBinding);
@@ -61,8 +61,7 @@ public:
     inline uint32_t createSkin(uint32_t jointCount) {
         uint32_t off = skinJointCount;
         skinJointCount += jointCount;
-        skinInstanceUploadBuffer.add(off);
-        dirtySkinBuffer = true;
+        skinInstanceBuffer.add(&off, sizeof(uint32_t));
         return skins.emplace(off, jointCount);
     }
 
@@ -72,6 +71,10 @@ public:
 
     void update(double dt) {
         PROFILE_SCOPE(SkinSystem_Update)
+        if (skinInstanceBuffer.resized) {
+            skinInstanceBuffer.resized = false;
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, skinInstanceBinding, skinInstanceBuffer.buffer.ID);
+        }
         VirtualArray<SkinInstance>& skinInstances = ecs->view<SkinInstance>().data;
         if (skinInstances.size() == 0u) {
             return;
@@ -82,10 +85,6 @@ public:
             instance.data.skinIdx = skins.reg[instance.skinID];
             instance.data.tx = transforms.get(instance.transformID).global;
         }
-        if (dirtySkinBuffer) {
-            dirtySkinBuffer = false;
-            skinInstanceBuffer.uploadData(skinInstanceUploadBuffer.data(), skinInstanceUploadBuffer.size());
-        }
         skinJointUploadBuffer.ensureCapacity(skinJointCount);
         for (uint32_t i = 0u; i < skins.size(); i++) {
             Skin& skin = skins.arr[i];
@@ -93,7 +92,12 @@ public:
                 skinJointUploadBuffer[skin.jointIdx + j] = transforms.get(skin.transformIDs[j]).global * skin.inverseBindMatrices[j];
             }
         }
-        skinJointBuffer.uploadData(skinJointUploadBuffer.data(), skinJointCount);
+        skinJointBuffer.pos = 0ull;
+        skinJointBuffer.add(skinJointUploadBuffer.data(), skinJointCount * sizeof(mat4));
+        if (skinJointBuffer.resized) {
+            skinJointBuffer.resized = false;
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, skinJointBinding, skinJointBuffer.buffer.ID);
+        }
     }
 };
 

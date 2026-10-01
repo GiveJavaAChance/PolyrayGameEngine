@@ -12,6 +12,7 @@
 #include <Viewport.h>
 #include <World.h>
 #include <prvl.h>
+#include <rendering/DynamicShaderBuffer.h>
 #include <shader/ShaderManager.h>
 #include <structure/UnorderedRegistry.h>
 
@@ -23,16 +24,14 @@ private:
 
     UnorderedRegistry<RenderView> views;
 
-    uint32_t bufferCapacity;
     uint32_t bufferStride;
-    DynamicArray<uint8_t> cameraUploadBuffer;
+    DynamicShaderBuffer cameraBuffer;
 
     void update(double dt) {
         PROFILE_SCOPE(RenderView2DSystem_Update)
-        cameraUploadBuffer.clear();
         uint32_t dataSize = views.arr.size() * bufferStride;
-        cameraUploadBuffer.ensureCapacity(dataSize);
-        uint8_t* data = cameraUploadBuffer.data();
+        cameraBuffer.resize(dataSize);
+        uint8_t* data = cameraBuffer.bufferMapping;
         GpuCamera2D cameraData;
         for (uint32_t i = 0u; i < views.arr.size(); i++) {
             RenderView& rv = views.arr[i];
@@ -55,24 +54,16 @@ private:
             uint32_t idx = i * bufferStride;
             std::memcpy(data + idx, &cameraData, sizeof(GpuCamera2D));
         }
-        if (cameraUploadBuffer.capacity() > bufferCapacity) {
-            bufferCapacity = cameraUploadBuffer.capacity();
-            cameraBuffer.setSize(bufferCapacity);
-        }
-        cameraBuffer.uploadPartialData(data, dataSize, 0u);
     }
 
 public:
     GLuint cameraBinding;
-    ShaderBuffer cameraBuffer;
 
-    RenderView2DSystem(ECS* ecs) : ecs(ecs), bufferCapacity(0u), cameraBinding(BindingRegistry::allocateBufferBinding()), cameraBuffer(GL_DYNAMIC_DRAW) {
+    RenderView2DSystem(ECS* ecs)
+        : ecs(ecs), bufferStride(ShaderBuffer::getUniformBufferStride(sizeof(GpuCamera2D))),
+          cameraBuffer(16ull * bufferStride), cameraBinding(BindingRegistry::allocateBufferBinding()) {
         ecs->registerUpdateCallback<RenderView2DSystem, &RenderView2DSystem::update, UpdateOrder::POST_FRAME>(this);
         ShaderManager::setValue("CAM2D_IDX", cameraBinding);
-
-        GLint alignment;
-        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &alignment);
-        bufferStride = (sizeof(GpuCamera2D) + alignment - 1u) / alignment * alignment;
     }
 
     uint32_t createView(Viewport* viewport, uint32_t cameraID, ivec2 viewportRegionPos = {0, 0}, ivec2 viewportRegionSize = {-1, -1}) {
@@ -86,7 +77,7 @@ public:
     void use(uint32_t view) {
         RenderView& rv = views[view];
         uint32_t loc = views.reg[view];
-        glBindBufferRange(GL_UNIFORM_BUFFER, cameraBinding, cameraBuffer.ID, loc * bufferStride, sizeof(GpuCamera2D));
+        glBindBufferRange(GL_UNIFORM_BUFFER, cameraBinding, cameraBuffer.buffer.ID, loc * bufferStride, sizeof(GpuCamera2D));
         rv.viewport->use();
         ivec2 pos = rv.viewportRegionPos;
         ivec2 size = rv.viewportRegionSize;

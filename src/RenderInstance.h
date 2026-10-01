@@ -8,11 +8,11 @@
 #include <World.h>
 
 struct RenderInstance {
-    uint32_t objectID;
+    uint64_t objectID;
 
     uint32_t componentID = UINT32_MAX;
 
-    RenderInstance(uint32_t objectID = UINT32_MAX) : objectID(objectID) {
+    RenderInstance(uint64_t objectID = UINT64_MAX) : objectID(objectID) {
     }
 };
 

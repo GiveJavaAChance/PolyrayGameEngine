@@ -32,6 +32,8 @@ struct VertexLayoutInfo {
     std::vector<VertexAttribInfo> attributes;
     bool hasInstanceFrom;
     uint32_t instanceFrom;
+    uint32_t vboCount;
+    std::vector<uint32_t> vboStrides;
 };
 
 namespace ShaderManager {
@@ -303,6 +305,14 @@ namespace ShaderManager {
         std::sort(attrs.begin(), attrs.end(), [](const VertexAttribInfo& a, const VertexAttribInfo& b) {
             return a.location < b.location;
         });
+        layout.vboCount = 0u;
+        for (const VertexAttribInfo& attr : layout.attributes) {
+            layout.vboCount = max(layout.vboCount, attr.vboIdx + 1u);
+        }
+        layout.vboStrides.resize(layout.vboCount);
+        for (const VertexAttribInfo& attr : layout.attributes) {
+            layout.vboStrides[attr.vboIdx] += attr.columns * attr.byteSize;
+        }
         return layout;
     }
 
@@ -311,14 +321,10 @@ namespace ShaderManager {
         glDeleteProgram(program.ID);
     }
 
-    inline GLuint createVAO(const VertexLayoutInfo& layout, const std::vector<GLuint>& vbos) {
+    inline GLuint createVAO(const VertexLayoutInfo& layout) {
         GLuint vao;
         glCreateVertexArrays(1, &vao);
-        std::vector<uint32_t> vboStrides(vbos.size(), 0);
-        for (const VertexAttribInfo& attr : layout.attributes) {
-            vboStrides[attr.vboIdx] += attr.columns * attr.byteSize;
-        }
-        std::vector<uint32_t> vboOffsets(vbos.size(), 0);
+        std::vector<uint32_t> vboOffsets(layout.vboCount, 0);
         for (const VertexAttribInfo& attr : layout.attributes) {
             GLuint bindingIndex = attr.vboIdx;
             uint32_t offset = vboOffsets[attr.vboIdx];
@@ -335,8 +341,15 @@ namespace ShaderManager {
                     glVertexArrayBindingDivisor(vao, bindingIndex, 1);
                 }
             }
-            glVertexArrayVertexBuffer(vao, bindingIndex, vbos[attr.vboIdx], 0, vboStrides[attr.vboIdx]);
             vboOffsets[attr.vboIdx] += attr.columns * attr.byteSize;
+        }
+        return vao;
+    }
+
+    inline GLuint setVAOBuffers(GLuint vao, const VertexLayoutInfo& layout, const std::vector<GLuint>& vbos) {
+        for (const VertexAttribInfo& attr : layout.attributes) {
+            GLuint bindingIndex = attr.vboIdx;
+            glVertexArrayVertexBuffer(vao, bindingIndex, vbos[attr.vboIdx], 0, layout.vboStrides[attr.vboIdx]);
         }
         return vao;
     }

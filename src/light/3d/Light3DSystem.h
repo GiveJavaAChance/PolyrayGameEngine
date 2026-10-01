@@ -1,6 +1,8 @@
 #ifndef LIGHT3DSYSTEM_H_INCLUDED
 #define LIGHT3DSYSTEM_H_INCLUDED
 
+#include "BindingRegistry.h"
+#include "glad/glad.h"
 #pragma once
 
 #include <Profiler.h>
@@ -34,6 +36,8 @@ private:
     ShaderBuffer directionalLightBuffer;
     ShaderBuffer spotLightBuffer;
     ShaderBuffer pointLightBuffer;
+
+    DynamicArray<uint8_t> uploadBuffer;
 
     void onDirectionalLightAdded(Entity e, uint32_t id) {
         DirectionalLight3D* light = ecs->getPtr<DirectionalLight3D>(id);
@@ -91,14 +95,26 @@ private:
     }
 
 public:
+    GLuint directionalLightBinding;
+    GLuint spotLightBinding;
+    GLuint pointLightBinding;
+
     Light3DSystem(ECS* ecs, ShadowSystem* shadowSystem, uint32_t maxDirectionalLights, uint32_t maxSpotLights, uint32_t maxPointLights)
-        : ecs(ecs), shadowSystem(shadowSystem), directionalLightBuffer(GL_DYNAMIC_DRAW), spotLightBuffer(GL_DYNAMIC_DRAW), pointLightBuffer(GL_DYNAMIC_DRAW) {
-        directionalLightBuffer.setSize(sizeof(GpuDirectionalLight3D) * maxDirectionalLights + 16u);
-        spotLightBuffer.setSize(sizeof(GpuSpotLight3D) * maxSpotLights + 16u);
-        pointLightBuffer.setSize(sizeof(GpuPointLight3D) * maxPointLights + 16u);
-        ShaderManager::setValue("DIRECTIONAL_LIGHT3D_IDX", BindingRegistry::bindBufferBase(directionalLightBuffer, GL_SHADER_STORAGE_BUFFER));
-        ShaderManager::setValue("SPOT_LIGHT3D_IDX", BindingRegistry::bindBufferBase(spotLightBuffer, GL_SHADER_STORAGE_BUFFER));
-        ShaderManager::setValue("POINT_LIGHT3D_IDX", BindingRegistry::bindBufferBase(pointLightBuffer, GL_SHADER_STORAGE_BUFFER));
+        : ecs(ecs), shadowSystem(shadowSystem),
+          directionalLightBuffer(sizeof(GpuDirectionalLight3D) * maxDirectionalLights + 16u),
+          spotLightBuffer(sizeof(GpuSpotLight3D) * maxSpotLights + 16u),
+          pointLightBuffer(sizeof(GpuPointLight3D) * maxPointLights + 16u),
+          directionalLightBinding(BindingRegistry::allocateBufferBinding()),
+          spotLightBinding(BindingRegistry::allocateBufferBinding()),
+          pointLightBinding(BindingRegistry::allocateBufferBinding()) {
+
+        ShaderManager::setValue("DIRECTIONAL_LIGHT3D_IDX", directionalLightBinding);
+        ShaderManager::setValue("SPOT_LIGHT3D_IDX", spotLightBinding);
+        ShaderManager::setValue("POINT_LIGHT3D_IDX", pointLightBinding);
+
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, directionalLightBinding, directionalLightBuffer.ID);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, spotLightBinding, spotLightBuffer.ID);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, pointLightBinding, pointLightBuffer.ID);
 
         ecs->registerComponentListener<DirectionalLight3D, Light3DSystem, &Light3DSystem::onDirectionalLightAdded, &Light3DSystem::onDirectionalLightRemoved>(this);
         ecs->registerComponentListener<SpotLight3D, Light3DSystem, &Light3DSystem::onSpotLightAdded, &Light3DSystem::onSpotLightRemoved>(this);
@@ -112,7 +128,8 @@ public:
 
         VirtualArray<DirectionalLight3D>& directionalLights = ecs->view<DirectionalLight3D>().data;
         uint32_t dirBufferSize = directionalLights.size() * sizeof(GpuDirectionalLight3D) + 16u;
-        uint8_t* dirBuffer = alloc<uint8_t>(dirBufferSize);
+        uploadBuffer.ensureCapacity(dirBufferSize);
+        uint8_t* dirBuffer = uploadBuffer.data();
         uint32_t directionalLightCount = directionalLights.size();
         std::memcpy(dirBuffer, &directionalLightCount, 4u);
 
@@ -128,10 +145,12 @@ public:
             GpuDirectionalLight3D dir{light.color, light.strength, prvl::vec3(tx[2]), light.castShadow ? shadowSystem->shadowCameras.reg[light.shadowId] : UINT32_MAX};
             std::memcpy(dirBuffer + i * sizeof(GpuDirectionalLight3D) + 16u, &dir, sizeof(GpuDirectionalLight3D));
         }
+        directionalLightBuffer.uploadData(dirBuffer, dirBufferSize);
 
         VirtualArray<SpotLight3D>& spotLights = ecs->view<SpotLight3D>().data;
         uint32_t spotBufferSize = spotLights.size() * sizeof(GpuSpotLight3D) + 16u;
-        uint8_t* spotBuffer = alloc<uint8_t>(spotBufferSize);
+        uploadBuffer.ensureCapacity(spotBufferSize);
+        uint8_t* spotBuffer = uploadBuffer.data();
         uint32_t spotLightCount = spotLights.size();
         std::memcpy(spotBuffer, &spotLightCount, 4u);
 
@@ -147,10 +166,12 @@ public:
             GpuSpotLight3D spot{light.color, light.strength, prvl::vec3(tx[3]), light.distanceAttenuation, prvl::vec3(tx[2]), cos(light.spotAngle * 0.5f), light.castShadow ? shadowSystem->shadowCameras.reg[light.shadowId] : UINT32_MAX};
             std::memcpy(spotBuffer + i * sizeof(GpuSpotLight3D) + 16u, &spot, sizeof(GpuSpotLight3D));
         }
+        spotLightBuffer.uploadData(spotBuffer, spotBufferSize);
 
         VirtualArray<PointLight3D>& pointLights = ecs->view<PointLight3D>().data;
         uint32_t pointBufferSize = pointLights.size() * sizeof(GpuPointLight3D) + 16u;
-        uint8_t* pointBuffer = alloc<uint8_t>(pointBufferSize);
+        uploadBuffer.ensureCapacity(pointBufferSize);
+        uint8_t* pointBuffer = uploadBuffer.data();
         uint32_t pointLightCount = pointLights.size();
         std::memcpy(pointBuffer, &pointLightCount, 4u);
 
@@ -171,14 +192,7 @@ public:
             }
             std::memcpy(pointBuffer + i * sizeof(GpuPointLight3D) + 16u, &point, sizeof(GpuPointLight3D));
         }
-
-        directionalLightBuffer.uploadPartialData(dirBuffer, dirBufferSize, 0u);
-        spotLightBuffer.uploadPartialData(spotBuffer, spotBufferSize, 0u);
-        pointLightBuffer.uploadPartialData(pointBuffer, pointBufferSize, 0u);
-
-        free(dirBuffer);
-        free(spotBuffer);
-        free(pointBuffer);
+        pointLightBuffer.uploadData(pointBuffer, pointBufferSize);
     }
 };
 
