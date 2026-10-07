@@ -6,33 +6,30 @@
 
 #include <Profiler.h>
 
-void Scene2D::updateNode(uint32_t node, Transform2D* nodeData, bool dirty) {
-    const mat3& global = nodeData->global;
+void Scene2D::updateNode(uint32_t node, const mat3& global, bool dirty) {
     ECS& ecs = world->ecs;
     SceneNode& sceneNode = nodes[node];
+    Transform2D* nodeData = ecs.getComponentPtr<Transform2D>(sceneNode.entityID);
+    if (nodeData->dirtyTRS) {
+        nodeData->local = trsToMatrix(nodeData->position, nodeData->rotation, nodeData->scale);
+        dirty = true;
+    }
+    if (nodeData->dirtyGlobal) {
+        nodeData->local = inverse(global) * nodeData->global;
+        dirty = true;
+    } else if (nodeData->dirtyLocal || dirty) {
+        nodeData->global = global * nodeData->local;
+        dirty = true;
+    }
+    nodeData->dirtyTRS = false;
+    nodeData->dirtyLocal = false;
+    nodeData->dirtyGlobal = false;
     if (dirty) {
         world->eventBus.fireDirect<Scene2DNodeUpdatedEvent>(node, sceneNode.entityID, nodeData);
     }
     for (uint32_t i = 0u; i < sceneNode.children.size(); i++) {
         uint32_t child = sceneNode.children[i];
-        if (Transform2D* childData = ecs.getComponentPtr<Transform2D>(nodes[child].entityID)) {
-            bool childDirty = dirty;
-            if (childData->dirtyTRS) {
-                childData->local = trsToMatrix(childData->position, childData->rotation, childData->scale);
-                childData->dirtyTRS = false;
-                childDirty = true;
-            }
-            if (childData->dirtyGlobal) {
-                childData->local = inverse(global) * childData->global;
-                childData->dirtyGlobal = false;
-                childDirty = true;
-            } else if (childData->dirtyLocal || childDirty) {
-                childData->global = global * childData->local;
-                childData->dirtyLocal = false;
-                childDirty = true;
-            }
-            updateNode(child, childData, childDirty);
-        }
+        updateNode(child, nodeData->global, dirty);
     }
 }
 
@@ -41,24 +38,28 @@ void Scene2D::disconnectFromParent(uint32_t node) {
     DynamicArray<uint32_t>& children = nodes[parent].children;
     for (uint32_t i = 0u; i < children.size(); i++) {
         if (children[i] == node) {
-            std::memmove(children + i, children + i + 1, children.size() - i - 1);
+            std::memmove(children + i, children + i + 1u, (children.size() - i - 1u) * sizeof(uint32_t));
             children.removeEnd(1u);
             break;
         }
     }
 }
 
-void Scene2D::removeNodes(uint32_t node) {
+void Scene2D::removeNodes(uint32_t node, bool deleteEntities) {
     SceneNode& n = nodes[node];
     entityMap.erase(n.entityID);
+    if (deleteEntities) {
+        world->ecs.deleteEntity(n.entityID);
+    }
     DynamicArray<uint32_t>& children = n.children;
     for (uint32_t i = 0u; i < children.size(); i++) {
-        removeNodes(children[i]);
+        removeNodes(children[i], deleteEntities);
     }
     nodes.remove(node);
 }
 
 Scene2D::Scene2D(World* world) : world(world) {
+    world->ecs.registerUpdateCallback<Scene2D, &Scene2D::frameUpdate, UpdateOrder::POST_PHYSICS>(this);
     world->ecs.registerUpdateCallback<Scene2D, &Scene2D::frameUpdate, UpdateOrder::POST_FRAME>(this);
 }
 
@@ -80,9 +81,9 @@ uint32_t Scene2D::addNode(uint32_t parent, const Entity& e, const std::string& n
     return id;
 }
 
-void Scene2D::removeNode(uint32_t node) {
+void Scene2D::removeNode(uint32_t node, bool deleteEntities) {
     disconnectFromParent(node);
-    removeNodes(node);
+    removeNodes(node, deleteEntities);
 }
 
 uint32_t Scene2D::getChild(uint32_t node, uint32_t index) {
@@ -179,24 +180,15 @@ uint32_t Scene2D::getNode(uint32_t entityID) {
     return entityMap[entityID];
 }
 
+void Scene2D::forceUpdateNode(uint32_t node) {
+    Transform2D* tx = world->ecs.getComponentPtr<Transform2D>(nodes[nodes[node].parent].entityID);
+    updateNode(node, tx->global, false);
+}
+
 void Scene2D::frameUpdate(double dt) {
     PROFILE_SCOPE(Scene2D_Update)
     if (nodes.size() == 0u) {
         return;
     }
-    if (Transform2D* rootData = world->ecs.getComponentPtr<Transform2D>(nodes[root].entityID)) {
-        if (rootData->dirtyTRS) {
-            rootData->local = trsToMatrix(rootData->position, rootData->rotation, rootData->scale);
-            rootData->dirtyLocal = true;
-        }
-        if (rootData->dirtyGlobal) {
-            rootData->local = rootData->global;
-        } else if (rootData->dirtyLocal) {
-            rootData->global = rootData->local;
-        }
-        updateNode(root, rootData, rootData->dirtyTRS || rootData->dirtyLocal || rootData->dirtyGlobal);
-        rootData->dirtyTRS = false;
-        rootData->dirtyLocal = false;
-        rootData->dirtyGlobal = false;
-    }
+    updateNode(root, diag(prvl::vec3(1.0f)), false);
 }

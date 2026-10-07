@@ -13,7 +13,8 @@
 struct World;
 struct Entity;
 
-struct Transform3D;
+struct mat4x4;
+using mat4 = mat4x4;
 
 struct Scene3D {
 private:
@@ -23,11 +24,11 @@ private:
 
     World* world;
 
-    void updateNode(uint32_t node, Transform3D* nodeData, bool dirty);
+    void updateNode(uint32_t node, const mat4& global, bool dirty);
 
     void disconnectFromParent(uint32_t node);
 
-    void removeNodes(uint32_t node);
+    void removeNodes(uint32_t node, bool deleteEntities);
 
 public:
     Scene3D(World* world);
@@ -38,7 +39,7 @@ public:
 
     uint32_t addNode(uint32_t parent, const Entity& e, const std::string& name);
 
-    void removeNode(uint32_t node);
+    void removeNode(uint32_t node, bool deleteEntities = false);
 
     uint32_t getChild(uint32_t node, uint32_t index);
 
@@ -59,6 +60,8 @@ public:
     Entity getEntity(uint32_t node);
 
     uint32_t getNode(uint32_t entityID);
+
+    void forceUpdateNode(uint32_t node);
 
     void frameUpdate(double dt);
 };
