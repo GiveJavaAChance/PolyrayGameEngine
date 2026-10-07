@@ -55,7 +55,7 @@ private:
                     data[i].~T();
                 }
             }
-            VirtualMemory::release(data);
+            VirtualMemory::release(data, reserved);
         }
         data = nullptr;
         reserved = 0ull;

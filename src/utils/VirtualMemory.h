@@ -69,7 +69,7 @@ namespace VirtualMemory {
 #endif
     }
 
-    inline void release(void* ptr) {
+    inline void release(void* ptr, size_t size) {
 #ifdef _WIN32
         VirtualFree(ptr, 0, MEM_RELEASE);
 #else

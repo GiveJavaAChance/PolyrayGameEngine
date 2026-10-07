@@ -44,7 +44,7 @@ private:
     void destroy() {
         if (base) {
             runDestructorsDownTo(0ull);
-            VirtualMemory::release(base);
+            VirtualMemory::release(base, reserved);
         }
         base = nullptr;
         reserved = 0ull;
