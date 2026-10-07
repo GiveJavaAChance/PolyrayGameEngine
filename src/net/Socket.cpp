@@ -68,7 +68,7 @@ Connection Socket::read(void* data, uint32_t length) {
         int bytes = recv(sock, reinterpret_cast<char*>(data) + total, length - total, 0);
         if (bytes == 0) {
             return Connection::DISCONNECTED;
-        } else if (bytes == SOCKET_ERROR) {
+        } else if (bytes == -1) {
             return Connection::ERROR;
         }
         total += static_cast<uint32_t>(bytes);
@@ -81,7 +81,7 @@ Connection Socket::write(const void* data, uint32_t length) {
     uint32_t total = 0;
     while (total < length) {
         int bytes = send(sock, reinterpret_cast<const char*>(data) + total, length - total, 0);
-        if (bytes == SOCKET_ERROR) {
+        if (bytes == -1) {
             return Connection::ERROR;
         }
         total += static_cast<uint32_t>(bytes);
@@ -91,7 +91,11 @@ Connection Socket::write(const void* data, uint32_t length) {
 
 std::string Socket::getIP() const {
     sockaddr_in address{};
+#ifdef _WIN32
     int addressLength = sizeof(sockaddr_in);
+#else
+    socklen_t addressLength = sizeof(sockaddr_in);
+#endif
     if (getpeername(sock, reinterpret_cast<sockaddr*>(&address), &addressLength) != 0) {
         return {};
     }
