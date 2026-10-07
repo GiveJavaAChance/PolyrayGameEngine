@@ -8,6 +8,7 @@
 #include <cstring>
 #include <type_traits>
 
+#include <structure/Arena.h>
 #include <structure/DynamicArray.h>
 #include <structure/MultiDynamicArray.h>
 #include <structure/Registry.h>
@@ -73,8 +74,7 @@ public:
 };
 
 struct ComponentReflection {
-    void* (*allocateStorage)();
-    void (*freeStorage)(void*);
+    void* (*allocateStorage)(Arena&);
     uint32_t (*createAndAddComponent)(void*, uint32_t);
     void (*removeComponent)(void*, uint32_t);
     void (*removeComponentByID)(void*, uint32_t, uint32_t);
@@ -98,11 +98,6 @@ public:
 
     template <typename T, T (*Create)() = defaultConstruct<T>>
     inline static void registerComponentType();
-
-    inline static void setStorageAllocator(uint32_t typeId, void* (*allocateStorage)(), void (*freeStorage)(void*)) {
-        reflection[typeId].allocateStorage = allocateStorage;
-        reflection[typeId].freeStorage = freeStorage;
-    }
 
     static void registerBuiltInComponents();
 };
@@ -234,7 +229,7 @@ private:
     }
 
 public:
-    ECS() : fixedDT(0.006), remaining(0.0), entities(nullptr), componentCount(nullptr), componentCapacity(nullptr), entityCount(0u), entityCapacity(0u) {
+    ECS(Arena& arena) : fixedDT(0.006), remaining(0.0), entities(nullptr), componentCount(nullptr), componentCapacity(nullptr), entityCount(0u), entityCapacity(0u) {
         uint32_t size = ComponentRegistry::metadata.size();
         storages.ensureCapacity(size);
         listeners.ensureCapacity(size);
@@ -244,7 +239,7 @@ public:
                 continue;
             }
             const ComponentReflection& reflection = ComponentRegistry::reflection[i];
-            storages.add(reflection.allocateStorage());
+            storages.add(reflection.allocateStorage(arena));
             listeners.emplace(1u);
         }
     }
@@ -252,10 +247,6 @@ public:
     ~ECS() {
         if (entities) {
             free(entities);
-        }
-        for (uint32_t i = 0u; i < storages.size(); i++) {
-            const ComponentReflection& reflection = ComponentRegistry::reflection[i];
-            reflection.freeStorage(storages[i]);
         }
     }
 
@@ -363,6 +354,7 @@ public:
     Entity createEntity(const uint32_t initialCapacity = 8u) {
         ensureEntityCapacity(entityCount + 1u);
         entities[entityCount] = alloc<uint64_t>(initialCapacity);
+        componentCount[entityCount] = 0u;
         componentCapacity[entityCount] = initialCapacity;
         entityCount++;
         return Entity(entityRegistry.create(), this);
@@ -370,15 +362,15 @@ public:
 
     void deleteEntity(uint32_t entityID) {
         entityCount--;
-        uint32_t loc;
+        uint32_t loc = entityRegistry.locations[entityID];
+        uint32_t count = componentCount[loc];
+        uint64_t* components = entities[loc];
+        for (uint32_t i = 0u; i < count; i++) {
+            uint64_t component = components[0u];
+            reflectRemoveComponent(ECS::extractComponentType(component), entityID, ECS::extractComponentID(component));
+        }
+        free(components);
         if (entityRegistry.remove(entityID, loc)) {
-            uint32_t count = componentCount[loc];
-            uint64_t* components = entities[loc];
-            for (uint32_t i = 0u; i < count; i++) {
-                uint64_t component = components[0u];
-                reflectRemoveComponent(ECS::extractComponentType(component), entityID, ECS::extractComponentID(component));
-            }
-            free(components);
             entities[loc] = entities[entityCount];
             componentCount[loc] = componentCount[entityCount];
             componentCapacity[loc] = componentCapacity[entityCount];
@@ -394,7 +386,7 @@ public:
         uint32_t location = entityRegistry[entityID];
         uint32_t idx = componentCount[location]++;
         ensureComponentCapacity(location, componentCount[location]);
-        uint32_t componentID = storage->add(std::move(component));
+        uint32_t componentID = storage->add(std::move(component), entityID);
         entities[location][idx] = componentType | static_cast<uint64_t>(componentID);
         componentAdded(entityID, type, componentID);
         return componentID;
@@ -763,14 +755,13 @@ inline void ComponentRegistry::registerComponentType() {
     }
     metadata[meta.typeId] = meta;
     reflection[meta.typeId] = ComponentReflection{
-        []() { return (void*) new Storage<T>{}; },
-        [](void* storage) { delete reinterpret_cast<Storage<T>*>(storage); },
+        [](Arena& arena) { return reinterpret_cast<void*>(&arena.emplace<Storage<T>>()); },
         &Invoke<uint32_t>::thunkReturn<ECS, uint32_t, &ECS::createAndAddComponent<T, Create>>,
         &Invoke<uint32_t>::thunk<ECS, &ECS::removeComponent<T>>,
         &Invoke<uint32_t, uint32_t>::thunk<ECS, &ECS::removeComponent<T>>,
-        reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, &ECS::getComponentPtr<T>>),
+        reinterpret_cast<void* (*) (void*, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, &ECS::getComponentPtr<T>>),
         &Invoke<uint32_t>::thunkReturn<ECS, bool, &ECS::isComponentValid<T>>,
-        reinterpret_cast<void* (*) (void* ecs, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, &ECS::getPtr<T>>),
+        reinterpret_cast<void* (*) (void*, uint32_t)>(&Invoke<uint32_t>::thunkReturn<ECS, T*, &ECS::getPtr<T>>),
         &Invoke<uint32_t, void*>::thunk<ECS, &ECS::read<T>>,
         &Invoke<uint32_t, void*>::thunk<ECS, &ECS::write<T>>,
     };
