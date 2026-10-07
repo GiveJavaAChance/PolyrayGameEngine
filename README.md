@@ -44,6 +44,16 @@
 ##
 
 ## Images
+
+#### Current status
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(60).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(61).png" width="300"><br></td>
+    <td><img src="https://raw.githubusercontent.com/givejavaachance/PolyrayGameEngine/polyray-cpp/examples/images/image%20(62).png" width="300"><br></td>
+  </tr>
+</table>
+
 *Note: Features shown below are not yet avaliable. They will be made into modules in the near future however*
 #### 2D Probe-based RTGI
 <table>
