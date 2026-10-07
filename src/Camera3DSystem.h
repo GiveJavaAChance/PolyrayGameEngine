@@ -40,6 +40,7 @@ private:
 public:
     Camera3DSystem(ECS* ecs) : ecs(ecs) {
         ecs->registerComponentListener<Camera3D, Camera3DSystem, &Camera3DSystem::onComponentAdded, &Camera3DSystem::onComponentRemoved>(this);
+        ecs->registerUpdateCallback<Camera3DSystem, &Camera3DSystem::update, UpdateOrder::POST_PHYSICS>(this);
         ecs->registerUpdateCallback<Camera3DSystem, &Camera3DSystem::update, UpdateOrder::POST_FRAME>(this);
     }
 };
