@@ -36,6 +36,13 @@ struct GltfLoader {
                                                                                        RenderGroupInfo::maskedStaticPBR(),
                                                                                        RenderGroupInfo::maskedStaticPBR(),
                                                                                    });
+
+    static SceneData loadData(const ResourcePath& res, World* world, const DynamicArray<RenderGroupInfo>& renderGroups = {
+                                                                         RenderGroupInfo::staticPBR(),
+                                                                         RenderGroupInfo::skinnedPBR(),
+                                                                         RenderGroupInfo::maskedStaticPBR(),
+                                                                         RenderGroupInfo::maskedStaticPBR(),
+                                                                     });
 };
 
 #endif

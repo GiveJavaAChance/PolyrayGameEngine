@@ -1,4 +1,4 @@
-#include <GltfLoader.h>
+#include "GltfLoader.h"
 
 #include <cstring>
 
@@ -17,6 +17,7 @@
 #include <gpu_types/GpuPBRMaterial.h>
 #include <light/3d/Light3DSystem.h>
 #include <scene/3d/Scene3D.h>
+#include <serial/SceneSerializer.h>
 #include <shader/ShaderManager.h>
 #include <structure/DynamicArray.h>
 
@@ -718,4 +719,12 @@ uint32_t GltfLoader::load(const ResourcePath& res, World* world, uint32_t fromNo
     }
 
     return rootNode;
+}
+
+SceneData GltfLoader::loadData(const ResourcePath& res, World* world, const DynamicArray<RenderGroupInfo>& renderGroups) {
+    Scene3D* scene = world->getSystem<Scene3D>();
+    uint32_t node = load(res, world, scene->getRootNode(), renderGroups);
+    SceneData data = SceneSerializer::serialize3D(world, node);
+    scene->removeNode(node, true);
+    return data;
 }
