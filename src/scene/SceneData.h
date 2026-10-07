@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <unordered_map>
 
 #include <World.h>
@@ -12,7 +13,7 @@
 
 struct SceneData {
 private:
-    uint8_t* data;
+    std::shared_ptr<uint8_t> data;
     uint32_t size;
 
     Entity readEntity(ByteReader& reader, ECS& ecs, World* world) {
@@ -68,34 +69,14 @@ private:
     }
 
 public:
-    SceneData(uint8_t* d, uint32_t s) noexcept : data(d), size(s) {
+    SceneData(uint8_t* d, uint32_t s) noexcept : data(d, [](uint8_t* ptr) { if (ptr) { free(ptr); } }), size(s) {
     }
 
-    ~SceneData() noexcept {
-        free(data);
-    }
-
-    SceneData(const SceneData&) = delete;
-    SceneData& operator=(const SceneData&) = delete;
-
-    SceneData(SceneData&& other) noexcept : data(other.data), size(other.size) {
-        other.data = nullptr;
-        other.size = 0u;
-    }
-
-    SceneData& operator=(SceneData&& other) noexcept {
-        if (this != &other) {
-            free(data);
-            data = other.data;
-            size = other.size;
-            other.data = nullptr;
-            other.size = 0u;
-        }
-        return *this;
+    SceneData() : SceneData(nullptr, 0u) {
     }
 
     uint32_t instantiate(World* world, uint32_t fromNode) {
-        ByteReader reader{data, size};
+        ByteReader reader{data.get(), size};
 
         uint8_t dimension = reader.read<uint8_t>();
 
@@ -106,11 +87,11 @@ public:
     }
 
     inline uint8_t getDimension() {
-        return data[0u];
+        return data.get()[0u];
     }
 
     inline void* getData() {
-        return data;
+        return data.get();
     }
 
     inline uint32_t getSize() {
