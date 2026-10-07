@@ -10,7 +10,6 @@
 
 #include <thread>
 
-#include <structure/BVH.h>
 #include <structure/DynamicBVH.h>
 
 #include <structure/DynamicArray.h>
@@ -22,6 +21,8 @@
 #include <physics/2d/CollisionInfo2D.h>
 #include <physics/2d/DynamicCollider2D.h>
 #include <physics/2d/PhysicsObject2D.h>
+#include <physics/2d/PhysicsRayHit2D.h>
+#include <physics/2d/RayHit2D.h>
 
 #include <Transform2D.h>
 #include <World.h>
@@ -29,18 +30,67 @@
 
 #include <Profiler.h>
 
-using CollisionFunc2D = bool (*)(Collider2D&, void*, Collider2D&, void*, CollisionInfo2D&);
+using CollisionFunc2D = bool (*)(const void*, const void*, const Collider2D&, const Collider2D&, CollisionInfo2D&);
+using RaycastFunction2D = float (*)(const void*, const float*, const float*, const float*, const float*, RayHit2D&);
+
+struct ColliderShape2DRegistry {
+    inline static DynamicArray<ColliderShape2DMetadata> colliderMetadata;
+    inline static DynamicArray<CollisionFunc2D> collisionRegistry;
+    inline static DynamicArray<RayIntersectionFunction> rayIntersectionFunctions;
+    inline static DynamicArray<RaycastFunction2D> raycastFunctions;
+
+    constexpr static uint32_t makeKey(uint32_t a, uint32_t b) {
+        return (((a + b) * (a + b + 1u)) >> 1u) + b;
+    }
+
+    template <typename A, typename B, bool (*Func)(const A*, const B*, const Collider2D&, const Collider2D&, CollisionInfo2D&)>
+    inline static bool inverseCollision(const A* aData, const B* bData, const Collider2D& a, const Collider2D& b, CollisionInfo2D& infoOut) {
+        if (!Func(reinterpret_cast<const A*>(bData), reinterpret_cast<const B*>(aData), b, a, infoOut)) {
+            return false;
+        }
+        infoOut.collisionNormalX = -infoOut.collisionNormalX;
+        infoOut.collisionNormalY = -infoOut.collisionNormalY;
+        return true;
+    }
+
+    template <typename T>
+    inline static void registerColliderShape() {
+        ColliderShape2DMetadata metadata = ColliderShape2DMetadata::get<T>();
+        while (metadata.typeId >= colliderMetadata.size()) {
+            colliderMetadata.add(ColliderShape2DMetadata::invalid());
+            rayIntersectionFunctions.add(nullptr);
+            raycastFunctions.add(nullptr);
+        }
+        colliderMetadata[metadata.typeId] = metadata;
+        float (*intersectFunc)(const T*, const float*, const float*, const float*, const float*) = &T::intersectRay;
+        void (*castFunc)(const T*, const float*, const float*, const float*, const float*, RayHit2D&) = &T::raycast;
+        rayIntersectionFunctions[metadata.typeId] = reinterpret_cast<RayIntersectionFunction>(intersectFunc);
+        raycastFunctions[metadata.typeId] = reinterpret_cast<RaycastFunction2D>(castFunc);
+    }
+
+    template <typename A, typename B, bool (*Func)(const A*, const B*, const Collider2D&, const Collider2D&, CollisionInfo2D&)>
+    inline static void registerCollisionFunction() {
+        uint32_t idA = ColliderShape2DMetadata::typeOf<A>();
+        uint32_t idB = ColliderShape2DMetadata::typeOf<B>();
+        uint32_t keyAB = makeKey(idA, idB);
+        uint32_t keyBA = makeKey(idB, idA);
+        uint32_t maxKey = max(keyAB, keyBA);
+        if (maxKey >= collisionRegistry.size()) {
+            collisionRegistry.reserve(maxKey + 1u - collisionRegistry.size());
+        }
+        collisionRegistry[keyAB] = reinterpret_cast<CollisionFunc2D>(Func);
+        if (idA != idB) {
+            collisionRegistry[keyBA] = reinterpret_cast<CollisionFunc2D>(&ColliderShape2DRegistry::inverseCollision<A, B, Func>);
+        }
+    }
+};
 
 struct Physics2D {
 private:
-    DynamicArray<ColliderShape2DMetadata> colliderMetadata;
-
-    DynamicArray<CollisionFunc2D> collisionRegistry;
-
     DynamicArray<float> dynamicBounds;
     DynamicArray<float> staticBounds;
 
-    BVH<2>* staticBVH = nullptr;
+    DynamicBVH<2u> staticBVH;
     bool dirtyStatic = true;
 
     DynamicBVH<2u> dynamicBVH;
@@ -69,28 +119,18 @@ private:
         return (((a + b) * (a + b + 1)) >> 1u) + b;
     }
 
-    template <typename A, typename B, bool (*func)(Collider2D&, A*, Collider2D&, B*, CollisionInfo2D&)>
-    inline static bool inverseCollision(Collider2D& a, A* aData, Collider2D& b, B* bData, CollisionInfo2D& infoOut) {
-        if (!func(b, reinterpret_cast<A*>(bData), a, reinterpret_cast<B*>(aData), infoOut)) {
-            return false;
-        }
-        infoOut.collisionNormalX = -infoOut.collisionNormalX;
-        infoOut.collisionNormalY = -infoOut.collisionNormalY;
-        return true;
-    }
-
-    bool collide(Collider2D& a, Collider2D& b, CollisionInfo2D& out) {
+    bool collide(const Collider2D& a, const Collider2D& b, CollisionInfo2D& out) {
         uint32_t idA = a.typeId;
         uint32_t idB = b.typeId;
         uint32_t key = makeKey(idA, idB);
-        if (key >= collisionRegistry.size()) {
+        if (key >= ColliderShape2DRegistry::collisionRegistry.size()) {
             return false;
         }
-        CollisionFunc2D func = collisionRegistry[key];
+        CollisionFunc2D func = ColliderShape2DRegistry::collisionRegistry[key];
         if (!func) {
             return false;
         }
-        return func(a, a.userData, b, b.userData, out);
+        return func(a.userData, b.userData, a, b, out);
     }
 
     void onStaticColliderAdded(Entity e, uint32_t id) {
@@ -148,13 +188,10 @@ private:
         dirtyStatic = false;
         VirtualArray<Collider2D>& staticColliders = ecs->view<Collider2D>().data;
         if (staticColliders.size() == 0) {
-            if (staticBVH) {
-                delete staticBVH;
-            }
             return;
         }
         int idx = 0;
-        staticBounds.ensureCapacity(staticColliders.size() * 4);
+        staticBounds.ensureCapacity(staticColliders.size() * 4u);
         for (uint32_t i = 0u; i < staticColliders.size(); i++) {
             const Collider2D& col = staticColliders[i];
             staticBounds[idx++] = static_cast<float>(col.posX);
@@ -162,19 +199,12 @@ private:
             staticBounds[idx++] = static_cast<float>(col.posX + col.sizeX);
             staticBounds[idx++] = static_cast<float>(col.posY + col.sizeY);
         }
-        if (staticBVH) {
-            delete staticBVH;
-        }
-        staticBVH = new BVH<2>(staticBounds.data(), staticColliders.size());
-    }
-
-    template <typename T>
-    void registerColliderShape() {
-        ColliderShape2DMetadata metadata = ColliderShape2DMetadata::get<T>();
-        while (metadata.typeId >= colliderMetadata.size()) {
-            colliderMetadata.add(ColliderShape2DMetadata::invalid());
-        }
-        colliderMetadata[metadata.typeId] = metadata;
+        staticBVH.build(staticBounds.data(), staticColliders.size(),
+            {
+                .primitiveStride = sizeof(Collider2D),
+                .typeOffset = offsetof(Collider2D, typeId),
+                .dataOffset = offsetof(Collider2D, userData),
+            });
     }
 
 public:
@@ -190,28 +220,6 @@ public:
         }
     }
 
-    const ColliderShape2DMetadata& getColliderShapeMetadata(uint32_t type) {
-        return colliderMetadata[type];
-    }
-
-    template <typename A, typename B, bool (*func)(Collider2D&, A*, Collider2D&, B*, CollisionInfo2D&)>
-    void registerCollision() {
-        registerColliderShape<A>();
-        registerColliderShape<B>();
-        uint32_t idA = ColliderShape2DMetadata::typeOf<A>();
-        uint32_t idB = ColliderShape2DMetadata::typeOf<B>();
-        uint32_t keyAB = makeKey(idA, idB);
-        uint32_t keyBA = makeKey(idB, idA);
-        uint32_t maxKey = std::max(keyAB, keyBA);
-        if (maxKey >= collisionRegistry.size()) {
-            collisionRegistry.reserve(maxKey + 1u - collisionRegistry.size());
-        }
-        collisionRegistry[keyAB] = reinterpret_cast<CollisionFunc2D>(func);
-        if (idA != idB) {
-            collisionRegistry[keyBA] = reinterpret_cast<CollisionFunc2D>(&inverseCollision<A, B, func>);
-        }
-    }
-
     inline void markDirtyStatic() {
         dirtyStatic = true;
     }
@@ -219,6 +227,45 @@ public:
     template <typename T>
     inline Collider2D createCollider(T* userData, double posX, double posY, double sizeX, double sizeY, double friction, double restitution) {
         return Collider2D{ColliderShape2DMetadata::typeOf<T>(), userData, posX, posY, sizeX, sizeY, friction, restitution};
+    }
+
+    inline PhysicsRayHit2D raycast(const vec2& rayPos, const vec2& rayDir) {
+        PhysicsRayHit2D hit{};
+        vec2 invDir = 1.0f / rayDir;
+        Storage<Collider2D>& staticColliders = ecs->view<Collider2D>();
+        if (staticColliders.data.size() > 0u) {
+            uint32_t hitIdx = staticBVH.queryIntersection(&rayPos[0u], &rayDir[0u], hit.distance, staticColliders.data.begin(), ColliderShape2DRegistry::rayIntersectionFunctions.data());
+            if (hitIdx != UINT32_MAX) {
+                RayHit2D pHit;
+                Collider2D& col = staticColliders.data[hitIdx];
+                ColliderShape2DRegistry::raycastFunctions[col.typeId](col.userData, &rayPos[0u], &rayDir[0u], &invDir[0u], staticBounds + hitIdx * 4u, pHit);
+                hit.distance = pHit.distance;
+                hit.depth = pHit.depth;
+                hit.normal = pHit.normal;
+                hit.didHit = pHit.didHit;
+                hit.colliderID = staticColliders.reg.IDs[hitIdx];
+                hit.entityID = staticColliders.entitySet[hitIdx];
+                hit.isDynamic = false;
+            }
+        }
+        Storage<DynamicCollider2D>& dynamicColliders = ecs->view<DynamicCollider2D>();
+        if (dynamicColliders.data.size() > 0u) {
+            float dist = POSITIVE_INFINITY;
+            uint32_t hitIdx = dynamicBVH.queryIntersection(&rayPos[0u], &rayDir[0u], dist, dynamicColliders.data.begin(), ColliderShape2DRegistry::rayIntersectionFunctions.data());
+            if (hitIdx != UINT32_MAX && (!hit.didHit || dist < hit.distance)) {
+                RayHit2D pHit;
+                DynamicCollider2D& col = dynamicColliders.data[hitIdx];
+                ColliderShape2DRegistry::raycastFunctions[col.impl.typeId](col.impl.userData, &rayPos[0u], &rayDir[0u], &invDir[0u], staticBounds + hitIdx * 4u, pHit);
+                hit.distance = pHit.distance;
+                hit.depth = pHit.depth;
+                hit.normal = pHit.normal;
+                hit.didHit = pHit.didHit;
+                hit.colliderID = dynamicColliders.reg.IDs[hitIdx];
+                hit.entityID = dynamicColliders.entitySet[hitIdx];
+                hit.isDynamic = true;
+            }
+        }
+        return hit;
     }
 
     void physicsUpdate(double dt) {
@@ -293,7 +340,12 @@ public:
             dynamicBounds[idx++] = static_cast<float>(col.impl.posY + col.impl.sizeY);
         }
         // time[3] = rdtsc();
-        dynamicBVH.build(dynamicBounds.data(), dynamicColliders.size());
+        dynamicBVH.build(dynamicBounds.data(), dynamicColliders.size(),
+            {
+                .primitiveStride = sizeof(DynamicCollider2D),
+                .typeOffset = offsetof(DynamicCollider2D, impl.typeId),
+                .dataOffset = offsetof(DynamicCollider2D, impl.userData),
+            });
         // time[4] = rdtsc();
 
         const uint32_t N = dynamicColliders.size() < 8u ? 1u : 8u;
@@ -333,8 +385,8 @@ public:
                         res.emplace_back(&a, &b, info);
                     }
                 }
-                if (staticBVH) {
-                    count = staticBVH->query(query, hits, 32u);
+                if (staticColliders.size() > 0u) {
+                    count = staticBVH.query(query, hits, 32u);
                     if (count != 0u) {
                         for (uint32_t j = 0u; j < count; j++) {
                             uint32_t bIdx = hits[j];
@@ -382,8 +434,8 @@ public:
                                 res.emplace_back(&a, &b, info);
                             }
                         }
-                        if (staticBVH) {
-                            count = staticBVH->query(query, hits, 32u, stack);
+                        if (staticColliders.size() > 0u) {
+                            count = staticBVH.query(query, hits, 32u, stack);
                             if (count != 0) {
                                 for (uint32_t j = 0; j < count; j++) {
                                     uint32_t bIdx = hits[j];
@@ -525,8 +577,7 @@ struct Serial<Collider2D> {
         output.write(c->typeId);
         if (c->userData) {
             output.write<uint8_t>(1u);
-            Physics2D* physicsSystem = world->getSystem<Physics2D>();
-            const ColliderShape2DMetadata& metadata = physicsSystem->getColliderShapeMetadata(c->typeId);
+            const ColliderShape2DMetadata& metadata = ColliderShape2DRegistry::colliderMetadata[c->typeId];
             output.write(c->userData, metadata.size);
         } else {
             output.write<uint8_t>(0u);
@@ -538,8 +589,7 @@ struct Serial<Collider2D> {
         Collider2D c;
         input.read(c.typeId);
         if (input.read<uint8_t>()) {
-            Physics2D* physicsSystem = world->getSystem<Physics2D>();
-            const ColliderShape2DMetadata& metadata = physicsSystem->getColliderShapeMetadata(c.typeId);
+            const ColliderShape2DMetadata& metadata = ColliderShape2DRegistry::colliderMetadata[c.typeId];
             c.userData = _mm_malloc(metadata.size, metadata.alignment);
             input.read(c.userData, metadata.size);
         }
@@ -555,8 +605,7 @@ struct Serial<DynamicCollider2D> {
         output.write(c->impl.typeId);
         if (c->impl.userData) {
             output.write<uint8_t>(1u);
-            Physics2D* physicsSystem = world->getSystem<Physics2D>();
-            const ColliderShape2DMetadata& metadata = physicsSystem->getColliderShapeMetadata(c->impl.typeId);
+            const ColliderShape2DMetadata& metadata = ColliderShape2DRegistry::colliderMetadata[c->impl.typeId];
             output.write(c->impl.userData, metadata.size);
         } else {
             output.write<uint8_t>(0u);
@@ -568,8 +617,7 @@ struct Serial<DynamicCollider2D> {
         DynamicCollider2D c;
         input.read(c.impl.typeId);
         if (input.read<uint8_t>()) {
-            Physics2D* physicsSystem = world->getSystem<Physics2D>();
-            const ColliderShape2DMetadata& metadata = physicsSystem->getColliderShapeMetadata(c.impl.typeId);
+            const ColliderShape2DMetadata& metadata = ColliderShape2DRegistry::colliderMetadata[c.impl.typeId];
             c.impl.userData = _mm_malloc(metadata.size, metadata.alignment);
             input.read(c.impl.userData, metadata.size);
         }

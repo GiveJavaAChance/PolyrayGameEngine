@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string_view>
+
 #include <typereg.h>
 
 struct ColliderShape3DMetadata {
@@ -28,7 +29,7 @@ public:
             ColliderTypes::getTypeId<T>(),
             sizeof(T),
             alignof(T),
-            type_name_of<T>()
+            type_name_of<T>(),
         };
     }
 
