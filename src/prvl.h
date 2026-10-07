@@ -438,6 +438,17 @@ constexpr bvec4 operator cmp(const name##4& a, const name##4& b) noexcept { \
     return prvl::bvec4(a.x cmp b.x, a.y cmp b.y, a.z cmp b.z, a.w cmp b.w); \
 }
 
+#define _prvl_VEC_SELECT(name)                                                                              \
+constexpr name##2 select(const name##2& t, const name##2& f, const bvec2& cond) noexcept {                  \
+    return prvl::name##2(cond.x ? t.x : f.x, cond.y ? t.y : f.y);                                           \
+}                                                                                                           \
+constexpr name##3 select(const name##3& t, const name##3& f, const bvec3& cond) noexcept {                  \
+    return prvl::name##3(cond.x ? t.x : f.x, cond.y ? t.y : f.y, cond.z ? t.z : f.z);                       \
+}                                                                                                           \
+constexpr name##4 select(const name##4& t, const name##4& f, const bvec4& cond) noexcept {                  \
+    return prvl::name##4(cond.x ? t.x : f.x, cond.y ? t.y : f.y, cond.z ? t.z : f.z, cond.w ? t.w : f.w);   \
+}
+
 #define _prvl_VEC_DOT(type, name)                                   \
 constexpr type dot(const name##2& a, const name##2& b) noexcept {   \
     return a.x * b.x + a.y * b.y;                                   \
@@ -545,7 +556,8 @@ _prvl_VEC_CMP(name, >)                      \
 _prvl_VEC_CMP(name, <=)                     \
 _prvl_VEC_CMP(name, >=)                     \
 _prvl_VEC_CMP(name, ==)                     \
-_prvl_VEC_CMP(name, !=)
+_prvl_VEC_CMP(name, !=)                     \
+_prvl_VEC_SELECT(name)
 
 #define _prvl_VEC_SIG_OP(name)  \
 _prvl_VEC_FUNC1(name, abs, v)   \
@@ -645,6 +657,9 @@ _prvl_VEC_BINARY_OP(uvec, >>)
 _prvl_VEC_SCALAR_OP(uint32_t, uvec, >>)
 _prvl_VEC_UNARY_OP(uvec, ~)
 
+_prvl_VEC_BINARY_OP(bvec, &)
+_prvl_VEC_BINARY_OP(bvec, |)
+_prvl_VEC_BINARY_OP(bvec, ^)
 _prvl_VEC_UNARY_OP(bvec, !)
 
 constexpr bool any(const bvec2& v) noexcept {
@@ -714,6 +729,25 @@ namespace prvl {
         float half = angle * 0.5f;
         float s = sinf(half);
         return (struct quat){axis.x * s, axis.y * s, axis.z * s, cosf(half)};
+    }
+
+    constexpr struct quat quat(const struct vec3& a, const struct vec3& b) noexcept {
+        float d = dot(a, b);
+        if (d > -1.0f) {
+            struct vec4 q = normalize(vec4(cross(a, b), 1.0f + d));
+            return (struct quat){q.x, q.y, q.z, q.w};
+        }
+        struct vec3 axis;
+        struct vec3 aa = abs(a);
+        if (aa.x < aa.y && aa.x < aa.z) {
+            axis = cross(a, {1.0f, 0.0f, 0.0f});
+        } else if (aa.y < aa.z) {
+            axis = cross(a, {0.0f, 1.0f, 0.0f});
+        } else {
+            axis = cross(a, {0.0f, 0.0f, 1.0f});
+        }
+        axis = normalize(axis);
+        return (struct quat){axis.x, axis.y, axis.z, 0.0f};
     }
 
     constexpr struct dquat dquat() noexcept {
