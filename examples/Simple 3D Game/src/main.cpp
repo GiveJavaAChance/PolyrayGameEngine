@@ -6,9 +6,12 @@
 
 #include <AmbientOcclusion.h>
 #include <Bloom.h>
+#include <Environment.h>
+#include <PipelineStateFlags.h>
 #include <RenderView3DSystem.h>
 #include <Renderer.h>
 #include <SSAO.h>
+#include <ShadowSystem.h>
 #include <SkinSystem.h>
 #include <Sky.h>
 #include <animation/AnimationSystem.h>
@@ -16,14 +19,10 @@
 #include <light/3d/Light3DSystem.h>
 #include <physics/3d/ColliderShape3D.h>
 #include <physics/3d/Physics3D.h>
+#include <scene/3d/Scene3D.h>
 #include <utils/Shape.h>
 
-#include <Environment.h>
-
-#include "PipelineStateFlags.h"
-#include "Scripts.h"
-#include "ShadowSystem.h"
-#include "scene/3d/Scene3D.h"
+#include <Scripts.h>
 
 Window* window;
 
@@ -101,8 +100,8 @@ int main() {
     // This order is pretty standard though:
 
     // Physics engine
+    ColliderShape3D::registerBuiltinColliders();
     world.createSystem<Physics3D>(&world, false);
-    ColliderShape3D::registerBuiltinColliders(world.getSystem<Physics3D>());
 
     // Animation system (not used)
     // world.createSystem<AnimationSystem>(&world);
@@ -299,15 +298,18 @@ int main() {
     player.addComponent(DynamicCollider3D{physics->createCollider<ColliderShape3D::Bean>(new ColliderShape3D::Bean{{0.5, 0.5, 0.5}, {0.5, 1.5, 0.5}, 0.5}, 0.0, 0.0, 0.0, 1.0, 2.0, 1.0, 0.05, 0.0), -0.5, -1.0, -0.5, 1.0});
     uint32_t scriptID = player.addComponent(PlayerScript{});
 
+    // Get player script pointer
+    PlayerScript* playerScript = ecs.getPtr<PlayerScript>(scriptID);
+
     // Set viewport reference in this particular player script
-    ecs.getPtr<PlayerScript>(scriptID)->viewport = &viewport;
+    playerScript->viewport = &viewport;
 
     uint32_t playerNode = scene->addNode(rootNode, player, "Player");
 
     // The camera is attached to the player, so this entity is purely for that
     Entity cameraPivot = world.ecs.createEntity();
     cameraPivot.addComponent(Transform3D{});
-    (*cameraPivot.getComponentPtr<Transform3D>()).local[3].y = 0.5f;
+    cameraPivot.getComponentPtr<Transform3D>()->position.y = 0.5f;
 
     uint32_t pivotNode = scene->addNode(playerNode, cameraPivot, "Camera Pivot");
 
@@ -472,6 +474,8 @@ int main() {
         // Final color processing
         colorProcess.setTexture(&resolvedFbo.color);
         colorProcess.render();
+
+        glFinish();
     });
 
     // Exit

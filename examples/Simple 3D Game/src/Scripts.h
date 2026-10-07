@@ -18,6 +18,8 @@ struct PlayerScript {
 
     Entity root;
 
+    uint32_t thisNode;
+
     Entity cameraPivot;
 
     float speed = 5.0f;
@@ -36,8 +38,8 @@ struct PlayerScript {
         uint32_t rootNode = scene->getRootNode();
         root = scene->getEntity(rootNode);
 
-        uint32_t node = scene->getNode(entityID);
-        uint32_t pivotNode = scene->getChild(node, 0u);
+        thisNode = scene->getNode(entityID);
+        uint32_t pivotNode = scene->getChild(thisNode, 0u);
         cameraPivot = scene->getEntity(pivotNode);
     }
 
@@ -93,7 +95,7 @@ struct PlayerScript {
 
         quat targetRotation = prvl::quat({0.0f, 1.0f, 0.0f}, -cameraAng.y) * prvl::quat({1.0f, 0.0f, 0.0f}, cameraAng.x);
 
-        float v = 1.0f - powf(0.000001f, dt);
+        float v = 1.0f - pow(0.000001f, dt);
         currentRotation = normalize(slerp(currentRotation, targetRotation, v));
 
         Transform3D* tx = cameraPivot.getComponentPtr<Transform3D>();
