@@ -41,8 +41,9 @@ void main() {
     if(material.normalMapTexture != 0ul) {
         normal = texture(sampler2D(material.normalMapTexture), transformUv(uv, material.normalUvTransform)).rgb;
         normal = normal * 2.0 - 1.0;
-        normal = normalize(tbn * normal);
+        normal = tbn * normal;
     }
+    normal = normalize(normal);
 
     vec2 metallicRoughness = material.baseMetallicRougness;
     if(material.metallicRoughnessTexture != 0ul) {
