@@ -12,7 +12,13 @@
 #define POSITIVE_INFINITY 100000000000.0f
 #define NEGATIVE_INFINITY -100000000000.0f
 
-using RayIntersectionFunction = float (*)(uint32_t, const float*);
+using RayIntersectionFunction = float (*)(const void*, const float*, const float*, const float*, const float*);
+
+struct BVHPrimitiveInfo {
+    uint32_t primitiveStride;
+    uint32_t typeOffset;
+    uint32_t dataOffset;
+};
 
 template <uint32_t Dim>
 struct DynamicBVH {
@@ -31,6 +37,8 @@ private:
     DynamicArray<Node> nodes;
 
     DynamicArray<uint32_t> indices;
+
+    BVHPrimitiveInfo primitiveInfo;
 
     DynamicArray<uint32_t> stack;
 
@@ -132,7 +140,7 @@ private:
         return nodeIdx;
     }
 
-    bool rayIntersectsAABB(const float* __restrict__ pos, const float* __restrict__ invDir, const float* __restrict__ min, const float* __restrict__ max) {
+    float rayAABBIntersection(const float* __restrict__ pos, const float* __restrict__ invDir, const float* __restrict__ min, const float* __restrict__ max) {
         float tMin = NEGATIVE_INFINITY;
         float tMax = POSITIVE_INFINITY;
         for (uint32_t i = 0u; i < Dim; i++) {
@@ -146,10 +154,10 @@ private:
             tMin = t0 > tMin ? t0 : tMin;
             tMax = t1 < tMax ? t1 : tMax;
             if (tMax < tMin) {
-                return false;
+                return -1.0f;
             }
         }
-        return tMax >= 0.0f;
+        return tMax < 0.0f ? -1.0f : (tMin < 0.0f ? 0.0f : tMin);
     }
 
     void quickSelect(const float* __restrict__ bounds, uint32_t left, uint32_t right, uint32_t k, uint32_t axis) {
@@ -188,7 +196,8 @@ private:
     }
 
 public:
-    void build(const float* __restrict__ bounds, uint32_t count) {
+    void build(const float* __restrict__ bounds, uint32_t count, const BVHPrimitiveInfo& primitiveInfo) {
+        this->primitiveInfo = primitiveInfo;
         indices.ensureCapacity(count);
         for (uint32_t i = 0u; i < count; i++) {
             indices[i] = i;
@@ -234,24 +243,28 @@ public:
         return query(q, hits, length, stack.data());
     }
 
-    uint32_t queryIntersection(const float* __restrict__ pos, const float* __restrict__ dir, float& dist, const RayIntersectionFunction intersectionFunc) {
+    uint32_t queryIntersection(const float* __restrict__ pos, const float* __restrict__ dir, float& dist, const void* primitives, const RayIntersectionFunction* rayIntersectionFunctions) {
         uint32_t sp = 0u;
         stack[sp++] = 0u;
         uint32_t hitIndex = UINT32_MAX;
         float closest = POSITIVE_INFINITY;
 
         float invDir[Dim];
-        for(uint32_t i = 0u; i < Dim; i++) {
+        for (uint32_t i = 0u; i < Dim; i++) {
             invDir[i] = 1.0f / dir[i];
         }
         while (sp > 0u) {
             uint32_t nodeIdx = stack[--sp];
             Node node = nodes[nodeIdx];
-            if (!rayIntersectsAABB(pos, invDir, node.bounds, node.bounds + Dim)) {
+            float nodeT = rayAABBIntersection(pos, invDir, node.bounds, node.bounds + Dim);
+            if (nodeT < 0.0f || nodeT > closest) {
                 continue;
             }
             if (node.boxIndex != UINT32_MAX) {
-                float d = intersectionFunc(node.boxIndex, node.bounds);
+                const uint8_t* primitive = reinterpret_cast<const uint8_t*>(primitives) + primitiveInfo.primitiveStride * node.boxIndex;
+                uint32_t primitiveType = *reinterpret_cast<const uint32_t*>(primitive + primitiveInfo.typeOffset);
+                const void* primitiveData = *reinterpret_cast<const void* const*>(primitive + primitiveInfo.dataOffset);
+                float d = rayIntersectionFunctions[primitiveType](primitiveData, pos, dir, invDir, node.bounds);
                 if (d >= 0.0f && d < closest) {
                     closest = d;
                     hitIndex = node.boxIndex;
