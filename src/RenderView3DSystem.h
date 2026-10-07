@@ -91,6 +91,47 @@ public:
         glViewport(pos.x, pos.y, size.x, size.y);
         glScissor(pos.x, pos.y, size.x, size.y);
     }
+
+    void getViewRay(uint32_t view, const vec2& ndc, vec3& rayPos, vec3& rayDir) {
+        RenderView& rv = views[view];
+        Camera3D* cam = ecs->getPtr<Camera3D>(rv.cameraID);
+        ivec2 pos = rv.viewportRegionPos;
+        ivec2 size = rv.viewportRegionSize;
+        ivec2 extents = prvl::ivec2(rv.viewport->size()) - pos;
+        if (size.x == -1) {
+            size.x = extents.x;
+        }
+        if (size.y == -1) {
+            size.y = extents.y;
+        }
+        vec4 clip = prvl::vec4(ndc, 1.0f, 1.0f);
+        vec4 v = inverse(cam->getProjection(prvl::vec2(size))) * clip;
+        v /= v.w;
+        vec3 w = prvl::vec3(cam->inverseCameraTransform * v);
+        rayDir = normalize(w);
+        rayPos = cam->cameraPos;
+    }
+
+    void getViewRayFromPixel(uint32_t view, const vec2& pixel, vec3& rayPos, vec3& rayDir) {
+        RenderView& rv = views[view];
+        Camera3D* cam = ecs->getPtr<Camera3D>(rv.cameraID);
+        ivec2 pos = rv.viewportRegionPos;
+        ivec2 size = rv.viewportRegionSize;
+        ivec2 extents = prvl::ivec2(rv.viewport->size()) - pos;
+        if (size.x == -1) {
+            size.x = extents.x;
+        }
+        if (size.y == -1) {
+            size.y = extents.y;
+        }
+        vec2 uv = pixel / prvl::vec2(size);
+        vec4 clip = prvl::vec4(2.0f * uv - 1.0f, 1.0f, 1.0f);
+        vec4 v = inverse(cam->getProjection(prvl::vec2(size))) * clip;
+        v /= v.w;
+        vec3 w = prvl::vec3(cam->inverseCameraTransform * v);
+        rayDir = normalize(w);
+        rayPos = cam->cameraPos;
+    }
 };
 
 #endif
