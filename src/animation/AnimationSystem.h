@@ -41,7 +41,6 @@ struct AnimationInstance {
     bool dirty = true;
 
     uint32_t cacheID = UINT32_MAX;
-    uint32_t entityID = UINT32_MAX;
 
     AnimationSystem* animationSystem = nullptr;
 
@@ -157,7 +156,6 @@ private:
 
     inline void onAnimationAdded(Entity e, uint32_t id) {
         AnimationInstance* instance = world->ecs.getPtr<AnimationInstance>(id);
-        instance->entityID = e.entityID;
         instance->cacheID = id;
         instance->animationSystem = this;
     }
@@ -292,9 +290,9 @@ public:
 
     void update(double dt) {
         PROFILE_SCOPE(AnimationSystem_Update)
-        VirtualArray<AnimationInstance>& animationInstances = world->ecs.view<AnimationInstance>().data;
-        for (uint32_t i = 0u; i < animationInstances.size(); i++) {
-            AnimationInstance& instance = animationInstances[i];
+        Storage<AnimationInstance>& animationInstances = world->ecs.view<AnimationInstance>();
+        for (uint32_t i = 0u; i < animationInstances.data.size(); i++) {
+            AnimationInstance& instance = animationInstances.data[i];
             if (!animations.reg.valid(instance.animationID)) {
                 continue;
             }
@@ -318,7 +316,7 @@ public:
             }
             if (update) {
                 Scene3D* scene = world->getSystem<Scene3D>();
-                uint32_t node = scene->getNode(instance.entityID);
+                uint32_t node = scene->getNode(animationInstances.entitySet[i]);
                 applyAnimation(animation, instance, scene, node);
             }
         }

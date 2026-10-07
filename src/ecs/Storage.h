@@ -10,13 +10,17 @@
 
 template <typename T>
 struct Storage {
-    constexpr static bool __DEFAULT__ = true;
+    Registry reg;
+    DynamicArray<uint32_t> entitySet;
 
     VirtualArray<T> data;
-    Registry reg;
 
-    inline uint32_t add(T&& component) noexcept {
+    Storage() : reg(), entitySet(), data() {
+    }
+
+    inline uint32_t add(T&& component, uint32_t entityID) noexcept {
         data.emplace(std::move(component));
+        entitySet.add(entityID);
         return reg.create();
     }
 
@@ -27,9 +31,12 @@ struct Storage {
     inline void remove(uint32_t componentID) noexcept {
         uint32_t loc;
         if (reg.remove(componentID, loc)) {
-            data[loc] = std::move(data[data.size() - 1u]);
+            uint32_t end = data.size() - 1u;
+            data[loc] = std::move(data[end]);
+            entitySet[loc] = entitySet[end];
         }
         data.removeEnd(1u);
+        entitySet.removeEnd(1u);
     }
 
     inline bool valid(uint32_t componentID) {

@@ -26,15 +26,18 @@ struct ExportInfo<PhysicsObject3D> {
 
 template <>
 struct Storage<PhysicsObject3D> {
-    MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t> objects;
     Registry reg;
+    DynamicArray<uint32_t> entitySet;
 
-    inline uint32_t add(PhysicsObject3D&& component) noexcept {
+    MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t> objects;
+
+    inline uint32_t add(PhysicsObject3D&& component, uint32_t entityID) noexcept {
         objects.add(
             component.posX, component.posY, component.posZ,
             component.prevPosX, component.prevPosY, component.prevPosZ,
             component.accX, component.accY, component.accZ,
             component.transformID);
+        entitySet.add(entityID);
         return reg.create();
     }
 
@@ -49,9 +52,12 @@ struct Storage<PhysicsObject3D> {
     inline void remove(uint32_t componentID) noexcept {
         uint32_t loc;
         if (reg.remove(componentID, loc)) {
-            objects.set(loc, objects, objects.size() - 1u);
+            uint32_t end = objects.size() - 1u;
+            objects.set(loc, objects, end);
+            entitySet[loc] = entitySet[end];
         }
         objects.removeEnd();
+        entitySet.removeEnd(1u);
     }
 
     inline bool valid(uint32_t componentID) {
