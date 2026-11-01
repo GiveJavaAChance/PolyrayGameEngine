@@ -42,6 +42,12 @@ namespace ColliderShape2D {
             float tMin = NEGATIVE_INFINITY;
             float tMax = POSITIVE_INFINITY;
             for (uint32_t i = 0u; i < dim; i++) {
+                if (std::isinf(invDir[i])) {
+                    if (pos[i] < min[i] || pos[i] > max[i]) {
+                        return -1.0f;
+                    }
+                    continue;
+                }
                 float t0 = (min[i] - pos[i]) * invDir[i];
                 float t1 = (max[i] - pos[i]) * invDir[i];
                 if (invDir[i] < 0.0f) {
@@ -66,6 +72,12 @@ namespace ColliderShape2D {
             float tMin = NEGATIVE_INFINITY;
             float tMax = POSITIVE_INFINITY;
             for (uint32_t i = 0u; i < dim; i++) {
+                if (std::isinf(invDir[i])) {
+                    if (pos[i] < min[i] || pos[i] > max[i]) {
+                        return hit;
+                    }
+                    continue;
+                }
                 float t0 = (min[i] - pos[i]) * invDir[i];
                 float t1 = (max[i] - pos[i]) * invDir[i];
                 if (invDir[i] < 0.0f) {
