@@ -314,6 +314,7 @@ public:
                     first = false;
                 }
                 uint64_t diff = currentPipelineStateFlags ^ psg.pipelineStateFlags;
+                currentPipelineStateFlags = psg.pipelineStateFlags;
                 if (diff & PipelineStateFlags::BACKFACE_CULLING) {
                     if (psg.pipelineStateFlags & PipelineStateFlags::BACKFACE_CULLING) {
                         glEnable(GL_CULL_FACE);
