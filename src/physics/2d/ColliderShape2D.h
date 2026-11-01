@@ -10,29 +10,23 @@
 namespace ColliderShape2D {
     struct AABB {
         inline static bool collideAABB_AABB_2D(const AABB* aabbA, const AABB* aabbB, const Collider2D& a, const Collider2D& b, CollisionInfo2D& out) {
-            double halfAx = a.sizeX * 0.5;
-            double halfAy = a.sizeY * 0.5;
-            double halfBx = b.sizeX * 0.5;
-            double halfBy = b.sizeY * 0.5;
-            double ax = a.posX + halfAx;
-            double ay = a.posY + halfAy;
-            double bx = b.posX + halfBx;
-            double by = b.posY + halfBy;
-            double dx = ax - bx;
-            double dy = ay - by;
-            double overlapX = halfAx + halfBx - abs(dx);
-            double overlapY = halfAy + halfBy - abs(dy);
-            if (overlapX <= 0.0 || overlapY <= 0.0) {
+            dvec2 halfA = a.size * 0.5;
+            dvec2 halfB = b.size * 0.5;
+            dvec2 ca = a.pos + halfA;
+            dvec2 cb = b.pos + halfB;
+            dvec2 d = ca - cb;
+            dvec2 overlap = halfA + halfB - abs(d);
+            if (overlap.x <= 0.0 || overlap.x <= 0.0) {
                 return false;
             }
-            if (overlapX < overlapY) {
-                out.collisionNormalX = (dx < 0.0) ? -1.0 : 1.0;
-                out.collisionNormalY = 0.0;
-                out.penetrationDepth = overlapX;
+            if (overlap.x < overlap.y) {
+                out.collisionNormal.x = (d.x < 0.0) ? -1.0 : 1.0;
+                out.collisionNormal.y = 0.0;
+                out.penetrationDepth = overlap.x;
             } else {
-                out.collisionNormalX = 0.0;
-                out.collisionNormalY = (dy < 0.0) ? -1.0 : 1.0;
-                out.penetrationDepth = overlapY;
+                out.collisionNormal.x = 0.0;
+                out.collisionNormal.y = (d.y < 0.0) ? -1.0 : 1.0;
+                out.penetrationDepth = overlap.y;
             }
             return true;
         }
@@ -123,22 +117,16 @@ namespace ColliderShape2D {
 
     struct Circle {
         inline static bool collideCircle_Circle_2D(const Circle* circleA, const Circle* circleB, const Collider2D& a, const Collider2D& b, CollisionInfo2D& out) {
-            double halfAx = a.sizeX * 0.5;
-            double halfAy = a.sizeY * 0.5;
-            double halfBx = b.sizeX * 0.5;
-            double halfBy = b.sizeY * 0.5;
-            double ax = a.posX + halfAx;
-            double ay = a.posY + halfAy;
-            double bx = b.posX + halfBx;
-            double by = b.posY + halfBy;
+            dvec2 halfA = a.size * 0.5;
+            dvec2 halfB = b.size * 0.5;
+            dvec2 ca = a.pos + halfA;
+            dvec2 cb = b.pos + halfB;
 
-            double ra = halfAx;
-            double rb = halfBx;
+            double ra = halfA.x;
+            double rb = halfB.x;
 
-            double dx = ax - bx;
-            double dy = ay - by;
-
-            double dist2 = dx * dx + dy * dy;
+            dvec2 d = ca - cb;
+            double dist2 = dot(d, d);
             double r = ra + rb;
             if (dist2 > r * r) {
                 return false;
@@ -146,40 +134,30 @@ namespace ColliderShape2D {
             double dist = sqrt(dist2);
             double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
 
-            out.collisionNormalX = dx * invDist;
-            out.collisionNormalY = dy * invDist;
+            out.collisionNormal = d * invDist;
             out.penetrationDepth = r - dist;
             return true;
         }
 
         inline static bool collideCircle_AABB_2D(const Circle* circle, const AABB* aabb, const Collider2D& a, const Collider2D& b, CollisionInfo2D& out) {
-            double halfAx = a.sizeX * 0.5;
-            double halfAy = a.sizeY * 0.5;
-            double halfBx = b.sizeX * 0.5;
-            double halfBy = b.sizeY * 0.5;
-            double ax = a.posX + halfAx;
-            double ay = a.posY + halfAy;
-            double bx = b.posX + halfBx;
-            double by = b.posY + halfBy;
+            dvec2 halfA = a.size * 0.5;
+            dvec2 halfB = b.size * 0.5;
+            dvec2 ca = a.pos + halfA;
+            dvec2 cb = b.pos + halfB;
 
-            double r = halfAx;
+            double r = halfA.x;
 
-            double cx = max(bx - halfBx, min(ax, bx + halfBx));
-            double cy = max(by - halfBy, min(ay, by + halfBy));
+            dvec2 c = max(b.pos, min(ca, cb + halfB));
+            dvec2 d = ca - c;
 
-            double dx = ax - cx;
-            double dy = ay - cy;
-
-            double dist2 = dx * dx + dy * dy;
-
+            double dist2 = dot(d, d);
             if (dist2 > r * r) {
                 return false;
             }
             double dist = sqrt(dist2);
             double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
 
-            out.collisionNormalX = dx * invDist;
-            out.collisionNormalY = dy * invDist;
+            out.collisionNormal = d * invDist;
             out.penetrationDepth = r - dist;
 
             return true;

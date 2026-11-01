@@ -3,10 +3,10 @@
 
 #pragma once
 
+#include <prvl.h>
+
 struct CollisionInfo3D {
-    double collisionNormalX;
-    double collisionNormalY;
-    double collisionNormalZ;
+    dvec3 collisionNormal;
     double penetrationDepth;
 };
 

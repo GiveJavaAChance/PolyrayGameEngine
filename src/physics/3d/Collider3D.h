@@ -3,23 +3,22 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include <ecs/Export.h>
+#include <prvl.h>
 
 struct Collider3D {
     uint32_t typeId;
     void* userData;
-    double posX, posY, posZ;
-    double sizeX, sizeY, sizeZ;
+    dvec3 pos;
+    dvec3 size;
     double friction, restitution;
 };
 
 template <>
 struct ExportInfo<Collider3D> {
     constexpr static Export __export__[] = {
-        {offsetof(Collider3D, posX), EXPORT_DVEC3, "Position"},
-        {offsetof(Collider3D, sizeX), EXPORT_DVEC3, "Size"},
+        {offsetof(Collider3D, pos), EXPORT_DVEC3, "Position"},
+        {offsetof(Collider3D, size), EXPORT_DVEC3, "Size"},
         {offsetof(Collider3D, friction), EXPORT_DOUBLE, "Friction"},
         {offsetof(Collider3D, restitution), EXPORT_DOUBLE, "Restitution"},
     };

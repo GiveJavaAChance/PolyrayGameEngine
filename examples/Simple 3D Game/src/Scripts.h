@@ -46,7 +46,7 @@ struct PlayerScript {
     void physicsUpdate(double dt) {
         PhysicsObject3D obj;
         if (getComponent<PhysicsObject3D>(obj)) {
-            obj.accY = -9.8;
+            obj.acc.y = -9.8;
             vec2 movement = prvl::vec2();
             if (Input::getKey(GLFW_KEY_W)) {
                 movement.y = 1.0f;
@@ -75,11 +75,11 @@ struct PlayerScript {
                 forward = normalize(forward);
                 vec3 mov = movement.x * right + movement.y * forward;
                 double mul = speed * dt;
-                obj.prevPosX = obj.posX - mov.x * mul;
-                obj.prevPosZ = obj.posZ - mov.z * mul;
+                obj.prevPos.x = obj.pos.x - mov.x * mul;
+                obj.prevPos.z = obj.pos.z - mov.z * mul;
             }
             if (jump) {
-                obj.prevPosY -= jumpForce * dt;
+                obj.prevPos.y -= jumpForce * dt;
                 jump = false;
             }
             setComponent(obj);

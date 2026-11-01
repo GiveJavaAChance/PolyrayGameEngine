@@ -10,42 +10,30 @@
 namespace ColliderShape3D {
     struct AABB {
         inline static bool collideAABB_AABB_3D(const AABB* aabbA, const AABB* aabbB, const Collider3D& a, const Collider3D& b, CollisionInfo3D& out) {
-            double halfAx = a.sizeX * 0.5;
-            double halfAy = a.sizeY * 0.5;
-            double halfAz = a.sizeZ * 0.5;
-            double halfBx = b.sizeX * 0.5;
-            double halfBy = b.sizeY * 0.5;
-            double halfBz = b.sizeZ * 0.5;
-            double ax = a.posX + halfAx;
-            double ay = a.posY + halfAy;
-            double az = a.posZ + halfAz;
-            double bx = b.posX + halfBx;
-            double by = b.posY + halfBy;
-            double bz = b.posZ + halfBz;
-            double dx = ax - bx;
-            double dy = ay - by;
-            double dz = az - bz;
-            double overlapX = halfAx + halfBx - abs(dx);
-            double overlapY = halfAy + halfBy - abs(dy);
-            double overlapZ = halfAz + halfBz - abs(dz);
-            if (overlapX <= 0.0 || overlapY <= 0.0 || overlapZ <= 0.0) {
+            dvec3 halfA = a.size * 0.5;
+            dvec3 halfB = b.size * 0.5;
+            dvec3 ca = a.pos + halfA;
+            dvec3 cb = b.pos + halfB;
+            dvec3 d = ca - cb;
+            dvec3 overlap = halfA + halfB - abs(d);
+            if (overlap.x <= 0.0 || overlap.y <= 0.0 || overlap.z <= 0.0) {
                 return false;
             }
-            if (overlapX < overlapY && overlapX < overlapZ) {
-                out.collisionNormalX = (dx < 0.0) ? -1.0 : 1.0;
-                out.collisionNormalY = 0.0;
-                out.collisionNormalZ = 0.0;
-                out.penetrationDepth = overlapX;
-            } else if (overlapY < overlapZ) {
-                out.collisionNormalX = 0.0;
-                out.collisionNormalY = (dy < 0.0) ? -1.0 : 1.0;
-                out.collisionNormalZ = 0.0;
-                out.penetrationDepth = overlapY;
+            if (overlap.x < overlap.y && overlap.x < overlap.z) {
+                out.collisionNormal.x = (d.x < 0.0) ? -1.0 : 1.0;
+                out.collisionNormal.y = 0.0;
+                out.collisionNormal.z = 0.0;
+                out.penetrationDepth = overlap.x;
+            } else if (overlap.y < overlap.z) {
+                out.collisionNormal.x = 0.0;
+                out.collisionNormal.y = (d.y < 0.0) ? -1.0 : 1.0;
+                out.collisionNormal.z = 0.0;
+                out.penetrationDepth = overlap.y;
             } else {
-                out.collisionNormalX = 0.0;
-                out.collisionNormalY = 0.0;
-                out.collisionNormalZ = (dz < 0.0) ? -1.0 : 1.0;
-                out.penetrationDepth = overlapZ;
+                out.collisionNormal.x = 0.0;
+                out.collisionNormal.y = 0.0;
+                out.collisionNormal.z = (d.z < 0.0) ? -1.0 : 1.0;
+                out.penetrationDepth = overlap.z;
             }
             return true;
         }
@@ -136,27 +124,17 @@ namespace ColliderShape3D {
 
     struct Sphere {
         inline static bool collideSphere_Sphere_3D(const Sphere* sphereA, const Sphere* sphereB, const Collider3D& a, const Collider3D& b, CollisionInfo3D& out) {
-            double halfAx = a.sizeX * 0.5;
-            double halfAy = a.sizeY * 0.5;
-            double halfAz = a.sizeZ * 0.5;
-            double halfBx = b.sizeX * 0.5;
-            double halfBy = b.sizeY * 0.5;
-            double halfBz = b.sizeZ * 0.5;
-            double ax = a.posX + halfAx;
-            double ay = a.posY + halfAy;
-            double az = a.posZ + halfAz;
-            double bx = b.posX + halfBx;
-            double by = b.posY + halfBy;
-            double bz = b.posZ + halfBz;
+            dvec3 halfA = a.size * 0.5;
+            dvec3 halfB = b.size * 0.5;
+            dvec3 ca = a.pos + halfA;
+            dvec3 cb = b.pos + halfB;
 
-            double ra = halfAx;
-            double rb = halfBx;
+            double ra = halfA.x;
+            double rb = halfB.x;
 
-            double dx = ax - bx;
-            double dy = ay - by;
-            double dz = az - bz;
+            dvec3 d = ca - cb;
 
-            double dist2 = dx * dx + dy * dy + dz * dz;
+            double dist2 = dot(d, d);
             double r = ra + rb;
             if (dist2 > r * r) {
                 return false;
@@ -164,73 +142,49 @@ namespace ColliderShape3D {
             double dist = sqrt(dist2);
             double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
 
-            out.collisionNormalX = dx * invDist;
-            out.collisionNormalY = dy * invDist;
-            out.collisionNormalZ = dz * invDist;
+            out.collisionNormal = d * invDist;
             out.penetrationDepth = r - dist;
             return true;
         }
 
         inline static bool collideSphere_AABB_3D(const Sphere* sphere, const AABB* aabb, const Collider3D& a, const Collider3D& b, CollisionInfo3D& out) {
-            double halfAx = a.sizeX * 0.5;
-            double halfAy = a.sizeY * 0.5;
-            double halfAz = a.sizeZ * 0.5;
-            double halfBx = b.sizeX * 0.5;
-            double halfBy = b.sizeY * 0.5;
-            double halfBz = b.sizeZ * 0.5;
-            double ax = a.posX + halfAx;
-            double ay = a.posY + halfAy;
-            double az = a.posZ + halfAz;
-            double bx = b.posX + halfBx;
-            double by = b.posY + halfBy;
-            double bz = b.posZ + halfBz;
-
-            double dx = ax - bx;
-            double dy = ay - by;
-            double dz = az - bz;
-            double overlapX = halfBx - abs(dx);
-            double overlapY = halfBy - abs(dy);
-            double overlapZ = halfBz - abs(dz);
-            double overlap = min(min(overlapX, overlapY), overlapZ);
-            if (overlap > 0.0) {
-                if (overlapX < overlapY && overlapX < overlapZ) {
-                    out.collisionNormalX = sign(dx) * overlapX;
-                    out.collisionNormalY = 0.0;
-                    out.collisionNormalZ = 0.0;
-                } else if (overlapY < overlapZ) {
-                    out.collisionNormalX = 0.0;
-                    out.collisionNormalY = sign(dy) * overlapY;
-                    out.collisionNormalZ = 0.0;
+            dvec3 halfA = a.size * 0.5;
+            dvec3 halfB = b.size * 0.5;
+            dvec3 ca = a.pos + halfA;
+            dvec3 cb = b.pos + halfB;
+            dvec3 d = ca - cb;
+            dvec3 overlap = halfA + halfB - abs(d);
+            double minOverlap = min(min(overlap.x, overlap.y), overlap.z);
+            if (minOverlap > 0.0) {
+                if (overlap.x < overlap.y && overlap.x < overlap.z) {
+                    out.collisionNormal.x = sign(d.x) * overlap.x;
+                    out.collisionNormal.y = 0.0;
+                    out.collisionNormal.z = 0.0;
+                } else if (overlap.y < overlap.z) {
+                    out.collisionNormal.x = 0.0;
+                    out.collisionNormal.y = sign(d.y) * overlap.y;
+                    out.collisionNormal.z = 0.0;
                 } else {
-                    out.collisionNormalX = 0.0;
-                    out.collisionNormalY = 0.0;
-                    out.collisionNormalZ = sign(dz) * overlapZ;
+                    out.collisionNormal.x = 0.0;
+                    out.collisionNormal.y = 0.0;
+                    out.collisionNormal.z = sign(d.z) * overlap.z;
                 }
-                out.penetrationDepth = overlap;
+                out.penetrationDepth = minOverlap;
                 return true;
             }
 
-            double r = halfAx;
+            double r = halfA.x;
 
-            double cx = max(bx - halfBx, min(ax, bx + halfBx));
-            double cy = max(by - halfBy, min(ay, by + halfBy));
-            double cz = max(bz - halfBz, min(az, bz + halfBz));
+            d = ca - max(b.pos, min(ca, cb + halfB));
 
-            dx = ax - cx;
-            dy = ay - cy;
-            dz = az - cz;
-
-            double dist2 = dx * dx + dy * dy + dz * dz;
-
+            double dist2 = dot(d, d);
             if (dist2 > r * r) {
                 return false;
             }
             double dist = sqrt(dist2);
             double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
 
-            out.collisionNormalX = dx * invDist;
-            out.collisionNormalY = dy * invDist;
-            out.collisionNormalZ = dz * invDist;
+            out.collisionNormal = d * invDist;
             out.penetrationDepth = r - dist;
 
             return true;
@@ -298,10 +252,10 @@ namespace ColliderShape3D {
         }
 
         inline static bool collideBean_Bean_3D(const Bean* beanA, const Bean* beanB, const Collider3D& a, const Collider3D& b, CollisionInfo3D& out) {
-            dvec3 a0 = prvl::dvec3(a.posX, a.posY, a.posZ) + beanA->deltaA;
+            dvec3 a0 = a.pos + beanA->deltaA;
             dvec3 d0 = beanA->deltaB - beanA->deltaA;
-            dvec3 a1 = prvl::dvec3(b.posX, b.posY, b.posZ) + beanB->deltaA;
-            dvec3 b1 = prvl::dvec3(b.posX, b.posY, b.posZ) + beanB->deltaB;
+            dvec3 a1 = b.pos + beanB->deltaA;
+            dvec3 b1 = b.pos + beanB->deltaB;
             dvec3 d1 = beanB->deltaB - beanB->deltaA;
 
             double minDist = beanA->radius + beanB->radius;
@@ -321,9 +275,7 @@ namespace ColliderShape3D {
             double penetration = minDist - dist;
             dvec3 D = dist0 < dist1 ? D0 : D1;
             double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
-            out.collisionNormalX = D.x * invDist;
-            out.collisionNormalY = D.y * invDist;
-            out.collisionNormalZ = D.z * invDist;
+            out.collisionNormal = D * invDist;
             out.penetrationDepth = penetration;
             return true;
         }
@@ -331,10 +283,10 @@ namespace ColliderShape3D {
         inline static bool collideBean_AABB_3D(const Bean* bean, const AABB* aabb, const Collider3D& a, const Collider3D& b, CollisionInfo3D& out) {
             constexpr double EPSILON = 1e-12;
 
-            dvec3 min = prvl::dvec3(b.posX, b.posY, b.posZ);
-            dvec3 max = min + prvl::dvec3(b.sizeX, b.sizeY, b.sizeZ);
-            dvec3 A = prvl::dvec3(a.posX, a.posY, a.posZ) + bean->deltaA;
-            dvec3 B = prvl::dvec3(a.posX, a.posY, a.posZ) + bean->deltaB;
+            dvec3 min = b.pos;
+            dvec3 max = min + b.size;
+            dvec3 A = a.pos + bean->deltaA;
+            dvec3 B = a.pos + bean->deltaB;
             dvec3 D = bean->deltaB - bean->deltaA;
 
             double cuts[8u];
@@ -380,7 +332,6 @@ namespace ColliderShape3D {
                 cuts[j] = value;
             }
             double minDistSq = bean->radius * bean->radius + 1.0;
-            dvec3 bestBoxPoint;
             dvec3 bestSegmentPoint;
 
             dvec3 delta;
@@ -468,25 +419,21 @@ namespace ColliderShape3D {
                     penetration = front;
                     normal = prvl::dvec3(0.0, 0.0, 1.0);
                 }
-                out.collisionNormalX = normal.x;
-                out.collisionNormalY = normal.y;
-                out.collisionNormalZ = normal.z;
+                out.collisionNormal = normal;
                 out.penetrationDepth = bean->radius + penetration;
                 return true;
             }
             double invDist = 1.0 / dist;
-            out.collisionNormalX = delta.x * invDist;
-            out.collisionNormalY = delta.y * invDist;
-            out.collisionNormalZ = delta.z * invDist;
+            out.collisionNormal = delta * invDist;
             out.penetrationDepth = bean->radius - dist;
             return true;
         }
 
         inline static bool collideBean_Sphere_3D(const Bean* bean, const Sphere* sphere, const Collider3D& a, const Collider3D& b, CollisionInfo3D& out) {
-            dvec3 lineA = prvl::dvec3(a.posX, a.posY, a.posZ) + bean->deltaA;
+            dvec3 lineA = a.pos + bean->deltaA;
             dvec3 lineD = bean->deltaB - bean->deltaA;
-            double rb = b.sizeX * 0.5;
-            dvec3 pos = prvl::dvec3(b.posX, b.posY, b.posZ) + rb;
+            double rb = b.size.x * 0.5;
+            dvec3 pos = b.pos + rb;
             dvec3 d = project(pos, lineA, lineD) - pos;
 
             double dist2 = dot(d, d);
@@ -497,9 +444,7 @@ namespace ColliderShape3D {
             double dist = sqrt(dist2);
             double invDist = (dist > 1e-12) ? 1.0 / dist : 0.0;
 
-            out.collisionNormalX = d.x * invDist;
-            out.collisionNormalY = d.y * invDist;
-            out.collisionNormalZ = d.z * invDist;
+            out.collisionNormal = d * invDist;
             out.penetrationDepth = r - dist;
             return true;
         }
@@ -654,7 +599,6 @@ namespace ColliderShape3D {
         }
 
         inline static float intersectRay(const Bean* __restrict__ bean, const float* __restrict__ pos, const float* __restrict__ dir, const float* __restrict__ invDir, const float* __restrict__ bounds) {
-            constexpr uint32_t dim = 3u;
             vec3 p = prvl::vec3(pos[0u], pos[1u], pos[2u]);
             vec3 d = prvl::vec3(dir[0u], dir[1u], dir[2u]);
 
@@ -665,7 +609,6 @@ namespace ColliderShape3D {
         }
 
         inline static void raycast(const Bean* __restrict__ bean, const float* __restrict__ pos, const float* __restrict__ dir, const float* __restrict__ invDir, const float* __restrict__ bounds, RayHit3D& hit) {
-            constexpr uint32_t dim = 3u;
             vec3 p = prvl::vec3(pos[0u], pos[1u], pos[2u]);
             vec3 d = prvl::vec3(dir[0u], dir[1u], dir[2u]);
 

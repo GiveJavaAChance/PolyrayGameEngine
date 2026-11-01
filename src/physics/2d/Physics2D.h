@@ -46,8 +46,7 @@ struct ColliderShape2DRegistry {
         if (!Func(reinterpret_cast<const A*>(bData), reinterpret_cast<const B*>(aData), b, a, infoOut)) {
             return false;
         }
-        infoOut.collisionNormalX = -infoOut.collisionNormalX;
-        infoOut.collisionNormalY = -infoOut.collisionNormalY;
+        infoOut.collisionNormal = -infoOut.collisionNormal;
         return true;
     }
 
@@ -101,14 +100,14 @@ private:
         DynamicCollider2D* a;
         DynamicCollider2D* b;
         Collider2D* bc;
-        const double normalX, normalY;
+        const dvec2 normal;
         const double penetrationDepth;
 
-        Collision2D(DynamicCollider2D* a, DynamicCollider2D* b, CollisionInfo2D& info) : a(a), b(b), normalX(info.collisionNormalX), normalY(info.collisionNormalY), penetrationDepth(info.penetrationDepth) {
+        Collision2D(DynamicCollider2D* a, DynamicCollider2D* b, CollisionInfo2D& info) : a(a), b(b), normal(info.collisionNormal), penetrationDepth(info.penetrationDepth) {
             this->bc = nullptr;
         }
 
-        Collision2D(DynamicCollider2D* a, Collider2D* b, CollisionInfo2D& info) : a(a), bc(b), normalX(info.collisionNormalX), normalY(info.collisionNormalY), penetrationDepth(info.penetrationDepth) {
+        Collision2D(DynamicCollider2D* a, Collider2D* b, CollisionInfo2D& info) : a(a), bc(b), normal(info.collisionNormal), penetrationDepth(info.penetrationDepth) {
             this->b = nullptr;
         }
     };
@@ -173,10 +172,9 @@ private:
             Transform2D* tx = evt->tx;
             mat3& m = tx->global;
             vec2 pos = prvl::vec2(m[2u]);
-            col->posX = pos.x;
-            col->posY = pos.y;
-            col->sizeX = m[0u][0u];
-            col->sizeY = m[1u][1u];
+            vec2 size = prvl::vec2(m[0u]);
+            col->pos = prvl::dvec2(pos);
+            col->size = prvl::dvec2(size);
             dirtyStatic = true;
         }
         return false;
@@ -192,10 +190,10 @@ private:
         staticBounds.ensureCapacity(staticColliders.size() * 4u);
         for (uint32_t i = 0u; i < staticColliders.size(); i++) {
             const Collider2D& col = staticColliders[i];
-            staticBounds[idx++] = static_cast<float>(col.posX);
-            staticBounds[idx++] = static_cast<float>(col.posY);
-            staticBounds[idx++] = static_cast<float>(col.posX + col.sizeX);
-            staticBounds[idx++] = static_cast<float>(col.posY + col.sizeY);
+            staticBounds[idx++] = static_cast<float>(col.pos.x);
+            staticBounds[idx++] = static_cast<float>(col.pos.y);
+            staticBounds[idx++] = static_cast<float>(col.pos.x + col.size.y);
+            staticBounds[idx++] = static_cast<float>(col.pos.y + col.size.y);
         }
         staticBVH.build(staticBounds.data(), staticColliders.size(),
             {
@@ -320,8 +318,7 @@ public:
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider2D& col = dynamicColliders[i];
             const uint32_t loc = storage.reg[col.objectID];
-            col.impl.posX = objects.column<0>()[loc] + col.offsetX;
-            col.impl.posY = objects.column<1>()[loc] + col.offsetY;
+            col.impl.pos = prvl::dvec2(objects.column<0>()[loc], objects.column<1>()[loc]) + col.offset;
         }
         // time[2] = rdtsc();
         if (dirtyStatic) {
@@ -332,10 +329,10 @@ public:
         dynamicBounds.ensureCapacity(dynamicColliders.size() * 4u);
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             const DynamicCollider2D& col = dynamicColliders[i];
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posX);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posY);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posX + col.impl.sizeX);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posY + col.impl.sizeY);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.x);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.y);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.x + col.impl.size.x);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.y + col.impl.size.y);
         }
         // time[3] = rdtsc();
         dynamicBVH.build(dynamicBounds.data(), dynamicColliders.size(),
@@ -360,7 +357,7 @@ public:
             CollisionInfo2D info;
             for (uint32_t aIdx = 0u; aIdx < dynamicColliders.size(); aIdx++) {
                 DynamicCollider2D& a = dynamicColliders[aIdx];
-                _mm_store_ps(query, _mm256_cvtpd_ps(_mm256_set_pd(a.impl.posY + a.impl.sizeY, a.impl.posX + a.impl.sizeX, a.impl.posY, a.impl.posX)));
+                _mm_store_ps(query, _mm256_cvtpd_ps(_mm256_set_pd(a.impl.pos.y + a.impl.size.y, a.impl.pos.x + a.impl.size.x, a.impl.pos.y, a.impl.pos.x)));
                 //__m256d v = _mm256_loadu_pd(&a.impl.posX);
                 //_mm_store_ps(query, _mm256_cvtpd_ps(_mm256_add_pd(v, _mm256_permute2f128_pd(v, v, 0x00))));
                 // const __m256d mask = _mm256_castsi256_pd(_mm256_set_epi64x(-1, -1, 0, 0));
@@ -409,7 +406,7 @@ public:
                     CollisionInfo2D info;
                     for (uint32_t aIdx = start; aIdx < end; aIdx++) {
                         DynamicCollider2D& a = dynamicColliders[aIdx];
-                        _mm_store_ps(query, _mm256_cvtpd_ps(_mm256_set_pd(a.impl.posY + a.impl.sizeY, a.impl.posX + a.impl.sizeX, a.impl.posY, a.impl.posX)));
+                        _mm_store_ps(query, _mm256_cvtpd_ps(_mm256_set_pd(a.impl.pos.y + a.impl.size.y, a.impl.pos.x + a.impl.size.x, a.impl.pos.y, a.impl.pos.x)));
                         //__m256d v = _mm256_loadu_pd(&a.impl.posX);
                         //_mm_store_ps(query, _mm256_cvtpd_ps(_mm256_add_pd(v, _mm256_permute2f128_pd(v, v, 0x00))));
                         // const __m256d mask = _mm256_castsi256_pd(_mm256_set_epi64x(-1, -1, 0, 0));
@@ -465,35 +462,32 @@ public:
 
                 DynamicCollider2D* b = col.b;
 
-                const double normalX = col.normalX;
-                const double normalY = col.normalY;
+                const dvec2 normal = col.normal;
                 double penetrationDepth = col.penetrationDepth * resolvingStrength;
-                double dx = normalX * penetrationDepth;
-                double dy = normalY * penetrationDepth;
+                dvec2 d = normal * penetrationDepth;
                 if (b) {
                     double mul = b->mass / (a->mass + b->mass);
-                    posAX += dx * mul;
-                    posAY += dy * mul;
+                    posAX += d.x * mul;
+                    posAY += d.y * mul;
                     uint32_t objB = storage.reg[b->objectID];
                     mul = 1.0 - mul;
-                    objects.column<0>()[objB] -= dx * mul;
-                    objects.column<1>()[objB] -= dy * mul;
+                    objects.column<0>()[objB] -= d.x * mul;
+                    objects.column<1>()[objB] -= d.y * mul;
                 } else {
                     double vx = posAX - prevPosAX;
                     double vy = posAY - prevPosAY;
-                    posAX += dx;
-                    posAY += dy;
-                    double height = -(vx * normalX + vy * normalY);
+                    posAX += d.x;
+                    posAY += d.y;
+                    double height = -(vx * normal.x + vy * normal.y);
                     if (height < 0.0) {
                         continue;
                     }
-                    double nvx = normalX * height;
-                    double nvy = normalY * height;
+                    dvec2 nv = normal * height;
                     Collider2D& ac = a->impl;
                     double friction = 1.0 - ac.friction;
                     double restitution = ac.restitution;
-                    double rx = (vx + nvx) * friction + nvx * restitution;
-                    double ry = (vy + nvy) * friction + nvy * restitution;
+                    double rx = (vx + nv.x) * friction + nv.x * restitution;
+                    double ry = (vy + nv.y) * friction + nv.y * restitution;
                     prevPosAX = posAX - rx;
                     prevPosAY = posAY - ry;
                 }
@@ -505,8 +499,7 @@ public:
             uint32_t loc = storage.reg[col.objectID];
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
-            col.impl.posX = posX + col.offsetX;
-            col.impl.posY = posY + col.offsetY;
+            col.impl.pos = prvl::dvec2(posX, posY) + col.offset;
             if (Transform2D* tx = ecs->getPtr<Transform2D>(objects.column<6>()[loc])) {
                 tx->position = prvl::vec2(posX, posY);
                 tx->dirtyTRS = true;
@@ -558,8 +551,7 @@ public:
             uint32_t loc = storage.reg[col.objectID];
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
-            col.impl.posX = posX + col.offsetX;
-            col.impl.posY = posY + col.offsetY;
+            col.impl.pos = prvl::dvec2(posX, posY) + col.offset;
             if (Transform2D* tx = ecs->getPtr<Transform2D>(objects.column<6>()[loc])) {
                 tx->position = prvl::vec2(posX, posY);
                 tx->dirtyTRS = true;
@@ -580,7 +572,7 @@ struct Serial<Collider2D> {
         } else {
             output.write<uint8_t>(0u);
         }
-        output.write(&c->posX, 6u * sizeof(double));
+        output.write(&c->pos, 6u * sizeof(double));
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
@@ -591,7 +583,7 @@ struct Serial<Collider2D> {
             c.userData = _mm_malloc(metadata.size, metadata.alignment);
             input.read(c.userData, metadata.size);
         }
-        input.read(&c.posX, 6u * sizeof(double));
+        input.read(&c.pos, 6u * sizeof(double));
         e.addComponent(c);
     }
 };
@@ -608,7 +600,7 @@ struct Serial<DynamicCollider2D> {
         } else {
             output.write<uint8_t>(0u);
         }
-        output.write(&c->impl.sizeX, 7u * sizeof(double));
+        output.write(&c->impl.size, 7u * sizeof(double));
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
@@ -619,7 +611,7 @@ struct Serial<DynamicCollider2D> {
             c.impl.userData = _mm_malloc(metadata.size, metadata.alignment);
             input.read(c.impl.userData, metadata.size);
         }
-        input.read(&c.impl.sizeX, 7u * sizeof(double));
+        input.read(&c.impl.size, 7u * sizeof(double));
         c.objectID = UINT32_MAX;
         e.addComponent(c);
     }

@@ -5,22 +5,23 @@
 
 #include <ecs/Export.h>
 #include <ecs/Storage.h>
+#include <prvl.h>
 #include <structure/MultiDynamicArray.h>
 #include <structure/Registry.h>
 
 struct PhysicsObject3D {
-    double posX, posY, posZ;
-    double prevPosX, prevPosY, prevPosZ;
-    double accX, accY, accZ;
+    dvec3 pos;
+    dvec3 prevPos;
+    dvec3 acc;
     uint32_t transformID;
 };
 
 template <>
 struct ExportInfo<PhysicsObject3D> {
     constexpr static Export __export__[] = {
-        {offsetof(PhysicsObject3D, posX), EXPORT_DVEC3, "Position"},
-        {offsetof(PhysicsObject3D, prevPosX), EXPORT_DVEC3, "Previous Position"},
-        {offsetof(PhysicsObject3D, accX), EXPORT_DVEC3, "Acceleration"},
+        {offsetof(PhysicsObject3D, pos), EXPORT_DVEC3, "Position"},
+        {offsetof(PhysicsObject3D, prevPos), EXPORT_DVEC3, "Previous Position"},
+        {offsetof(PhysicsObject3D, acc), EXPORT_DVEC3, "Acceleration"},
     };
 };
 
@@ -33,9 +34,9 @@ struct Storage<PhysicsObject3D> {
 
     inline uint32_t add(PhysicsObject3D&& component, uint32_t entityID) noexcept {
         objects.add(
-            component.posX, component.posY, component.posZ,
-            component.prevPosX, component.prevPosY, component.prevPosZ,
-            component.accX, component.accY, component.accZ,
+            component.pos.x, component.pos.y, component.pos.z,
+            component.prevPos.x, component.prevPos.y, component.prevPos.z,
+            component.acc.x, component.acc.y, component.acc.z,
             component.transformID);
         entitySet.add(entityID);
         return reg.create();
@@ -43,9 +44,9 @@ struct Storage<PhysicsObject3D> {
 
     inline void set(uint32_t componentID, PhysicsObject3D&& component) noexcept {
         objects.setIndex(reg[componentID],
-            component.posX, component.posY, component.posZ,
-            component.prevPosX, component.prevPosY, component.prevPosZ,
-            component.accX, component.accY, component.accZ,
+            component.pos.x, component.pos.y, component.pos.z,
+            component.prevPos.x, component.prevPos.y, component.prevPos.z,
+            component.acc.x, component.acc.y, component.acc.z,
             component.transformID);
     }
 

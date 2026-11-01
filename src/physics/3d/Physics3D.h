@@ -46,9 +46,7 @@ struct ColliderShape3DRegistry {
         if (!Func(reinterpret_cast<const A*>(bData), reinterpret_cast<const B*>(aData), b, a, infoOut)) {
             return false;
         }
-        infoOut.collisionNormalX = -infoOut.collisionNormalX;
-        infoOut.collisionNormalY = -infoOut.collisionNormalY;
-        infoOut.collisionNormalZ = -infoOut.collisionNormalZ;
+        infoOut.collisionNormal = -infoOut.collisionNormal;
         return true;
     }
 
@@ -102,14 +100,14 @@ private:
         DynamicCollider3D* a;
         DynamicCollider3D* b;
         Collider3D* bc;
-        const double normalX, normalY, normalZ;
+        const dvec3 normal;
         const double penetrationDepth;
 
-        Collision3D(DynamicCollider3D* a, DynamicCollider3D* b, CollisionInfo3D& info) : a(a), b(b), normalX(info.collisionNormalX), normalY(info.collisionNormalY), normalZ(info.collisionNormalZ), penetrationDepth(info.penetrationDepth) {
+        Collision3D(DynamicCollider3D* a, DynamicCollider3D* b, CollisionInfo3D& info) : a(a), b(b), normal(info.collisionNormal), penetrationDepth(info.penetrationDepth) {
             this->bc = nullptr;
         }
 
-        Collision3D(DynamicCollider3D* a, Collider3D* b, CollisionInfo3D& info) : a(a), bc(b), normalX(info.collisionNormalX), normalY(info.collisionNormalY), normalZ(info.collisionNormalZ), penetrationDepth(info.penetrationDepth) {
+        Collision3D(DynamicCollider3D* a, Collider3D* b, CollisionInfo3D& info) : a(a), bc(b), normal(info.collisionNormal), penetrationDepth(info.penetrationDepth) {
             this->b = nullptr;
         }
     };
@@ -176,12 +174,9 @@ private:
             Transform3D* tx = evt->tx;
             mat4& m = tx->global;
             vec3 pos = prvl::vec3(m[3u]);
-            col->posX = pos.x;
-            col->posY = pos.y;
-            col->posZ = pos.z;
-            col->sizeX = m[0u][0u];
-            col->sizeY = m[1u][1u];
-            col->sizeZ = m[2u][2u];
+            vec3 size = prvl::vec3(m[0u]);
+            col->pos = prvl::dvec3(pos);
+            col->size = prvl::dvec3(size);
             dirtyStatic = true;
         }
         return false;
@@ -196,12 +191,12 @@ private:
         staticBounds.ensureCapacity(staticColliders.size() * 6u);
         for (uint32_t i = 0u; i < staticColliders.size(); i++) {
             const Collider3D& col = staticColliders[i];
-            staticBounds[idx++] = static_cast<float>(col.posX);
-            staticBounds[idx++] = static_cast<float>(col.posY);
-            staticBounds[idx++] = static_cast<float>(col.posZ);
-            staticBounds[idx++] = static_cast<float>(col.posX + col.sizeX);
-            staticBounds[idx++] = static_cast<float>(col.posY + col.sizeY);
-            staticBounds[idx++] = static_cast<float>(col.posZ + col.sizeZ);
+            staticBounds[idx++] = static_cast<float>(col.pos.x);
+            staticBounds[idx++] = static_cast<float>(col.pos.y);
+            staticBounds[idx++] = static_cast<float>(col.pos.z);
+            staticBounds[idx++] = static_cast<float>(col.pos.x + col.size.x);
+            staticBounds[idx++] = static_cast<float>(col.pos.y + col.size.y);
+            staticBounds[idx++] = static_cast<float>(col.pos.z + col.size.z);
         }
         staticBVH.build(staticBounds.data(), staticColliders.size(),
             {
@@ -341,9 +336,7 @@ public:
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider3D& col = dynamicColliders[i];
             const uint32_t loc = storage.reg[col.objectID];
-            col.impl.posX = objects.column<0>()[loc] + col.offsetX;
-            col.impl.posY = objects.column<1>()[loc] + col.offsetY;
-            col.impl.posZ = objects.column<2>()[loc] + col.offsetZ;
+            col.impl.pos = prvl::dvec3(objects.column<0>()[loc], objects.column<1>()[loc], objects.column<2>()[loc]) + col.offset;
         }
         // time[2] = rdtsc();
         if (dirtyStatic) {
@@ -354,12 +347,12 @@ public:
         dynamicBounds.ensureCapacity(dynamicColliders.size() * 6u);
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             const DynamicCollider3D& col = dynamicColliders[i];
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posX);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posY);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posZ);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posX + col.impl.sizeX);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posY + col.impl.sizeY);
-            dynamicBounds[idx++] = static_cast<float>(col.impl.posZ + col.impl.sizeZ);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.x);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.y);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.z);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.x + col.impl.size.x);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.y + col.impl.size.y);
+            dynamicBounds[idx++] = static_cast<float>(col.impl.pos.z + col.impl.size.z);
         }
         // time[3] = rdtsc();
         dynamicBVH.build(dynamicBounds.data(), dynamicColliders.size(),
@@ -385,12 +378,12 @@ public:
             for (uint32_t aIdx = 0u; aIdx < dynamicColliders.size(); aIdx++) {
                 DynamicCollider3D& a = dynamicColliders[aIdx];
                 //_mm_store_ps(query, _mm256_cvtpd_ps(_mm256_set_pd(a.impl.posY + a.impl.sizeY, a.impl.posX + a.impl.sizeX, a.impl.posY, a.impl.posX)));
-                query[0u] = static_cast<float>(a.impl.posX);
-                query[1u] = static_cast<float>(a.impl.posY);
-                query[2u] = static_cast<float>(a.impl.posZ);
-                query[3u] = static_cast<float>(a.impl.posX + a.impl.sizeX);
-                query[4u] = static_cast<float>(a.impl.posY + a.impl.sizeY);
-                query[5u] = static_cast<float>(a.impl.posZ + a.impl.sizeZ);
+                query[0u] = static_cast<float>(a.impl.pos.x);
+                query[1u] = static_cast<float>(a.impl.pos.y);
+                query[2u] = static_cast<float>(a.impl.pos.z);
+                query[3u] = static_cast<float>(a.impl.pos.x + a.impl.size.x);
+                query[4u] = static_cast<float>(a.impl.pos.y + a.impl.size.y);
+                query[5u] = static_cast<float>(a.impl.pos.z + a.impl.size.z);
                 uint32_t count = dynamicBVH.query(query, hits, 32u);
                 if (count != 0u) {
                     for (uint32_t j = 0u; j < count; j++) {
@@ -432,12 +425,12 @@ public:
                     for (uint32_t aIdx = start; aIdx < end; aIdx++) {
                         DynamicCollider3D& a = dynamicColliders[aIdx];
                         //_mm_store_ps(query, _mm256_cvtpd_ps(_mm256_set_pd(a.impl.posY + a.impl.sizeY, a.impl.posX + a.impl.sizeX, a.impl.posY, a.impl.posX)));
-                        query[0u] = static_cast<float>(a.impl.posX);
-                        query[1u] = static_cast<float>(a.impl.posY);
-                        query[2u] = static_cast<float>(a.impl.posZ);
-                        query[3u] = static_cast<float>(a.impl.posX + a.impl.sizeX);
-                        query[4u] = static_cast<float>(a.impl.posY + a.impl.sizeY);
-                        query[5u] = static_cast<float>(a.impl.posZ + a.impl.sizeZ);
+                        query[0u] = static_cast<float>(a.impl.pos.x);
+                        query[1u] = static_cast<float>(a.impl.pos.y);
+                        query[2u] = static_cast<float>(a.impl.pos.z);
+                        query[3u] = static_cast<float>(a.impl.pos.x + a.impl.size.x);
+                        query[4u] = static_cast<float>(a.impl.pos.y + a.impl.size.y);
+                        query[5u] = static_cast<float>(a.impl.pos.z + a.impl.size.z);
                         uint32_t count = dynamicBVH.query(query, hits, 32u, stack);
                         if (count != 0u) {
                             for (uint32_t j = 0u; j < count; j++) {
@@ -487,43 +480,37 @@ public:
 
                 DynamicCollider3D* b = col.b;
 
-                const double normalX = col.normalX;
-                const double normalY = col.normalY;
-                const double normalZ = col.normalZ;
+                const dvec3 normal = col.normal;
                 double penetrationDepth = col.penetrationDepth * resolvingStrength;
-                double dx = normalX * penetrationDepth;
-                double dy = normalY * penetrationDepth;
-                double dz = normalZ * penetrationDepth;
+                dvec3 d = normal * penetrationDepth;
                 if (b) {
                     double mul = b->mass / (a->mass + b->mass);
-                    posAX += dx * mul;
-                    posAY += dy * mul;
-                    posAZ += dz * mul;
+                    posAX += d.x * mul;
+                    posAY += d.y * mul;
+                    posAZ += d.z * mul;
                     uint32_t objB = storage.reg[b->objectID];
                     mul = 1.0 - mul;
-                    objects.column<0>()[objB] -= dx * mul;
-                    objects.column<1>()[objB] -= dy * mul;
-                    objects.column<2>()[objB] -= dz * mul;
+                    objects.column<0>()[objB] -= d.x * mul;
+                    objects.column<1>()[objB] -= d.y * mul;
+                    objects.column<2>()[objB] -= d.z * mul;
                 } else {
                     double vx = posAX - prevPosAX;
                     double vy = posAY - prevPosAY;
                     double vz = posAZ - prevPosAZ;
-                    posAX += dx;
-                    posAY += dy;
-                    posAZ += dz;
-                    double height = -(vx * normalX + vy * normalY + vz * normalZ);
+                    posAX += d.x;
+                    posAY += d.y;
+                    posAZ += d.z;
+                    double height = -(vx * normal.x + vy * normal.y + vz * normal.z);
                     if (height < 0.0) {
                         continue;
                     }
-                    double nvx = normalX * height;
-                    double nvy = normalY * height;
-                    double nvz = normalZ * height;
+                    dvec3 nv = normal * height;
                     Collider3D& ac = a->impl;
                     double friction = 1.0 - ac.friction;
                     double restitution = ac.restitution;
-                    double rx = (vx + nvx) * friction + nvx * restitution;
-                    double ry = (vy + nvy) * friction + nvy * restitution;
-                    double rz = (vz + nvz) * friction + nvz * restitution;
+                    double rx = (vx + nv.x) * friction + nv.x * restitution;
+                    double ry = (vy + nv.y) * friction + nv.y * restitution;
+                    double rz = (vz + nv.z) * friction + nv.z * restitution;
                     prevPosAX = posAX - rx;
                     prevPosAY = posAY - ry;
                     prevPosAZ = posAZ - rz;
@@ -537,9 +524,7 @@ public:
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
             double posZ = objects.column<2>()[loc];
-            col.impl.posX = posX + col.offsetX;
-            col.impl.posY = posY + col.offsetY;
-            col.impl.posZ = posZ + col.offsetZ;
+            col.impl.pos = prvl::dvec3(posX, posY, posZ) + col.offset;
             if (Transform3D* tx = ecs->getPtr<Transform3D>(objects.column<9>()[loc])) {
                 tx->position = prvl::vec3(posX, posY, posZ);
                 tx->dirtyTRS = true;
@@ -601,9 +586,7 @@ public:
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
             double posZ = objects.column<2>()[loc];
-            col.impl.posX = posX + col.offsetX;
-            col.impl.posY = posY + col.offsetY;
-            col.impl.posZ = posZ + col.offsetZ;
+            col.impl.pos = prvl::dvec3(posX, posY, posZ) + col.offset;
             if (Transform3D* tx = ecs->getPtr<Transform3D>(objects.column<9>()[loc])) {
                 tx->position = prvl::vec3(posX, posY, posZ);
                 tx->dirtyTRS = true;
@@ -624,7 +607,7 @@ struct Serial<Collider3D> {
         } else {
             output.write<uint8_t>(0u);
         }
-        output.write(&c->posX, 8u * sizeof(double));
+        output.write(&c->pos, 8u * sizeof(double));
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
@@ -635,7 +618,7 @@ struct Serial<Collider3D> {
             c.userData = _mm_malloc(metadata.size, metadata.alignment);
             input.read(c.userData, metadata.size);
         }
-        input.read(&c.posX, 8u * sizeof(double));
+        input.read(&c.pos, 8u * sizeof(double));
         e.addComponent(c);
     }
 };
@@ -652,7 +635,7 @@ struct Serial<DynamicCollider3D> {
         } else {
             output.write<uint8_t>(0u);
         }
-        output.write(&c->impl.sizeX, 9u * sizeof(double));
+        output.write(&c->impl.size, 9u * sizeof(double));
     }
 
     static void deserialize(World* world, Entity& e, ByteReader& input) {
@@ -663,7 +646,7 @@ struct Serial<DynamicCollider3D> {
             c.impl.userData = _mm_malloc(metadata.size, metadata.alignment);
             input.read(c.impl.userData, metadata.size);
         }
-        input.read(&c.impl.sizeX, 9u * sizeof(double));
+        input.read(&c.impl.size, 9u * sizeof(double));
         c.objectID = UINT32_MAX;
         e.addComponent(c);
     }

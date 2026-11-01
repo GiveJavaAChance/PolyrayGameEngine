@@ -1,27 +1,27 @@
 #ifndef PHYSICSOBJECT2D_H_INCLUDED
 #define PHYSICSOBJECT2D_H_INCLUDED
 
-#include "structure/DynamicArray.h"
 #pragma once
 
 #include <ecs/Export.h>
 #include <ecs/Storage.h>
+#include <prvl.h>
 #include <structure/MultiDynamicArray.h>
 #include <structure/Registry.h>
 
 struct PhysicsObject2D {
-    double posX, posY;
-    double prevPosX, prevPosY;
-    double accX, accY;
+    dvec2 pos;
+    dvec2 prevPos;
+    dvec2 acc;
     uint32_t transformID;
 };
 
 template <>
 struct ExportInfo<PhysicsObject2D> {
     constexpr static Export __export__[] = {
-        {offsetof(PhysicsObject2D, posX), EXPORT_DVEC2, "Position"},
-        {offsetof(PhysicsObject2D, prevPosX), EXPORT_DVEC2, "Previous Position"},
-        {offsetof(PhysicsObject2D, accX), EXPORT_DVEC2, "Acceleration"},
+        {offsetof(PhysicsObject2D, pos), EXPORT_DVEC2, "Position"},
+        {offsetof(PhysicsObject2D, prevPos), EXPORT_DVEC2, "Previous Position"},
+        {offsetof(PhysicsObject2D, acc), EXPORT_DVEC2, "Acceleration"},
     };
 };
 
@@ -34,9 +34,9 @@ struct Storage<PhysicsObject2D> {
 
     inline uint32_t add(PhysicsObject2D&& component, uint32_t entityID) noexcept {
         objects.add(
-            component.posX, component.posY,
-            component.prevPosX, component.prevPosY,
-            component.accX, component.accY,
+            component.pos.x, component.pos.y,
+            component.prevPos.x, component.prevPos.y,
+            component.acc.x, component.acc.y,
             component.transformID);
         entitySet.add(entityID);
         return reg.create();
@@ -44,9 +44,9 @@ struct Storage<PhysicsObject2D> {
 
     inline void set(uint32_t componentID, PhysicsObject2D&& component) noexcept {
         objects.setIndex(reg[componentID],
-            component.posX, component.posY,
-            component.prevPosX, component.prevPosY,
-            component.accX, component.accY,
+            component.pos.x, component.pos.y,
+            component.prevPos.x, component.prevPos.y,
+            component.acc.x, component.acc.y,
             component.transformID);
     }
 
