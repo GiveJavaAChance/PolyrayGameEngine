@@ -3,16 +3,11 @@
 
 #pragma once
 
-#include <cstring>
-
 #include <Transform3D.h>
 #include <World.h>
-#include <ecs/ComponentRef.h>
 #include <prvl.h>
 #include <rendering/ShaderBuffer.h>
 #include <serial/Serial.h>
-
-#include <gpu_types/GpuCamera3D.h>
 
 enum ProjectionMode : uint8_t {
     PERSPECTIVE,
@@ -37,9 +32,9 @@ struct Camera3D {
 
     bool current;
 
-    ComponentRef<Transform3D> transformRef;
+    uint32_t transformID;
 
-    Camera3D() : projectionMode(ProjectionMode::PERSPECTIVE), current(false), transformRef(UINT32_MAX) {
+    Camera3D() : projectionMode(ProjectionMode::PERSPECTIVE), current(false), transformID(UINT32_MAX) {
     }
 
     mat4 getProjection(vec2 size) {

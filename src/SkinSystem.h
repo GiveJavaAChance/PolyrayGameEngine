@@ -75,11 +75,11 @@ public:
             skinInstanceBuffer.resized = false;
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, skinInstanceBinding, skinInstanceBuffer.buffer.ID);
         }
-        VirtualArray<SkinInstance>& skinInstances = ecs->view<SkinInstance>().data;
+        VirtualArray<SkinInstance>& skinInstances = ecs->storage<SkinInstance>().data;
         if (skinInstances.size() == 0u) {
             return;
         }
-        Storage<Transform3D>& transforms = ecs->view<Transform3D>();
+        Storage<Transform3D>& transforms = ecs->storage<Transform3D>();
         for (uint32_t i = 0u; i < skinInstances.size(); i++) {
             SkinInstance& instance = skinInstances[i];
             instance.data.skinIdx = skins.reg[instance.skinID];

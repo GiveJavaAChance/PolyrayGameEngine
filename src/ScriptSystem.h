@@ -93,28 +93,28 @@ private:
     }
 
     void setup() {
-        Storage<T>& storage = world->ecs.view<T>();
+        Storage<T>& storage = world->ecs.storage<T>();
         for (uint32_t i = 0u; i < storage.data.size(); i++) {
             storage.data[i].setup();
         }
     }
 
     void frameUpdate(double dt) {
-        Storage<T>& storage = world->ecs.view<T>();
+        Storage<T>& storage = world->ecs.storage<T>();
         for (uint32_t i = 0u; i < storage.data.size(); i++) {
             storage.data[i].frameUpdate(dt);
         }
     }
 
     void physicsUpdate(double dt) {
-        Storage<T>& storage = world->ecs.view<T>();
+        Storage<T>& storage = world->ecs.storage<T>();
         for (uint32_t i = 0u; i < storage.data.size(); i++) {
             storage.data[i].physicsUpdate(dt);
         }
     }
 
     bool input(InputEvent* event) {
-        Storage<T>& storage = world->ecs.view<T>();
+        Storage<T>& storage = world->ecs.storage<T>();
         for (uint32_t i = 0u; i < storage.data.size(); i++) {
             storage.data[i].input(*event);
         }

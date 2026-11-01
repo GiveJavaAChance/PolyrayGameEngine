@@ -5,7 +5,6 @@
 
 #include <Transform2D.h>
 #include <World.h>
-#include <ecs/ComponentRef.h>
 #include <prvl.h>
 #include <rendering/ShaderBuffer.h>
 #include <serial/Serial.h>
@@ -16,9 +15,9 @@ struct Camera2D {
 
     bool current;
 
-    ComponentRef<Transform2D> transformRef;
+    uint32_t transformID;
 
-    Camera2D() : current(false), transformRef(UINT32_MAX) {
+    Camera2D() : current(false), transformID(UINT32_MAX) {
     }
 
     mat3 getProjection(vec2 size) {

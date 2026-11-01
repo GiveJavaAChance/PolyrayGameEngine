@@ -1,11 +1,6 @@
 #ifndef ANIMATIONSYSTEM_H_INCLUDED
 #define ANIMATIONSYSTEM_H_INCLUDED
 
-#include "ecs/ComponentMetadata.h"
-#include "ecs/ECS.h"
-#include "utils/perf.h"
-#include <malloc.h>
-#include <stdexcept>
 #pragma once
 
 #include <cstdint>
@@ -17,6 +12,8 @@
 #include <animation/Animation.h>
 #include <animation/AnimationBinding.h>
 #include <animation/AnimationChannel.h>
+#include <ecs/ComponentMetadata.h>
+#include <ecs/ECS.h>
 #include <ecs/Export.h>
 #include <scene/3d/Scene3D.h>
 #include <serial/Serial.h>
@@ -290,7 +287,7 @@ public:
 
     void update(double dt) {
         PROFILE_SCOPE(AnimationSystem_Update)
-        Storage<AnimationInstance>& animationInstances = world->ecs.view<AnimationInstance>();
+        Storage<AnimationInstance>& animationInstances = world->ecs.storage<AnimationInstance>();
         for (uint32_t i = 0u; i < animationInstances.data.size(); i++) {
             AnimationInstance& instance = animationInstances.data[i];
             if (!animations.reg.valid(instance.animationID)) {

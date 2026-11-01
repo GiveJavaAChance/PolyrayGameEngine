@@ -14,9 +14,9 @@ private:
     ECS* ecs;
 
     void onComponentAdded(Entity e, uint32_t id) {
-        Storage<Camera3D>& cameraStorage = ecs->view<Camera3D>();
+        Storage<Camera3D>& cameraStorage = ecs->storage<Camera3D>();
         Camera3D& cam = cameraStorage.get(id);
-        if (!ecs->getComponentID<Transform3D>(e.entityID, cam.transformRef.ID)) {
+        if (!ecs->getComponentID<Transform3D>(e.entityID, cam.transformID)) {
             std::cerr << "Could not find transform." << std::endl;
         }
     }
@@ -26,11 +26,11 @@ private:
 
     void update(double dt) {
         PROFILE_SCOPE(Camera3DSystem_Update)
-        Storage<Camera3D>& cameraStorage = ecs->view<Camera3D>();
+        Storage<Camera3D>& cameraStorage = ecs->storage<Camera3D>();
         VirtualArray<Camera3D>& cameras = cameraStorage.data;
         for (uint32_t i = 0u; i < cameras.size(); i++) {
             Camera3D& cam = cameras[i];
-            Transform3D* tx = ecs->getPtr(cam.transformRef);
+            Transform3D* tx = ecs->getPtr<Transform3D>(cam.transformID);
             cam.cameraPos = prvl::vec3(tx->global[3]);
             cam.inverseCameraTransform = prvl::mat4(prvl::mat3(tx->global));
             cam.cameraTransform = transpose(cam.inverseCameraTransform);

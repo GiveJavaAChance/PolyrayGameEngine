@@ -124,9 +124,9 @@ public:
 
     void update(double dt) {
         PROFILE_SCOPE(Light3DSystem_Update)
-        Storage<Transform3D>& transforms = ecs->view<Transform3D>();
+        Storage<Transform3D>& transforms = ecs->storage<Transform3D>();
 
-        VirtualArray<DirectionalLight3D>& directionalLights = ecs->view<DirectionalLight3D>().data;
+        VirtualArray<DirectionalLight3D>& directionalLights = ecs->storage<DirectionalLight3D>().data;
         uint32_t dirBufferSize = directionalLights.size() * sizeof(GpuDirectionalLight3D) + 16u;
         uploadBuffer.ensureCapacity(dirBufferSize);
         uint8_t* dirBuffer = uploadBuffer.data();
@@ -147,7 +147,7 @@ public:
         }
         directionalLightBuffer.uploadData(dirBuffer, dirBufferSize);
 
-        VirtualArray<SpotLight3D>& spotLights = ecs->view<SpotLight3D>().data;
+        VirtualArray<SpotLight3D>& spotLights = ecs->storage<SpotLight3D>().data;
         uint32_t spotBufferSize = spotLights.size() * sizeof(GpuSpotLight3D) + 16u;
         uploadBuffer.ensureCapacity(spotBufferSize);
         uint8_t* spotBuffer = uploadBuffer.data();
@@ -168,7 +168,7 @@ public:
         }
         spotLightBuffer.uploadData(spotBuffer, spotBufferSize);
 
-        VirtualArray<PointLight3D>& pointLights = ecs->view<PointLight3D>().data;
+        VirtualArray<PointLight3D>& pointLights = ecs->storage<PointLight3D>().data;
         uint32_t pointBufferSize = pointLights.size() * sizeof(GpuPointLight3D) + 16u;
         uploadBuffer.ensureCapacity(pointBufferSize);
         uint8_t* pointBuffer = uploadBuffer.data();

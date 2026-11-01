@@ -6,8 +6,6 @@
 #include <cstdint>
 #include <immintrin.h>
 
-#include <iostream>
-
 #include <thread>
 
 #include <structure/DynamicBVH.h>
@@ -143,7 +141,7 @@ private:
     }
 
     void onPhysicsObjectAdded(Entity e, uint32_t id) {
-        Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
+        Storage<PhysicsObject3D>& storage = ecs->storage<PhysicsObject3D>();
         uint32_t transformID;
         if (ecs->getComponentID<Transform3D>(e.entityID, transformID)) {
             uint32_t loc = storage.reg[id];
@@ -165,7 +163,7 @@ private:
     void onDynamicColliderAdded(Entity e, uint32_t id) {
         uint32_t objID;
         if (ecs->getComponentID<PhysicsObject3D>(e.entityID, objID)) {
-            ecs->getPtr<DynamicCollider3D>(id)->object.ID = objID;
+            ecs->getPtr<DynamicCollider3D>(id)->objectID = objID;
         }
     }
 
@@ -190,7 +188,7 @@ private:
     }
 
     void refreshStaticColliders() {
-        VirtualArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
+        VirtualArray<Collider3D>& staticColliders = ecs->storage<Collider3D>().data;
         if (staticColliders.size() == 0u) {
             return;
         }
@@ -238,7 +236,7 @@ public:
     inline PhysicsRayHit3D raycast(const vec3& rayPos, const vec3& rayDir) {
         PhysicsRayHit3D hit{};
         vec3 invDir = 1.0f / rayDir;
-        Storage<Collider3D>& staticColliders = ecs->view<Collider3D>();
+        Storage<Collider3D>& staticColliders = ecs->storage<Collider3D>();
         if (staticColliders.data.size() > 0u) {
             uint32_t hitIdx = staticBVH.queryIntersection(&rayPos[0u], &rayDir[0u], hit.distance, staticColliders.data.begin(), ColliderShape3DRegistry::rayIntersectionFunctions.data());
             if (hitIdx != UINT32_MAX) {
@@ -254,7 +252,7 @@ public:
                 hit.isDynamic = false;
             }
         }
-        Storage<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>();
+        Storage<DynamicCollider3D>& dynamicColliders = ecs->storage<DynamicCollider3D>();
         if (dynamicColliders.data.size() > 0u) {
             float dist = POSITIVE_INFINITY;
             uint32_t hitIdx = dynamicBVH.queryIntersection(&rayPos[0u], &rayDir[0u], dist, dynamicColliders.data.begin(), ColliderShape3DRegistry::rayIntersectionFunctions.data());
@@ -276,11 +274,11 @@ public:
 
     void physicsUpdate(double dt) {
         PROFILE_SCOPE(Physics3D_Update)
-        Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
+        Storage<PhysicsObject3D>& storage = ecs->storage<PhysicsObject3D>();
         MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
-        VirtualArray<Collider3D>& staticColliders = ecs->view<Collider3D>().data;
-        VirtualArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
+        VirtualArray<Collider3D>& staticColliders = ecs->storage<Collider3D>().data;
+        VirtualArray<DynamicCollider3D>& dynamicColliders = ecs->storage<DynamicCollider3D>().data;
 
         // uint64_t time[9];
         // time[0] = rdtsc();
@@ -342,7 +340,7 @@ public:
         }
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider3D& col = dynamicColliders[i];
-            const uint32_t loc = storage.reg[col.object.ID];
+            const uint32_t loc = storage.reg[col.objectID];
             col.impl.posX = objects.column<0>()[loc] + col.offsetX;
             col.impl.posY = objects.column<1>()[loc] + col.offsetY;
             col.impl.posZ = objects.column<2>()[loc] + col.offsetZ;
@@ -479,7 +477,7 @@ public:
         for (std::vector<Collision3D>& res : result) {
             for (Collision3D& col : res) {
                 DynamicCollider3D* a = col.a;
-                uint32_t objA = storage.reg[a->object.ID];
+                uint32_t objA = storage.reg[a->objectID];
                 double& posAX = objects.column<0>()[objA];
                 double& posAY = objects.column<1>()[objA];
                 double& posAZ = objects.column<2>()[objA];
@@ -501,7 +499,7 @@ public:
                     posAX += dx * mul;
                     posAY += dy * mul;
                     posAZ += dz * mul;
-                    uint32_t objB = storage.reg[b->object.ID];
+                    uint32_t objB = storage.reg[b->objectID];
                     mul = 1.0 - mul;
                     objects.column<0>()[objB] -= dx * mul;
                     objects.column<1>()[objB] -= dy * mul;
@@ -535,7 +533,7 @@ public:
         // time[7] = rdtsc();
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider3D& col = dynamicColliders[i];
-            uint32_t loc = storage.reg[col.object.ID];
+            uint32_t loc = storage.reg[col.objectID];
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
             double posZ = objects.column<2>()[loc];
@@ -561,10 +559,10 @@ public:
     }
 
     void disabledPhysicsUpdate(double dt) {
-        Storage<PhysicsObject3D>& storage = ecs->view<PhysicsObject3D>();
+        Storage<PhysicsObject3D>& storage = ecs->storage<PhysicsObject3D>();
         MultiDynamicArray<double, double, double, double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
-        VirtualArray<DynamicCollider3D>& dynamicColliders = ecs->view<DynamicCollider3D>().data;
+        VirtualArray<DynamicCollider3D>& dynamicColliders = ecs->storage<DynamicCollider3D>().data;
 
         const __m256d zero = _mm256_set1_pd(0.0);
         uint32_t updateI = 0u;
@@ -599,7 +597,7 @@ public:
         }
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider3D& col = dynamicColliders[i];
-            uint32_t loc = storage.reg[col.object.ID];
+            uint32_t loc = storage.reg[col.objectID];
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
             double posZ = objects.column<2>()[loc];
@@ -666,7 +664,7 @@ struct Serial<DynamicCollider3D> {
             input.read(c.impl.userData, metadata.size);
         }
         input.read(&c.impl.sizeX, 9u * sizeof(double));
-        c.object.ID = UINT32_MAX;
+        c.objectID = UINT32_MAX;
         e.addComponent(c);
     }
 };

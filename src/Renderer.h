@@ -90,7 +90,7 @@ private:
     std::unordered_map<GLuint, uint32_t> groupMap;
 
     void onComponentAdded(Entity e, uint32_t id) {
-        Storage<RenderInstance>& instanceStorage = ecs->view<RenderInstance>();
+        Storage<RenderInstance>& instanceStorage = ecs->storage<RenderInstance>();
         RenderInstance& i = instanceStorage.get(id);
         uint32_t groupID = static_cast<uint32_t>(i.objectID >> 48u);
         uint32_t pipelineStateID = static_cast<uint32_t>((i.objectID >> 32u) & 0xFFFFull);
@@ -104,7 +104,7 @@ private:
     }
 
     void onComponentRemoved(Entity e, uint32_t id) {
-        Storage<RenderInstance>& instanceStorage = ecs->view<RenderInstance>();
+        Storage<RenderInstance>& instanceStorage = ecs->storage<RenderInstance>();
         RenderInstance& i = instanceStorage.get(id);
         uint32_t groupID = static_cast<uint32_t>(i.objectID >> 48u);
         uint32_t pipelineStateID = static_cast<uint32_t>((i.objectID >> 32u) & 0xFFFFull);
@@ -224,7 +224,7 @@ public:
         if (groups.size() == 0u) {
             return;
         }
-        Storage<RenderInstance>& instanceStorage = ecs->view<RenderInstance>();
+        Storage<RenderInstance>& instanceStorage = ecs->storage<RenderInstance>();
         if (instanceStorage.data.size() == 0u) {
             return;
         }

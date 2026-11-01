@@ -14,9 +14,9 @@ private:
     ECS* ecs;
 
     void onComponentAdded(Entity e, uint32_t id) {
-        Storage<Camera2D>& cameraStorage = ecs->view<Camera2D>();
+        Storage<Camera2D>& cameraStorage = ecs->storage<Camera2D>();
         Camera2D& cam = cameraStorage.get(id);
-        if (!ecs->getComponentID<Transform2D>(e.entityID, cam.transformRef.ID)) {
+        if (!ecs->getComponentID<Transform2D>(e.entityID, cam.transformID)) {
             std::cerr << "Could not find transform." << std::endl;
         }
     }
@@ -26,11 +26,11 @@ private:
 
     void update(double dt) {
         PROFILE_SCOPE(Camera2DSystem_Update)
-        Storage<Camera2D>& cameraStorage = ecs->view<Camera2D>();
+        Storage<Camera2D>& cameraStorage = ecs->storage<Camera2D>();
         VirtualArray<Camera2D>& cameras = cameraStorage.data;
         for (uint32_t i = 0u; i < cameras.size(); i++) {
             Camera2D& cam = cameras[i];
-            Transform2D* tx = ecs->getPtr(cam.transformRef);
+            Transform2D* tx = ecs->getPtr<Transform2D>(cam.transformID);
             cam.cameraTransform = tx->global;
             cam.inverseCameraTransform = transpose(cam.cameraTransform);
         }

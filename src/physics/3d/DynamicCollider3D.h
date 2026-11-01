@@ -2,7 +2,6 @@
 #define DYNAMICCOLLIDER3D_H_INCLUDED
 
 #include <cstdint>
-#include <ecs/ComponentRef.h>
 #include <physics/3d/Collider3D.h>
 #include <physics/3d/PhysicsObject3D.h>
 
@@ -10,7 +9,7 @@ struct DynamicCollider3D {
     Collider3D impl;
     double offsetX, offsetY, offsetZ;
     double mass;
-    ComponentRef<PhysicsObject3D> object;
+    uint32_t objectID;
 };
 
 template <>

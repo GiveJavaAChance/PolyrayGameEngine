@@ -6,8 +6,6 @@
 #include <cstdint>
 #include <immintrin.h>
 
-#include <iostream>
-
 #include <thread>
 
 #include <structure/DynamicBVH.h>
@@ -142,7 +140,7 @@ private:
     }
 
     void onPhysicsObjectAdded(Entity e, uint32_t id) {
-        Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
+        Storage<PhysicsObject2D>& storage = ecs->storage<PhysicsObject2D>();
         uint32_t transformID;
         if (ecs->getComponentID<Transform2D>(e.entityID, transformID)) {
             uint32_t loc = storage.reg[id];
@@ -162,7 +160,7 @@ private:
     void onDynamicColliderAdded(Entity e, uint32_t id) {
         uint32_t objID;
         if (ecs->getComponentID<PhysicsObject2D>(e.entityID, objID)) {
-            ecs->getPtr<DynamicCollider2D>(id)->object.ID = objID;
+            ecs->getPtr<DynamicCollider2D>(id)->objectID = objID;
         }
     }
 
@@ -186,7 +184,7 @@ private:
 
     void refreshStaticColliders() {
         dirtyStatic = false;
-        VirtualArray<Collider2D>& staticColliders = ecs->view<Collider2D>().data;
+        VirtualArray<Collider2D>& staticColliders = ecs->storage<Collider2D>().data;
         if (staticColliders.size() == 0) {
             return;
         }
@@ -232,7 +230,7 @@ public:
     inline PhysicsRayHit2D raycast(const vec2& rayPos, const vec2& rayDir) {
         PhysicsRayHit2D hit{};
         vec2 invDir = 1.0f / rayDir;
-        Storage<Collider2D>& staticColliders = ecs->view<Collider2D>();
+        Storage<Collider2D>& staticColliders = ecs->storage<Collider2D>();
         if (staticColliders.data.size() > 0u) {
             uint32_t hitIdx = staticBVH.queryIntersection(&rayPos[0u], &rayDir[0u], hit.distance, staticColliders.data.begin(), ColliderShape2DRegistry::rayIntersectionFunctions.data());
             if (hitIdx != UINT32_MAX) {
@@ -248,7 +246,7 @@ public:
                 hit.isDynamic = false;
             }
         }
-        Storage<DynamicCollider2D>& dynamicColliders = ecs->view<DynamicCollider2D>();
+        Storage<DynamicCollider2D>& dynamicColliders = ecs->storage<DynamicCollider2D>();
         if (dynamicColliders.data.size() > 0u) {
             float dist = POSITIVE_INFINITY;
             uint32_t hitIdx = dynamicBVH.queryIntersection(&rayPos[0u], &rayDir[0u], dist, dynamicColliders.data.begin(), ColliderShape2DRegistry::rayIntersectionFunctions.data());
@@ -270,11 +268,11 @@ public:
 
     void physicsUpdate(double dt) {
         PROFILE_SCOPE(Physics2D_Update)
-        Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
+        Storage<PhysicsObject2D>& storage = ecs->storage<PhysicsObject2D>();
         MultiDynamicArray<double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
-        VirtualArray<Collider2D>& staticColliders = ecs->view<Collider2D>().data;
-        VirtualArray<DynamicCollider2D>& dynamicColliders = ecs->view<DynamicCollider2D>().data;
+        VirtualArray<Collider2D>& staticColliders = ecs->storage<Collider2D>().data;
+        VirtualArray<DynamicCollider2D>& dynamicColliders = ecs->storage<DynamicCollider2D>().data;
 
         // uint64_t time[9];
         // time[0] = rdtsc();
@@ -321,7 +319,7 @@ public:
         }
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider2D& col = dynamicColliders[i];
-            const uint32_t loc = storage.reg[col.object.ID];
+            const uint32_t loc = storage.reg[col.objectID];
             col.impl.posX = objects.column<0>()[loc] + col.offsetX;
             col.impl.posY = objects.column<1>()[loc] + col.offsetY;
         }
@@ -459,7 +457,7 @@ public:
         for (std::vector<Collision2D>& res : result) {
             for (Collision2D& col : res) {
                 DynamicCollider2D* a = col.a;
-                uint32_t objA = storage.reg[a->object.ID];
+                uint32_t objA = storage.reg[a->objectID];
                 double& posAX = objects.column<0>()[objA];
                 double& posAY = objects.column<1>()[objA];
                 double& prevPosAX = objects.column<2>()[objA];
@@ -476,7 +474,7 @@ public:
                     double mul = b->mass / (a->mass + b->mass);
                     posAX += dx * mul;
                     posAY += dy * mul;
-                    uint32_t objB = storage.reg[b->object.ID];
+                    uint32_t objB = storage.reg[b->objectID];
                     mul = 1.0 - mul;
                     objects.column<0>()[objB] -= dx * mul;
                     objects.column<1>()[objB] -= dy * mul;
@@ -504,7 +502,7 @@ public:
         // time[7] = rdtsc();
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider2D& col = dynamicColliders[i];
-            uint32_t loc = storage.reg[col.object.ID];
+            uint32_t loc = storage.reg[col.objectID];
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
             col.impl.posX = posX + col.offsetX;
@@ -528,10 +526,10 @@ public:
     }
 
     void disabledPhysicsUpdate(double dt) {
-        Storage<PhysicsObject2D>& storage = ecs->view<PhysicsObject2D>();
+        Storage<PhysicsObject2D>& storage = ecs->storage<PhysicsObject2D>();
         MultiDynamicArray<double, double, double, double, double, double, uint32_t>& objects = storage.objects;
 
-        VirtualArray<DynamicCollider2D>& dynamicColliders = ecs->view<DynamicCollider2D>().data;
+        VirtualArray<DynamicCollider2D>& dynamicColliders = ecs->storage<DynamicCollider2D>().data;
 
         const __m256d zero = _mm256_set1_pd(0.0);
         uint32_t updateI = 0u;
@@ -557,7 +555,7 @@ public:
         }
         for (uint32_t i = 0u; i < dynamicColliders.size(); i++) {
             DynamicCollider2D& col = dynamicColliders[i];
-            uint32_t loc = storage.reg[col.object.ID];
+            uint32_t loc = storage.reg[col.objectID];
             double posX = objects.column<0>()[loc];
             double posY = objects.column<1>()[loc];
             col.impl.posX = posX + col.offsetX;
@@ -622,7 +620,7 @@ struct Serial<DynamicCollider2D> {
             input.read(c.impl.userData, metadata.size);
         }
         input.read(&c.impl.sizeX, 7u * sizeof(double));
-        c.object.ID = UINT32_MAX;
+        c.objectID = UINT32_MAX;
         e.addComponent(c);
     }
 };

@@ -15,7 +15,7 @@
 #include <typereg.h>
 
 #include <ecs/ComponentMetadata.h>
-#include <ecs/ComponentRef.h>
+#include <ecs/ComponentView.h>
 #include <ecs/Storage.h>
 
 #include <utils/Invoke.h>
@@ -49,27 +49,72 @@ struct Entity {
     inline uint32_t getComponents(T* const ptr);
 };
 
-template <typename T>
-struct ComponentView {
+template <typename... Ts>
+struct ECSViewIterator {
 private:
+    constexpr static std::index_sequence_for<Ts...> INDICES = std::index_sequence_for<Ts...>{};
+    using ElementType = std::tuple<uint32_t, ComponentView<Ts>...>;
+
     ECS* ecs;
-    ComponentRef<T> ref;
-    T temp;
-    bool dirty = false;
+    DynamicArray<uint32_t>* entitySet;
 
-public:
-    ComponentView(ECS* ecs, ComponentRef<T> ref);
+    uint32_t index;
+    uint32_t componentIDs[sizeof...(Ts)];
 
-    ~ComponentView();
+    template <size_t... Is>
+    inline bool findComponents(uint32_t entityID, std::index_sequence<Is...>);
 
-    inline T* operator->() {
-        dirty = true;
-        return &temp;
+    template <size_t... Is>
+    inline ElementType dereference(std::index_sequence<Is...>);
+
+    void advance() {
+        while (index < entitySet->size()) {
+            uint32_t entityID = (*entitySet)[index];
+            if (findComponents(entityID, std::index_sequence_for<Ts...>{})) {
+                break;
+            }
+            ++index;
+        }
     }
 
-    inline T& operator*() {
-        dirty = true;
-        return temp;
+public:
+    ECSViewIterator(ECS* ecs, DynamicArray<uint32_t>* entitySet) : ecs(ecs), entitySet(entitySet), index(0u) {
+        advance();
+    }
+
+    ElementType operator*() {
+        return dereference(std::index_sequence_for<Ts...>{});
+    }
+
+    ECSViewIterator& operator++() {
+        ++index;
+        advance();
+        return *this;
+    }
+
+    explicit inline operator bool() const {
+        return index < entitySet->size();
+    }
+
+    bool operator!=(int) const {
+        return static_cast<bool>(*this);
+    }
+};
+
+template <typename... Ts>
+struct ECSView {
+private:
+    ECS* ecs;
+    DynamicArray<uint32_t>* entitySet;
+
+public:
+    ECSView(ECS* ecs, DynamicArray<uint32_t>* entitySet) : ecs(ecs), entitySet(entitySet) {
+    }
+
+    ECSViewIterator<Ts...> begin();
+
+    int end() {
+        return 0;
     }
 };
 
@@ -604,18 +649,8 @@ public:
     }
 
     template <typename T>
-    T* getPtr(ComponentRef<T> ref) {
-        return getPtr<T>(ref.ID);
-    }
-
-    template <typename T>
     T read(uint32_t componentID) {
         return getStorage<T>()->get(componentID);
-    }
-
-    template <typename T>
-    T read(ComponentRef<T> ref) {
-        return getStorage<T>()->get(ref.ID);
     }
 
     template <typename T>
@@ -634,11 +669,6 @@ public:
     }
 
     template <typename T>
-    void write(ComponentRef<T> ref, T&& component) {
-        getStorage<T>()->set(ref.ID, std::forward<T>(component));
-    }
-
-    template <typename T>
     inline void write(uint32_t componentID, void* src) {
         alignas(T) uint8_t component[sizeof(T)];
         std::memcpy(component, src, sizeof(T));
@@ -650,8 +680,16 @@ public:
     }
 
     template <typename T>
-    Storage<T>& view() {
+    Storage<T>& storage() {
         return *getStorage<T>();
+    }
+
+    template <typename... Ts>
+    ECSView<Ts...> view() {
+        uint32_t minSize = UINT32_MAX;
+        DynamicArray<uint32_t>* entitySet = nullptr;
+        ((getStorage<Ts>()->entitySet.size() < minSize ? (minSize = getStorage<Ts>()->entitySet.size(), entitySet = &getStorage<Ts>()->entitySet) : 0), ...);
+        return ECSView<Ts...>(this, entitySet);
     }
 
     void* reflectGetStorage(uint32_t type) {
@@ -701,17 +739,6 @@ public:
 };
 
 template <typename T>
-ComponentView<T>::ComponentView(ECS* ecs, ComponentRef<T> ref) : ecs(ecs), ref(ref), temp(ecs->read(ref)) {
-}
-
-template <typename T>
-ComponentView<T>::~ComponentView() {
-    if (dirty) {
-        ecs->write(ref, std::move(temp));
-    }
-}
-
-template <typename T>
 inline uint32_t Entity::addComponent(T&& component) {
     return ecs->addComponent(entityID, std::move(component));
 }
@@ -744,6 +771,26 @@ inline uint32_t Entity::getComponentCount() {
 template <typename T>
 inline uint32_t Entity::getComponents(T* const ptr) {
     return ecs->getComponents<T>(entityID, ptr);
+}
+
+template <typename... Ts>
+template <size_t... Is>
+inline bool ECSViewIterator<Ts...>::findComponents(uint32_t entityID, std::index_sequence<Is...>) {
+    bool found = true;
+    ((found = found && ecs->getComponentID<Ts>(entityID, componentIDs[Is])), ...);
+    return found;
+}
+
+template <typename... Ts>
+template <size_t... Is>
+inline ECSViewIterator<Ts...>::ElementType ECSViewIterator<Ts...>::dereference(std::index_sequence<Is...>) {
+    uint32_t entityID = (*entitySet)[index];
+    return ElementType(entityID, ComponentView<Ts>(&ecs->storage<Ts>(), componentIDs[Is])...);
+}
+
+template <typename... Ts>
+ECSViewIterator<Ts...> ECSView<Ts...>::begin() {
+    return ECSViewIterator<Ts...>(ecs, entitySet);
 }
 
 template <typename T, T (*Create)()>
