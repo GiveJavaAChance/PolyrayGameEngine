@@ -7,11 +7,11 @@
 #include <structure/DynamicArray.h>
 
 struct ByteReader {
-    uint8_t* data;
-    uint32_t length;
-    uint32_t pos;
+    const uint8_t* data;
+    size_t size;
+    size_t pos;
 
-    ByteReader(uint8_t* d, uint32_t l) : data(d), length(l), pos(0u) {
+    ByteReader(const uint8_t* data, size_t size) : data(data), size(size), pos(0ull) {
     }
 
     inline void read(void* dst, uint32_t size) {

@@ -281,7 +281,7 @@ namespace ResourceManager {
         in.seekg(0, std::ios::beg);
         uint8_t* data = alloc<uint8_t>(size);
         in.read(reinterpret_cast<char*>(data), size);
-        return {data, static_cast<uint32_t>(size)};
+        return SceneData{data, size};
     }
 }
 

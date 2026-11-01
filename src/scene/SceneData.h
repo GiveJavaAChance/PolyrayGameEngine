@@ -4,7 +4,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <unordered_map>
 
 #include <World.h>
@@ -13,8 +12,8 @@
 
 struct SceneData {
 private:
-    std::shared_ptr<uint8_t> data;
-    uint32_t size;
+    uint8_t* data;
+    size_t size;
 
     Entity readEntity(ByteReader& reader, ECS& ecs, World* world) {
         Entity e = ecs.createEntity();
@@ -32,21 +31,20 @@ private:
         ECS& ecs = world->ecs;
         Scene* scene = world->getSystem<Scene>();
 
-        std::vector<uint32_t> stack;
+        DynamicArray<uint32_t> stack;
 
         uint32_t newNode = UINT32_MAX;
         bool first = true;
 
         if (fromNode != UINT32_MAX) {
-            stack.push_back(fromNode);
+            stack.add(fromNode);
         }
         DynamicArray<char> nameBuffer;
-        while (reader.pos < reader.length) {
+        while (reader.pos < reader.size) {
             uint8_t instruction = reader.read<uint8_t>();
             if (instruction == 0u) {
-                nameBuffer.clear();
                 uint32_t nameLength = reader.read<uint32_t>();
-                nameBuffer.reserve(nameLength + 1u);
+                nameBuffer.ensureCapacity(nameLength + 1u);
                 reader.read(nameBuffer.data(), nameLength);
                 nameBuffer[nameLength] = 0;
                 Entity e = readEntity(reader, ecs, world);
@@ -54,29 +52,56 @@ private:
                 if (stack.size() == 0u) {
                     n = scene->setRootNode(e, nameBuffer.data());
                 } else {
-                    n = scene->addNode(stack.back(), e, nameBuffer.data());
+                    n = scene->addNode(stack[stack.size() - 1u], e, nameBuffer.data());
                 }
-                stack.push_back(n);
+                stack.add(n);
                 if (first) {
                     first = false;
                     newNode = n;
                 }
             } else {
-                stack.pop_back();
+                stack.removeEnd(1u);
             }
         }
         return newNode;
     }
 
 public:
-    SceneData(uint8_t* d, uint32_t s) noexcept : data(d, [](uint8_t* ptr) { if (ptr) { free(ptr); } }), size(s) {
+    SceneData(uint8_t* data, size_t size) noexcept : data(data), size(size) {
     }
 
-    SceneData() : SceneData(nullptr, 0u) {
+    SceneData() noexcept : data(nullptr), size(0ull) {
+    }
+
+    ~SceneData() noexcept {
+        if (data) {
+            free(data);
+        }
+    }
+
+    SceneData(const SceneData&) = delete;
+    SceneData& operator=(const SceneData&) = delete;
+
+    SceneData(SceneData&& other) noexcept : data(other.data), size(other.size) {
+        other.data = nullptr;
+        other.size = 0ull;
+    }
+
+    SceneData& operator=(SceneData&& other) noexcept {
+        if (this != &other) {
+            if (data) {
+                free(data);
+            }
+            data = other.data;
+            size = other.size;
+            other.data = nullptr;
+            other.size = 0ull;
+        }
+        return *this;
     }
 
     uint32_t instantiate(World* world, uint32_t fromNode) {
-        ByteReader reader{data.get(), size};
+        ByteReader reader{data, size};
 
         uint8_t dimension = reader.read<uint8_t>();
 
@@ -86,15 +111,15 @@ public:
         return instantiateImpl<Scene3D>(reader, world, fromNode);
     }
 
-    inline uint8_t getDimension() {
-        return data.get()[0u];
+    inline uint8_t getDimension() const {
+        return data[0u];
     }
 
-    inline void* getData() {
-        return data.get();
+    inline const uint8_t* getData() const {
+        return data;
     }
 
-    inline uint32_t getSize() {
+    inline uint32_t getSize() const {
         return size;
     }
 };
