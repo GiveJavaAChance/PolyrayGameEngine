@@ -261,7 +261,7 @@ public:
             if (hitIdx != UINT32_MAX && (!hit.didHit || dist < hit.distance)) {
                 RayHit3D pHit;
                 DynamicCollider3D& col = dynamicColliders.data[hitIdx];
-                ColliderShape3DRegistry::raycastFunctions[col.impl.typeId](col.impl.userData, &rayPos[0u], &rayDir[0u], &invDir[0u], staticBounds + hitIdx * 6u, pHit);
+                ColliderShape3DRegistry::raycastFunctions[col.impl.typeId](col.impl.userData, &rayPos[0u], &rayDir[0u], &invDir[0u], dynamicBounds + hitIdx * 6u, pHit);
                 hit.distance = pHit.distance;
                 hit.depth = pHit.depth;
                 hit.normal = pHit.normal;
